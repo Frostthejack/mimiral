@@ -1,0 +1,13 @@
+# Default ignored files
+/sap
+/app/build
+/app/.cxx
+*.iml
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
