@@ -1,0 +1,14 @@
+package com.mimiral.app.navigation
+
+sealed class Screen(val route: String) {
+    object Library : Screen("library")
+    object Discover : Screen("discover")
+    object NowReading : Screen("now_reading")
+    object Settings : Screen("settings")
+    object EpubReader : Screen("epub_reader/{bookId}") {
+        fun createRoute(bookId: Int): String = "epub_reader/$bookId"
+    }
+    object PdfReader : Screen("pdf_reader/{bookId}") {
+        fun createRoute(bookId: Int): String = "pdf_reader/$bookId"
+    }
+}

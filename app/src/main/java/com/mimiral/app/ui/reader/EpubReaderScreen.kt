@@ -1,0 +1,602 @@
+package com.mimiral.app.ui.reader
+
+import android.view.KeyEvent
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBackIos
+import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.mimiral.app.data.local.settings.ReaderSettings
+import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EpubReaderScreen(
+    bookId: Int,
+    onNavigateBack: () -> Unit,
+    viewModel: EpubReaderViewModel = hiltViewModel()
+) {
+    val context = LocalContext.current
+    val settingsRepository = remember { ReaderSettingsRepository(context) }
+    val settings by settingsRepository.settings.collectAsState(initial = ReaderSettings())
+    val textSettings by settingsRepository.textSettings.collectAsState(initial = TextSettings())
+    val uiState by viewModel.uiState.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+
+    val focusRequester = remember { FocusRequester() }
+
+    // Pagination engine
+    val paginationEngine = remember { PaginationEngine(context) }
+
+    // Screen dimensions for pagination
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() }
+
+    // Sample chapter text for pagination (simulated EPUB content)
+    val chapterText = remember {
+        """
+        Chapter 1: The Beginning
+
+        Welcome to Mimiral Reader.
+
+        This is the beginning of your book. The text you are reading is paginated using Android's StaticLayout engine, which calculates line breaks and page boundaries based on the screen dimensions, font size, line spacing, and margins you configure.
+
+        Tap the left or right side of the screen to turn pages, or swipe to navigate between pages. You can also use volume keys if that setting is enabled.
+
+        The pagination engine recalculates page boundaries whenever you change text settings like font size, line spacing, or margins. This ensures that the text always fits properly on each page.
+
+        Custom fonts are supported in TTF and OTF format. You can load font files from the app's assets directory and apply them to the reader. The font family selector lets you choose between built-in fonts like Serif, Sans Serif, and Monospace, or load your own custom fonts.
+
+        Line spacing can be adjusted using both a multiplier and extra spacing. The multiplier scales the line height proportionally, while extra spacing adds a fixed amount of space between lines. Margins can be adjusted independently for each side of the page.
+
+        All your text settings are persisted using DataStore, so they will be remembered the next time you open the app. This includes font size, line spacing, margins, and font family selection.
+
+        This is a demonstration of the EPUB reader screen with customizable text rendering. In production, actual EPUB content would be rendered here with proper pagination from the Readium library integrated with the StaticLayout engine.
+
+        End of sample content. Thank you for using Mimiral Reader!
+        """.trimIndent()
+    }
+
+    // Paginate text whenever text settings change
+    var paginationResult by remember { mutableStateOf<PaginationResult?>(null) }
+    LaunchedEffect(textSettings, screenWidthPx, screenHeightPx) {
+        paginationResult = paginationEngine.paginate(
+            text = chapterText,
+            config = textSettings.toRenderConfig(),
+            screenWidthPx = screenWidthPx,
+            screenHeightPx = screenHeightPx
+        )
+    }
+
+    val pages = paginationResult?.pages ?: emptyList()
+    val pageCount = pages.size.coerceAtLeast(1)
+
+    // Sync total pages to ViewModel
+    LaunchedEffect(pageCount) {
+        viewModel.setTotalPages(pageCount)
+    }
+
+    val pagerState = rememberPagerState(
+        initialPage = uiState.currentPage.coerceIn(0, (pageCount - 1).coerceAtLeast(0)),
+        pageCount = { pageCount }
+    )
+
+    var toolbarVisible by remember { mutableStateOf(false) }
+    var showTextSettings by remember { mutableStateOf(false) }
+
+    // Track page changes and notify ViewModel
+    LaunchedEffect(pagerState.currentPage) {
+        val chapterIndex = uiState.currentChapter
+        viewModel.onPageTurn(
+            chapterIndex = chapterIndex,
+            characterOffset = pagerState.currentPage.toLong() * 500L,
+            totalCharacters = pageCount.toLong() * 500L,
+            pageNumber = pagerState.currentPage,
+            lastReadPosition = "page:${pagerState.currentPage}"
+        )
+    }
+
+    // Request focus for key events
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    // Volume key handler
+    val handleVolumeKey: (Int) -> Boolean = remember(settings) { { keyCode ->
+        if (!settings.volumeKeyNavigationEnabled) {
+            return@remember false
+        }
+
+        val isVolumeUp = keyCode == KeyEvent.KEYCODE_VOLUME_UP
+        val isVolumeDown = keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+
+        if (!isVolumeUp && !isVolumeDown) {
+            return@remember false
+        }
+
+        val swap = settings.volumeKeyDirectionSwapped
+        val goNext = if (swap) isVolumeUp else isVolumeDown
+        val goPrev = if (swap) isVolumeDown else isVolumeUp
+
+        when {
+            goNext && pagerState.currentPage < pageCount - 1 -> {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                }
+                true
+            }
+            goPrev && pagerState.currentPage > 0 -> {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                }
+                true
+            }
+            else -> true // Consume event even at boundaries
+        }
+    } }
+
+    // Bookmark state for the bookmark button
+    val isBookmarked = uiState.isCurrentPageBookmarked
+
+    // Current chapter title for the toolbar
+    val currentChapterTitle = uiState.chapters.getOrNull(uiState.currentChapter)?.title ?: "Reader"
+
+    // Text settings change handler
+    val onTextSettingsChanged: (TextSettings) -> Unit = remember(settingsRepository) { { newSettings ->
+        coroutineScope.launch {
+            settingsRepository.setTextSettings(newSettings)
+        }
+    } }
+
+    Scaffold(
+        topBar = {
+            if (toolbarVisible) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = currentChapterTitle,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            // Progress subtitle
+                            Text(
+                                text = buildProgressText(uiState),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            viewModel.saveCurrentProgress()
+                            onNavigateBack()
+                        }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        // TOC button
+                        IconButton(onClick = { viewModel.showToc() }) {
+                            Icon(Icons.Default.List, contentDescription = "Table of Contents")
+                        }
+                        // Bookmark button
+                        IconButton(onClick = { viewModel.toggleBookmark() }) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        // Settings button
+                        IconButton(onClick = { showTextSettings = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Text Settings")
+                        }
+                    }
+                )
+            }
+        },
+        bottomBar = {
+            if (toolbarVisible) {
+                NavigationBar {
+                    // Previous chapter
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            if (viewModel.hasPreviousChapter()) {
+                                viewModel.previousChapter()
+                                coroutineScope.launch {
+                                    val chapter = uiState.chapters.getOrNull(uiState.currentChapter - 1)
+                                    if (chapter != null) {
+                                        pagerState.animateScrollToPage(chapter.startPage)
+                                    }
+                                }
+                            }
+                        },
+                        enabled = viewModel.hasPreviousChapter(),
+                        icon = { Icon(Icons.Default.ArrowBackIos, contentDescription = "Previous chapter") },
+                        label = { Text("Prev Ch") }
+                    )
+                    // Page indicator / TOC trigger
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = { viewModel.showToc() },
+                        icon = { Text("${pagerState.currentPage + 1}/$pageCount") },
+                        label = { Text("Page") }
+                    )
+                    // Next chapter
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            if (viewModel.hasNextChapter()) {
+                                viewModel.nextChapter()
+                                coroutineScope.launch {
+                                    val chapter = uiState.chapters.getOrNull(uiState.currentChapter + 1)
+                                    if (chapter != null) {
+                                        pagerState.animateScrollToPage(chapter.startPage)
+                                    }
+                                }
+                            }
+                        },
+                        enabled = viewModel.hasNextChapter(),
+                        icon = { Icon(Icons.Default.ArrowForwardIos, contentDescription = "Next chapter") },
+                        label = { Text("Next Ch") }
+                    )
+                }
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .focusRequester(focusRequester)
+                .focusTarget()
+                .onKeyEvent { keyEvent ->
+                    if (keyEvent.type == KeyEventType.KeyDown) {
+                        val nativeKeyCode = keyEvent.nativeKeyEvent.keyCode
+                        handleVolumeKey(nativeKeyCode)
+                    } else {
+                        false
+                    }
+                }
+        ) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (uiState.error != null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Error: ${uiState.error}",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            } else if (pageCount > 0 && pages.isNotEmpty()) {
+                // HorizontalPager with swipe gestures and GPU-accelerated transitions
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    beyondViewportPageCount = 1,
+                    key = { index -> index }
+                ) { pageIndex ->
+                    val pageOffset = (
+                        (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                // GPU-accelerated alpha fade during transition
+                                alpha = if (abs(pageOffset) < 1f) {
+                                    1f - (abs(pageOffset) * 0.3f)
+                                } else {
+                                    0.7f
+                                }
+
+                                // Subtle scale effect during page transition
+                                val scale = 1f - (abs(pageOffset) * 0.03f).coerceIn(0f, 0.1f)
+                                scaleX = scale
+                                scaleY = scale
+
+                                // Slight translation for depth/parallax effect
+                                translationX = pageOffset * size.width * -0.05f
+
+                                clip = true
+                            }
+                            .pointerInput(Unit) {
+                                detectTapGestures { offset ->
+                                    val tapZoneWidth = size.width / 3f
+
+                                    when {
+                                        // Left third -> previous page
+                                        offset.x < tapZoneWidth -> {
+                                            if (pagerState.currentPage > 0) {
+                                                coroutineScope.launch {
+                                                    pagerState.animateScrollToPage(
+                                                        pagerState.currentPage - 1
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        // Right third -> next page
+                                        offset.x > tapZoneWidth * 2 -> {
+                                            if (pagerState.currentPage < pageCount - 1) {
+                                                coroutineScope.launch {
+                                                    pagerState.animateScrollToPage(
+                                                        pagerState.currentPage + 1
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        // Center -> toggle toolbar
+                                        else -> {
+                                            toolbarVisible = !toolbarVisible
+                                        }
+                                    }
+                                }
+                            }
+                    ) {
+                        // Page content with paginated text
+                        val pageText = pages.getOrNull(pageIndex)?.text ?: ""
+                        EpubPageContent(
+                            pageText = pageText,
+                            pageNumber = pageIndex + 1,
+                            totalPages = pageCount,
+                            chapterTitle = if (pageIndex == 0) uiState.chapters.getOrNull(uiState.currentChapter)?.title else null,
+                            textSettings = textSettings
+                        )
+                    }
+                }
+            } else {
+                // Empty state
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No content to display",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            // Subtle page indicator when toolbar is hidden
+            if (!toolbarVisible && pageCount > 0) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "${pagerState.currentPage + 1} / $pageCount",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                    )
+                    // Thin progress bar
+                    LinearProgressIndicator(
+                        progress = (pagerState.currentPage + 1).toFloat() / pageCount.toFloat(),
+                        modifier = Modifier
+                            .width(100.dp)
+                            .padding(top = 4.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                        trackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+                    )
+                }
+            }
+        }
+    }
+
+    // Table of Contents dialog
+    if (uiState.showToc) {
+        TableOfContentsDialog(
+            chapters = uiState.chapters,
+            currentChapterIndex = uiState.currentChapter,
+            onNavigateToChapter = { chapterIndex ->
+                viewModel.navigateToChapter(chapterIndex)
+                coroutineScope.launch {
+                    val chapter = uiState.chapters.getOrNull(chapterIndex)
+                    if (chapter != null) {
+                        pagerState.animateScrollToPage(chapter.startPage)
+                    }
+                }
+            },
+            onDismiss = { viewModel.dismissToc() }
+        )
+    }
+
+    // Bookmarks dialog
+    if (uiState.showBookmarks) {
+        BookmarkListDialog(
+            bookmarks = emptyList(),
+            onNavigateToBookmark = { bookmark ->
+                viewModel.navigateToBookmark(bookmark.chapterIndex, bookmark.pageNumber)
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(bookmark.pageNumber)
+                }
+            },
+            onDeleteBookmark = { /* Handled by BookmarkManager */ },
+            onDismiss = { viewModel.dismissBookmarks() }
+        )
+    }
+
+    // Text Settings dialog
+    if (showTextSettings) {
+        TextSettingsPanel(
+            settings = textSettings,
+            onSettingsChanged = onTextSettingsChanged,
+            onDismiss = { showTextSettings = false },
+            paginationEngine = paginationEngine
+        )
+    }
+}
+
+/**
+ * Build a human-readable progress text for the toolbar subtitle.
+ */
+private fun buildProgressText(uiState: ReaderUiState): String {
+    val pageText = "Page ${uiState.currentPage + 1} of ${uiState.totalPages}"
+    val percentText = "${uiState.progress.progressPercent.toInt()}%"
+    return "$pageText · $percentText"
+}
+
+/**
+ * Renders the content of a single EPUB page with customizable text settings.
+ */
+@Composable
+private fun EpubPageContent(
+    pageText: String,
+    pageNumber: Int,
+    totalPages: Int,
+    chapterTitle: String? = null,
+    textSettings: TextSettings = TextSettings()
+) {
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(
+                start = textSettings.marginLeft.dp,
+                end = textSettings.marginRight.dp,
+                top = textSettings.marginTop.dp,
+                bottom = textSettings.marginBottom.dp
+            )
+            .verticalScroll(scrollState)
+    ) {
+        // Chapter header (shown on first page of chapter)
+        if (chapterTitle != null && pageNumber == 1) {
+            Text(
+                text = chapterTitle,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+        }
+
+        Text(
+            text = pageText,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                lineHeight = (textSettings.fontSize * textSettings.lineSpacingMultiplier).sp,
+                fontSize = textSettings.fontSize.sp,
+                fontFamily = textSettings.selectedFontFamily.fontFamily
+            ),
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Page number at bottom
+        Text(
+            text = "$pageNumber",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+                .wrapContentWidth(Alignment.CenterHorizontally)
+        )
+    }
+}
+
+@Composable
+fun ReaderSettingsDialog(
+    settings: ReaderSettings,
+    onDismiss: () -> Unit,
+    onVolumeKeyToggle: (Boolean) -> Unit,
+    onDirectionSwapToggle: (Boolean) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Reader Settings") },
+        text = {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Volume key navigation")
+                    Switch(
+                        checked = settings.volumeKeyNavigationEnabled,
+                        onCheckedChange = onVolumeKeyToggle
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Swap volume direction")
+                        Text(
+                            if (settings.volumeKeyDirectionSwapped)
+                                "Vol Up = Next, Vol Down = Prev"
+                            else
+                                "Vol Up = Prev, Vol Down = Next",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = settings.volumeKeyDirectionSwapped,
+                        onCheckedChange = onDirectionSwapToggle,
+                        enabled = settings.volumeKeyNavigationEnabled
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Done")
+            }
+        }
+    )
+}

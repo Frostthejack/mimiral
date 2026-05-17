@@ -4,78 +4,175 @@ import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import kotlinx.coroutines.launch
 
-// Warm color palette
-val WarmBrown = Color(0xFF8B5E3C)
-val Tan = Color(0xFFD4A574)
-val WarmWhite = Color(0xFFFFF8F0)
-val SoftBlack = Color(0xFF2C2C2C)
+// ── Theme enum ─────────────────────────────────────────────
+enum class MimiralThemeType(val label: String) {
+    DAY("Day"),
+    SEPIA("Sepia"),
+    DARK("Dark"),
+    NIGHT("Night")
+}
 
-// Sepia
-val Parchment = Color(0xFFF4ECD8)
-val DarkBrown = Color(0xFF5B4636)
-val Golden = Color(0xFF8B6914)
-val Sand = Color(0xFFC4A77D)
-
-// Dark
-val DeepNavy = Color(0xFF1A1A2E)
-val LightGray = Color(0xFFE0E0E0)
-val Coral = Color(0xFFE94560)
-val Purple = Color(0xFF533483)
-
-// Night (OLED)
-val PureBlack = Color(0xFF000000)
-val Gold = Color(0xFFFFD700)
-val DarkGray = Color(0xFF404040)
+// ── Color Schemes ──────────────────────────────────────────
 
 private val DayColorScheme = lightColorScheme(
-    primary = WarmBrown,
-    onPrimary = WarmWhite,
-    secondary = Tan,
-    onSecondary = SoftBlack,
-    background = WarmWhite,
-    onBackground = SoftBlack,
-    surface = WarmWhite,
-    onSurface = SoftBlack,
+    primary = DayPrimary,
+    onPrimary = DayOnPrimary,
+    secondary = DaySecondary,
+    onSecondary = DayOnSecondary,
+    background = DayBackground,
+    onBackground = DayOnBackground,
+    surface = DaySurface,
+    onSurface = DayOnSurface,
+)
+
+private val SepiaColorScheme = lightColorScheme(
+    primary = SepiaPrimary,
+    onPrimary = SepiaOnPrimary,
+    secondary = SepiaSecondary,
+    onSecondary = SepiaOnSecondary,
+    background = SepiaBackground,
+    onBackground = SepiaOnBackground,
+    surface = SepiaSurface,
+    onSurface = SepiaOnSurface,
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Coral,
-    onPrimary = LightGray,
-    secondary = Purple,
-    onSecondary = LightGray,
-    background = DeepNavy,
-    onBackground = LightGray,
-    surface = DeepNavy,
-    onSurface = LightGray,
+    primary = DarkPrimary,
+    onPrimary = DarkOnPrimary,
+    secondary = DarkSecondary,
+    onSecondary = DarkOnSecondary,
+    background = DarkBackground,
+    onBackground = DarkOnBackground,
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
 )
+
+private val NightColorScheme = darkColorScheme(
+    primary = NightPrimary,
+    onPrimary = NightOnPrimary,
+    secondary = NightSecondary,
+    onSecondary = NightOnSecondary,
+    background = NightBackground,
+    onBackground = NightOnBackground,
+    surface = NightSurface,
+    onSurface = NightOnSurface,
+)
+
+// ── Theme State ────────────────────────────────────────────
+
+object ThemeState {
+    var currentTheme by mutableStateOf(MimiralThemeType.DAY)
+}
+
+/**
+ * Remembers and initializes theme state from DataStore.
+ * Must be called at the top of the composition tree (e.g. in MainContent).
+ */
+@Composable
+fun rememberMimiralThemeState(): MimiralThemeType {
+    val context = LocalContext.current
+    val settingsRepository = remember { ReaderSettingsRepository(context) }
+    val settings by settingsRepository.settings.collectAsState(
+        initial = com.mimiral.app.data.local.settings.ReaderSettings()
+    )
+
+    // Sync DataStore value into ThemeState on first composition and when it changes
+    LaunchedEffect(settings.themeName) {
+        val theme = try {
+            MimiralThemeType.valueOf(settings.themeName)
+        } catch (_: IllegalArgumentException) {
+            MimiralThemeType.DAY
+        }
+        ThemeState.currentTheme = theme
+    }
+
+    return ThemeState.currentTheme
+}
+
+// ── Theme Switcher Composable ──────────────────────────────
+
+@Composable
+fun MimiralThemeSwitcher(
+    currentTheme: MimiralThemeType = ThemeState.currentTheme,
+    onThemeSelected: (MimiralThemeType) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = currentTheme.label,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Theme") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            MimiralThemeType.entries.forEach { theme ->
+                DropdownMenuItem(
+                    text = { Text(theme.label) },
+                    onClick = {
+                        ThemeState.currentTheme = theme
+                        onThemeSelected(theme)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+// ── Main Theme Composable ──────────────────────────────────
 
 @Composable
 fun MimiralTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeType: MimiralThemeType = ThemeState.currentTheme,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val isDark = themeType == MimiralThemeType.DARK || themeType == MimiralThemeType.NIGHT
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            // Use dynamic color on Android 12+
-            if (darkTheme) DarkColorScheme else DayColorScheme
+            val view = LocalView.current
+            if (view.isInEditMode) {
+                // Preview: use static scheme
+                themeType.toColorScheme()
+            } else {
+                // On Android 12+, use dynamic colors but only for Day/Sepia (light) or Dark (dark)
+                // Night theme should stay pure black even with dynamic colors
+                if (themeType == MimiralThemeType.NIGHT) {
+                    NightColorScheme
+                } else {
+                    val context = view.context
+                    if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                }
+            }
         }
-        darkTheme -> DarkColorScheme
-        else -> DayColorScheme
+        else -> themeType.toColorScheme()
     }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            window.statusBarColor = colorScheme.background.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDark
         }
     }
 
@@ -84,4 +181,13 @@ fun MimiralTheme(
         typography = Typography(),
         content = content
     )
+}
+
+// ── Helper ─────────────────────────────────────────────────
+
+fun MimiralThemeType.toColorScheme(): ColorScheme = when (this) {
+    MimiralThemeType.DAY -> DayColorScheme
+    MimiralThemeType.SEPIA -> SepiaColorScheme
+    MimiralThemeType.DARK -> DarkColorScheme
+    MimiralThemeType.NIGHT -> NightColorScheme
 }

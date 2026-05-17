@@ -1,0 +1,51 @@
+package com.mimiral.app.ui.components
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+
+/**
+ * A loading indicator with an optional text label.
+ * Displays a circular progress indicator centered in its container.
+ *
+ * @param visible Whether the loading indicator is shown.
+ * @param text Optional text displayed below the spinner.
+ * @param modifier Optional modifier.
+ */
+@Composable
+fun LoadingIndicator(
+    visible: Boolean,
+    text: String? = null,
+    modifier: Modifier = Modifier
+) {
+    if (!visible) return
+
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 3.dp
+            )
+
+            if (text != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}

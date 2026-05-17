@@ -21,7 +21,12 @@ object DatabaseModule {
             context,
             MimiralDatabase::class.java,
             "mimiral_database"
-        ).build()
+        )
+            .addMigrations(
+                MimiralDatabase.MIGRATION_1_2,
+                MimiralDatabase.MIGRATION_2_3
+            )
+            .build()
     }
 
     @Provides
@@ -44,4 +49,10 @@ object DatabaseModule {
 
     @Provides
     fun provideOpdsCatalogDao(database: MimiralDatabase) = database.opdsCatalogDao()
+
+    @Provides
+    fun providePdfSettingsDao(database: MimiralDatabase) = database.pdfSettingsDao()
+
+    @Provides
+    fun provideChapterDao(database: MimiralDatabase) = database.chapterDao()
 }

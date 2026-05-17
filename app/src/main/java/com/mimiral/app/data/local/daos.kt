@@ -15,6 +15,34 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%'")
     fun searchBooks(query: String): Flow<List<BookEntity>>
 
+    // -- Sorted queries --
+
+    @Query("SELECT * FROM books ORDER BY title ASC")
+    fun getAllBooksSortedByTitle(): Flow<List<BookEntity>>
+
+    @Query("SELECT * FROM books ORDER BY author ASC")
+    fun getAllBooksSortedByAuthor(): Flow<List<BookEntity>>
+
+    @Query("SELECT * FROM books ORDER BY date_added DESC")
+    fun getAllBooksSortedByDateAdded(): Flow<List<BookEntity>>
+
+    @Query("SELECT books.* FROM books LEFT JOIN reading_progress ON books.id = reading_progress.book_id ORDER BY reading_progress.last_read_time DESC")
+    fun getAllBooksSortedByRecent(): Flow<List<BookEntity>>
+
+    // -- Sorted + searched queries --
+
+    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY title ASC")
+    fun searchBooksSortedByTitle(query: String): Flow<List<BookEntity>>
+
+    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY author ASC")
+    fun searchBooksSortedByAuthor(query: String): Flow<List<BookEntity>>
+
+    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY date_added DESC")
+    fun searchBooksSortedByDateAdded(query: String): Flow<List<BookEntity>>
+
+    @Query("SELECT books.* FROM books LEFT JOIN reading_progress ON books.id = reading_progress.book_id WHERE books.title LIKE '%' || :query || '%' OR books.author LIKE '%' || :query || '%' ORDER BY reading_progress.last_read_time DESC")
+    fun searchBooksSortedByRecent(query: String): Flow<List<BookEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBook(book: BookEntity): Long
 
@@ -26,6 +54,12 @@ interface BookDao {
 
     @Query("SELECT COUNT(*) FROM books")
     suspend fun getBookCount(): Int
+
+    @Query("SELECT * FROM books WHERE file_path = :filePath LIMIT 1")
+    suspend fun getBookByFilePath(filePath: String): BookEntity?
+
+    @Query("SELECT file_path FROM books")
+    suspend fun getAllFilePaths(): List<String>
 }
 
 @Dao
@@ -33,11 +67,17 @@ interface ReadingProgressDao {
     @Query("SELECT * FROM reading_progress WHERE book_id = :bookId")
     suspend fun getProgressForBook(bookId: Int): ReadingProgressEntity?
 
+    @Query("SELECT * FROM reading_progress WHERE book_id = :bookId")
+    fun getProgressForBookFlow(bookId: Int): Flow<ReadingProgressEntity?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveProgress(progress: ReadingProgressEntity)
 
     @Query("SELECT * FROM reading_progress ORDER BY last_read_time DESC LIMIT 10")
     fun getRecentProgress(): Flow<List<ReadingProgressEntity>>
+
+    @Query("SELECT * FROM reading_progress")
+    fun getAllProgress(): Flow<List<ReadingProgressEntity>>
 }
 
 @Dao
@@ -53,6 +93,12 @@ interface BookmarkDao {
 
     @Query("SELECT * FROM bookmarks WHERE kavita_synced = 0")
     suspend fun getUnsyncedBookmarks(): List<BookmarkEntity>
+
+    @Query("SELECT COUNT(*) FROM bookmarks WHERE book_id = :bookId AND chapter_index = :chapterIndex AND page_number = :pageNumber AND (position = :position OR (position IS NULL AND :position IS NULL))")
+    suspend fun countBookmarksAtPosition(bookId: Int, chapterIndex: Int, pageNumber: Int, position: String?): Int
+
+    @Query("SELECT * FROM bookmarks WHERE book_id = :bookId AND chapter_index = :chapterIndex AND page_number = :pageNumber AND (position = :position OR (position IS NULL AND :position IS NULL)) LIMIT 1")
+    suspend fun getBookmarkAtPosition(bookId: Int, chapterIndex: Int, pageNumber: Int, position: String?): BookmarkEntity?
 }
 
 @Dao
@@ -107,4 +153,60 @@ interface OpdsCatalogDao {
 
     @Delete
     suspend fun deleteCatalog(catalog: OpdsCatalogEntity)
+}
+
+@Dao
+interface PdfSettingsDao {
+    @Query("SELECT * FROM pdf_settings WHERE book_id = :bookId")
+    suspend fun getSettingsForBook(bookId: Int): PdfSettingsEntity?
+
+    @Query("SELECT * FROM pdf_settings WHERE book_id = :bookId")
+    fun getSettingsForBookFlow(bookId: Int): Flow<PdfSettingsEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveSettings(settings: PdfSettingsEntity)
+
+    @Query("DELETE FROM pdf_settings WHERE book_id = :bookId")
+    suspend fun deleteSettingsForBook(bookId: Int)
+}
+
+@Dao
+interface ChapterDao {
+    @Query("SELECT * FROM chapters WHERE book_id = :bookId ORDER BY chapter_index")
+    fun getChaptersForBook(bookId: Int): Flow<List<ChapterEntity>>
+
+    @Query("SELECT * FROM chapters WHERE book_id = :bookId AND chapter_index = :chapterIndex")
+    suspend fun getChapter(bookId: Int, chapterIndex: Int): ChapterEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChapter(chapter: ChapterEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChapters(chapters: List<ChapterEntity>)
+
+    @Query("DELETE FROM chapters WHERE book_id = :bookId")
+    suspend fun deleteChaptersForBook(bookId: Int)
+
+    /**
+     * FTS5 full-text search across chapter content.
+     * Returns chapters matching the query text, ranked by relevance.
+     */
+    @Query(
+        "SELECT chapters.* FROM chapters " +
+        "INNER JOIN chapters_fts ON chapters.id = chapters_fts.rowid " +
+        "WHERE chapters_fts MATCH :query " +
+        "ORDER BY rank"
+    )
+    fun searchChapters(query: String): Flow<List<ChapterEntity>>
+
+    /**
+     * FTS5 search scoped to a specific book.
+     */
+    @Query(
+        "SELECT chapters.* FROM chapters " +
+        "INNER JOIN chapters_fts ON chapters.id = chapters_fts.rowid " +
+        "WHERE chapters_fts MATCH :query AND chapters.book_id = :bookId " +
+        "ORDER BY rank"
+    )
+    fun searchChaptersInBook(bookId: Int, query: String): Flow<List<ChapterEntity>>
 }

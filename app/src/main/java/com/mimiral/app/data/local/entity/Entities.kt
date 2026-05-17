@@ -26,7 +26,10 @@ data class ReadingProgressEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "book_id") val bookId: Int,
     @ColumnInfo(name = "chapter_index") val chapterIndex: Int = 0,
+    @ColumnInfo(name = "character_offset") val characterOffset: Long = 0,
+    @ColumnInfo(name = "total_characters") val totalCharacters: Long = 0,
     @ColumnInfo(name = "page_number") val pageNumber: Int = 0,
+    @ColumnInfo(name = "total_pages") val totalPages: Int = 0,
     @ColumnInfo(name = "progress_percent") val progressPercent: Float = 0f,
     @ColumnInfo(name = "last_read_position") val lastReadPosition: String? = null,
     @ColumnInfo(name = "last_read_time") val lastReadTime: Long = System.currentTimeMillis(),
@@ -110,4 +113,55 @@ data class OpdsCatalogEntity(
     val username: String? = null,
     val password: String? = null,
     @ColumnInfo(name = "is_active") val isActive: Boolean = true
+)
+
+/**
+ * Per-book PDF settings including margin crop values.
+ */
+@Entity(tableName = "pdf_settings")
+data class PdfSettingsEntity(
+    @PrimaryKey @ColumnInfo(name = "book_id") val bookId: Int,
+    @ColumnInfo(name = "crop_left") val cropLeft: Int = 0,
+    @ColumnInfo(name = "crop_top") val cropTop: Int = 0,
+    @ColumnInfo(name = "crop_right") val cropRight: Int = 0,
+    @ColumnInfo(name = "crop_bottom") val cropBottom: Int = 0,
+    @ColumnInfo(name = "auto_detected") val autoDetected: Boolean = false
+)
+
+/**
+ * Chapter content entity — stores extracted chapter text for full-text search.
+ * Each row represents one chapter of one book.
+ */
+@Entity(
+    tableName = "chapters",
+    foreignKeys = [
+        ForeignKey(
+            entity = BookEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["book_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["book_id"])]
+)
+data class ChapterEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(name = "book_id") val bookId: Int,
+    @ColumnInfo(name = "chapter_index") val chapterIndex: Int,
+    val title: String? = null,
+    val content: String = ""
+)
+
+/**
+ * FTS5 external content virtual table for chapter search.
+ * Uses Room's @Fts4 with external content pointing to the chapters table.
+ */
+@Entity(tableName = "chapters_fts")
+@Fts4(contentEntity = ChapterEntity::class)
+data class ChapterFtsEntity(
+    @PrimaryKey val rowid: Int,
+    @ColumnInfo(name = "book_id") val bookId: Int,
+    @ColumnInfo(name = "chapter_index") val chapterIndex: Int,
+    val title: String? = null,
+    val content: String = ""
 )
