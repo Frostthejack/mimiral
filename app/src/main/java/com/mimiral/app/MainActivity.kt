@@ -15,6 +15,7 @@ import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.navigation.MimiralNavGraph
 import com.mimiral.app.ui.theme.MimiralTheme
+import com.mimiral.app.ui.theme.rememberMimiralThemeState
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -60,6 +61,9 @@ fun MainContent() {
     val settingsRepository = remember { ReaderSettingsRepository(context) }
     val settings by settingsRepository.settings.collectAsState(initial = ReaderSettings())
     val navController = rememberNavController()
+
+    // Initialize theme from DataStore
+    rememberMimiralThemeState()
 
     // Register volume key callback with Activity
     LaunchedEffect(settings.volumeKeyNavigationEnabled) {

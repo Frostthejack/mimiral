@@ -17,6 +17,7 @@ import androidx.navigation.navArgument
 import com.mimiral.app.ui.library.LibraryScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
+import com.mimiral.app.ui.settings.SettingsScreen
 
 @Composable
 fun MimiralNavGraph(navController: NavController) {
@@ -25,10 +26,20 @@ fun MimiralNavGraph(navController: NavController) {
 
     Scaffold(
         bottomBar = {
-            BottomNavBar(
-                navController = navController,
-                currentDestination = currentDestination
-            )
+            // Hide bottom bar on reader screens
+            val route = currentDestination?.route
+            if (route == null || (route != Screen.Library.route
+                        && route != Screen.Discover.route
+                        && route != Screen.NowReading.route
+                        && route != Screen.Settings.route)
+            ) {
+                // Don't show bottom bar
+            } else {
+                BottomNavBar(
+                    navController = navController,
+                    currentDestination = currentDestination
+                )
+            }
         }
     ) { innerPadding ->
         NavHost(
@@ -39,7 +50,7 @@ fun MimiralNavGraph(navController: NavController) {
             composable(Screen.Library.route) {
                 LibraryScreen(
                     onBookClick = { bookId ->
-                        navController.navigate(Screen.EpubReader.createRoute(bookId))
+                        navController.navigate("pdf_reader/$bookId")
                     }
                 )
             }
@@ -50,24 +61,28 @@ fun MimiralNavGraph(navController: NavController) {
                 PlaceholderScreen("Now Reading")
             }
             composable(Screen.Settings.route) {
-                PlaceholderScreen("Settings")
+                SettingsScreen()
             }
+
+            // Reader routes
             composable(
-                route = Screen.EpubReader.route,
+                route = "pdf_reader/{bookId}",
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val bookId = backStackEntry.arguments?.getInt("bookId") ?: -1
-                EpubReaderScreen(
+                val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
+                PdfReaderScreen(
                     bookId = bookId,
+                    filePath = "", // Will be loaded from DB by the ViewModel
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+
             composable(
-                route = Screen.PdfReader.route,
+                route = "epub_reader/{bookId}",
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val bookId = backStackEntry.arguments?.getInt("bookId") ?: -1
-                PdfReaderScreen(
+                val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
+                EpubReaderScreen(
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() }
                 )

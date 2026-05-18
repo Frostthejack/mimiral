@@ -232,6 +232,232 @@ class PdfRenderer : AutoCloseable {
         }
     }
 
+    /**
+     * Render a page to a bitmap at the specified DPI with optional margin cropping.
+     *
+     * @param pageIndex Zero-based page index
+     * @param dpi Target DPI (default 160)
+     * @param cropMargins MarginCrop specifying how much to crop from each side (0-50%)
+     * @return Rendered bitmap, or null if rendering failed
+     */
+    suspend fun renderPage(
+        pageIndex: Int,
+        dpi: Int = 160,
+        cropMargins: MarginCrop = MarginCrop.NONE
+    ): Bitmap? = withContext(Dispatchers.IO) {
+        val renderer = pdfRenderer ?: return@withContext null
+        if (pageIndex < 0 || pageIndex >= renderer.pageCount) return@withContext null
+
+        try {
+            val page = renderer.openPage(pageIndex)
+            try {
+                val width = (page.width * dpi / 72f).toInt().coerceAtLeast(1)
+                val height = (page.height * dpi / 72f).toInt().coerceAtLeast(1)
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                bitmap.eraseColor(android.graphics.Color.WHITE)
+                page.render(bitmap, null, null, AndroidPdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+
+                if (cropMargins.hasCrop()) {
+                    cropBitmap(bitmap, cropMargins)
+                } else {
+                    bitmap
+                }
+            } finally {
+                page.close()
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Render a page to a bitmap at the specified dimensions with optional margin cropping.
+     */
+    suspend fun renderPageAtSize(
+        pageIndex: Int,
+        width: Int,
+        height: Int,
+        cropMargins: MarginCrop = MarginCrop.NONE
+    ): Bitmap? = withContext(Dispatchers.IO) {
+        val renderer = pdfRenderer ?: return@withContext null
+        if (pageIndex < 0 || pageIndex >= renderer.pageCount) return@withContext null
+
+        try {
+            val page = renderer.openPage(pageIndex)
+            try {
+                val bitmap = Bitmap.createBitmap(
+                    width.coerceAtLeast(1),
+                    height.coerceAtLeast(1),
+                    Bitmap.Config.ARGB_8888
+                )
+                bitmap.eraseColor(android.graphics.Color.WHITE)
+                page.render(bitmap, null, null, AndroidPdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+
+                if (cropMargins.hasCrop()) {
+                    cropBitmap(bitmap, cropMargins)
+                } else {
+                    bitmap
+                }
+            } finally {
+                page.close()
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Detect margins on a page by scanning for non-white borders.
+     * Returns a MarginCrop with the detected margins as percentages.
+     */
+    suspend fun detectMargins(
+        pageIndex: Int,
+        sampleDpi: Int = 72,
+        threshold: Int = 240
+    ): MarginCrop = withContext(Dispatchers.Default) {
+        val renderer = pdfRenderer ?: return@withContext MarginCrop.NONE
+        if (pageIndex < 0 || pageIndex >= renderer.pageCount) return@withContext MarginCrop.NONE
+
+        try {
+            val page = renderer.openPage(pageIndex)
+            try {
+                val width = (page.width * sampleDpi / 72f).toInt().coerceAtLeast(1)
+                val height = (page.height * sampleDpi / 72f).toInt().coerceAtLeast(1)
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                bitmap.eraseColor(android.graphics.Color.WHITE)
+                page.render(bitmap, null, null, AndroidPdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+
+                val margins = findContentBounds(bitmap, threshold)
+                bitmap.recycle()
+
+                MarginCrop(
+                    left = (margins.left.toFloat() / width * 100).toInt().coerceIn(0, 50),
+                    top = (margins.top.toFloat() / height * 100).toInt().coerceIn(0, 50),
+                    right = ((width - margins.right).toFloat() / width * 100).toInt().coerceIn(0, 50),
+                    bottom = ((height - margins.bottom).toFloat() / height * 100).toInt().coerceIn(0, 50)
+                )
+            } finally {
+                page.close()
+            }
+        } catch (e: Exception) {
+            MarginCrop.NONE
+        }
+    }
+
+    /**
+     * Auto-detect margins for a scanned PDF by sampling multiple pages.
+     * Returns the maximum margins found across sampled pages.
+     */
+    suspend fun autoDetectScannedMargins(
+        samplePages: Int = 3,
+        threshold: Int = 240
+    ): MarginCrop = withContext(Dispatchers.Default) {
+        val renderer = pdfRenderer ?: return@withContext MarginCrop.NONE
+        val pageCount = renderer.pageCount
+        if (pageCount == 0) return@withContext MarginCrop.NONE
+
+        val pagesToSample = minOf(samplePages, pageCount)
+        val step = if (pagesToSample > 1) pageCount / pagesToSample else 0
+
+        var maxLeft = 0
+        var maxTop = 0
+        var maxRight = 0
+        var maxBottom = 0
+
+        for (i in 0 until pagesToSample) {
+            val pageIdx = (i * step).coerceAtMost(pageCount - 1)
+            val margins = detectMargins(pageIdx, sampleDpi = 72, threshold)
+            maxLeft = maxOf(maxLeft, margins.left)
+            maxTop = maxOf(maxTop, margins.top)
+            maxRight = maxOf(maxRight, margins.right)
+            maxBottom = maxOf(maxBottom, margins.bottom)
+        }
+
+        MarginCrop(
+            left = maxLeft.coerceIn(0, 50),
+            top = maxTop.coerceIn(0, 50),
+            right = maxRight.coerceIn(0, 50),
+            bottom = maxBottom.coerceIn(0, 50)
+        )
+    }
+
+    // ---- Private helpers ----
+
+    private fun findContentBounds(bitmap: Bitmap, threshold: Int): android.graphics.Rect {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        // Find top margin
+        var top = 0
+        outer@ for (y in 0 until height) {
+            for (x in 0 until width) {
+                if (!isWhite(pixels[y * width + x], threshold)) {
+                    top = y
+                    break@outer
+                }
+            }
+        }
+
+        // Find bottom margin
+        var bottom = height
+        outer@ for (y in height - 1 downTo top) {
+            for (x in 0 until width) {
+                if (!isWhite(pixels[y * width + x], threshold)) {
+                    bottom = y + 1
+                    break@outer
+                }
+            }
+        }
+
+        // Find left margin
+        var left = 0
+        outer@ for (x in 0 until width) {
+            for (y in top until bottom) {
+                if (!isWhite(pixels[y * width + x], threshold)) {
+                    left = x
+                    break@outer
+                }
+            }
+        }
+
+        // Find right margin
+        var right = width
+        outer@ for (x in width - 1 downTo left) {
+            for (y in top until bottom) {
+                if (!isWhite(pixels[y * width + x], threshold)) {
+                    right = x + 1
+                    break@outer
+                }
+            }
+        }
+
+        return android.graphics.Rect(left, top, right, bottom)
+    }
+
+    private fun isWhite(pixel: Int, threshold: Int): Boolean {
+        val r = (pixel shr 16) and 0xFF
+        val g = (pixel shr 8) and 0xFF
+        val b = pixel and 0xFF
+        return r >= threshold && g >= threshold && b >= threshold
+    }
+
+    private fun cropBitmap(bitmap: Bitmap, crop: MarginCrop): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+
+        val left = (width * crop.left / 100f).toInt()
+        val top = (height * crop.top / 100f).toInt()
+        val right = (width * (100 - crop.right) / 100f).toInt()
+        val bottom = (height * (100 - crop.bottom) / 100f).toInt()
+
+        val cropWidth = (right - left).coerceAtLeast(1)
+        val cropHeight = (bottom - top).coerceAtLeast(1)
+
+        return Bitmap.createBitmap(bitmap, left, top, cropWidth, cropHeight)
+    }
+
     // ---- Lifecycle ----
 
     override fun close() {

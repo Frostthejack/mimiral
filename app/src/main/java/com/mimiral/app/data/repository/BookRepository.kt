@@ -36,19 +36,19 @@ class BookRepository @Inject constructor(
         SortOption.TITLE -> bookDao.getAllBooksSortedByTitle()
         SortOption.AUTHOR -> bookDao.getAllBooksSortedByAuthor()
         SortOption.RECENT -> bookDao.getAllBooksSortedByRecent()
-        SortOption.DATE_ADDED -> bookDao.getAllBooksSortedByRecent()
-        // Progress and Rating need post-processing (no DB column for rating)
+        SortOption.DATE_ADDED -> bookDao.getAllBooksSortedByDateAdded()
+        // Progress and Rating need in-memory sorting (no DB columns for rating)
         SortOption.PROGRESS -> bookDao.getAllBooks()
-        SortOption.RATING -> bookDao.getAllBooks()
+        SortOption.RATING -> bookDao.getAllBooksSortedByTitle()
     }
 
     fun searchBooksSorted(query: String, sort: SortOption): Flow<List<BookEntity>> = when (sort) {
         SortOption.TITLE -> bookDao.searchBooksSortedByTitle(query)
         SortOption.AUTHOR -> bookDao.searchBooksSortedByAuthor(query)
         SortOption.RECENT -> bookDao.searchBooksSortedByRecent(query)
-        SortOption.DATE_ADDED -> bookDao.searchBooksSortedByRecent(query)
+        SortOption.DATE_ADDED -> bookDao.searchBooksSortedByDateAdded(query)
         SortOption.PROGRESS -> bookDao.searchBooks(query)
-        SortOption.RATING -> bookDao.searchBooks(query)
+        SortOption.RATING -> bookDao.searchBooksSortedByTitle(query)
     }
 
     // ---- Sorted + filtered + searched combined query ----
@@ -91,6 +91,12 @@ class BookRepository @Inject constructor(
     suspend fun deleteBook(book: BookEntity) = bookDao.deleteBook(book)
 
     suspend fun getBookCount(): Int = bookDao.getBookCount()
+
+    suspend fun getBookByFilePath(filePath: String): BookEntity? =
+        bookDao.getBookByFilePath(filePath)
+
+    suspend fun getAllFilePaths(): Set<String> =
+        bookDao.getAllFilePaths().toSet()
 
     // ---- Reading Progress ----
 
@@ -185,6 +191,9 @@ class BookRepository @Inject constructor(
 
     suspend fun getPdfSettings(bookId: Int): PdfSettingsEntity? =
         pdfSettingsDao.getSettingsForBook(bookId)
+
+    fun getPdfSettingsFlow(bookId: Int): Flow<PdfSettingsEntity?> =
+        pdfSettingsDao.getSettingsForBookFlow(bookId)
 
     suspend fun savePdfSettings(settings: PdfSettingsEntity) =
         pdfSettingsDao.saveSettings(settings)

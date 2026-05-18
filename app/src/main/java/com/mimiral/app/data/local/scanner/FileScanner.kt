@@ -1,10 +1,8 @@
 package com.mimiral.app.data.local.scanner
 
 import android.content.Context
+import android.database.Cursor
 import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.DocumentsContract
 import android.provider.MediaStore
 import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.entity.BookEntity
@@ -398,41 +396,25 @@ class FileScanner @Inject constructor(
     // ---- Public API for LibraryRepository ----
 
     /**
-     * Scan a directory (via SAF Uri) for ebook files and return them as BookEntity list.
-     * Each discovered file is inserted into the database and returned.
+     * Scan a directory (via SAF Uri) for ebook files and return pending book data.
+     * Does NOT insert into the database -- callers are responsible for dedup + insert.
      *
      * @param uri The SAF Uri of the directory to scan
-     * @return List of BookEntity objects for discovered files
+     * @return List of PendingBook objects for discovered files
      */
-    suspend fun scanDirectory(uri: Uri): List<BookEntity> = withContext(Dispatchers.IO) {
-        val file = File(uri.path ?: return@withContext emptyList())
-        val pendingBooks = if (file.exists() && file.isDirectory) {
+    suspend fun scanDirectory(uri: Uri): List<PendingBook> = withContext(Dispatchers.IO) {
+        val path = uri.path ?: return@withContext emptyList()
+        // SAF Uris may not map directly to filesystem paths; attempt best-effort resolution
+        val file = try {
+            File(path)
+        } catch (_: Exception) {
+            return@withContext emptyList()
+        }
+        if (file.exists() && file.isDirectory) {
             scanDirectory(file)
         } else {
             emptyList()
         }
-
-        val results = mutableListOf<BookEntity>()
-        for (pending in pendingBooks) {
-            try {
-                val bookEntity = BookEntity(
-                    filePath = pending.filePath,
-                    title = pending.fileName,
-                    author = null,
-                    coverPath = null,
-                    format = pending.format,
-                    fileSize = pending.fileSize,
-                    dateAdded = System.currentTimeMillis(),
-                    dateModified = pending.dateModified * 1000,
-                    source = "LOCAL"
-                )
-                val id = bookDao.insertBook(bookEntity)
-                results.add(bookEntity.copy(id = id.toInt()))
-            } catch (_: Exception) {
-                // Skip files that fail to insert
-            }
-        }
-        results
     }
 
     /**

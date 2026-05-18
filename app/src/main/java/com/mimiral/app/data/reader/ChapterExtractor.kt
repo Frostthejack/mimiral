@@ -6,6 +6,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.util.Try
 import java.io.IOException
 import java.util.LinkedHashMap
 
@@ -239,11 +240,28 @@ class ChapterExtractor(
 
         // Read the XHTML content from the publication resource
         val resource = pub.get(link)
-        val bytes = resource.read().getOrNull()
             ?: return ChapterExtractionResult.Error(
-                "Failed to read resource for chapter ${chapter.title}",
+                "Failed to get resource for chapter ${chapter.title}",
                 chapterIndex
             )
+
+        val readResult = resource.read()
+        val bytes = when (readResult) {
+            is Try.Success -> readResult.value
+            is Try.Failure -> {
+                return ChapterExtractionResult.Error(
+                    "Failed to read resource for chapter ${chapter.title}: ${readResult.value.message}",
+                    chapterIndex
+                )
+            }
+        }
+
+        if (bytes.isEmpty()) {
+            return ChapterExtractionResult.Error(
+                "Empty resource for chapter ${chapter.title}",
+                chapterIndex
+            )
+        }
 
         val xhtml = String(bytes, Charsets.UTF_8)
 
@@ -360,8 +378,14 @@ class ChapterExtractor(
         val chapter = chapters[chapterIndex]
         val link = pub.readingOrder.getOrNull(chapterIndex) ?: return null
 
-        val resource = pub.get(link)
-        val bytes = resource.read().getOrNull() ?: return null
+        val resource = pub.get(link) ?: return null
+
+        val bytes = when (val readResult = resource.read()) {
+            is Try.Success -> readResult.value
+            is Try.Failure -> return null
+        }
+        if (bytes.isEmpty()) return null
+
         val xhtml = String(bytes, Charsets.UTF_8)
         val cleanText = stripHtmlTags(xhtml)
         val truncatedText = if (cleanText.length > config.maxCharactersPerChapter) {

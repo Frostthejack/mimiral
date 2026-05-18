@@ -7,11 +7,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.Contributor
 import org.readium.r2.shared.publication.Link
-import org.readium.r2.shared.publication.Manifest
-import org.readium.r2.shared.publication.Metadata
-import org.readium.r2.streamer.Streamer
+import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.util.Try
+import org.readium.r2.shared.util.asset.AssetRetriever
+import org.readium.r2.shared.util.http.DefaultHttpClient
+import org.readium.r2.streamer.PublicationOpener
 import java.io.File
 import java.io.IOException
 
@@ -77,10 +79,10 @@ sealed class CoverResult {
 }
 
 /**
- * Core EPUB parser built on Readium Mobile (r2-streamer).
+ * Core EPUB parser built on Readium Mobile v3 (PublicationOpener + AssetRetriever).
  *
  * Features:
- * - Opens EPUB files (ZIP archives) via Readium Streamer
+ * - Opens EPUB files (ZIP archives) via AssetRetriever + PublicationOpener
  * - Parses OPF manifest to extract metadata, spine, and TOC
  * - Extracts chapter list in reading order
  * - Provides cover image extraction
@@ -106,7 +108,8 @@ sealed class CoverResult {
  */
 class EpubParser(private val context: Context) {
 
-    private var streamer: Streamer? = null
+    private var publicationOpener: PublicationOpener? = null
+    private var assetRetriever: AssetRetriever? = null
     private var publication: Publication? = null
     private var currentFile: File? = null
     private var chapters: List<EpubChapter> = emptyList()
@@ -122,8 +125,8 @@ class EpubParser(private val context: Context) {
     /**
      * Opens and parses an EPUB file.
      *
-     * This method uses Readium Streamer to parse the EPUB ZIP archive,
-     * extract the OPF manifest, and build the chapter list and TOC.
+     * This method uses AssetRetriever to create an Asset from the file,
+     * then PublicationOpener to parse the EPUB into a Publication.
      *
      * @param file The EPUB file to open.
      * @return [EpubState.Loaded] on success, [EpubState.Error] on failure.
@@ -146,12 +149,35 @@ class EpubParser(private val context: Context) {
                 // Close any previously opened document
                 closeInternal()
 
-                // Initialize Readium Streamer with default configuration
-                val streamerInstance = Streamer(context)
-                streamer = streamerInstance
+                // Create AssetRetriever with default configuration
+                val retriever = AssetRetriever(context.contentResolver, DefaultHttpClient())
+                assetRetriever = retriever
 
-                // Parse the EPUB file into a Publication
-                val parsedPublication = streamerInstance.open(file)
+                // Create an Asset from the file
+                val asset = retriever.retrieve(file).getOrElse { error ->
+                    val epubError = EpubState.Error("Failed to retrieve asset: ${error.message}")
+                    state = epubError
+                    return@withContext epubError
+                }
+
+                // Create PublicationOpener and parse the EPUB
+                val opener = PublicationOpener()
+                publicationOpener = opener
+
+                val pubResult = opener.open(
+                    asset = asset,
+                    allowUserInteraction = false
+                )
+
+                val parsedPublication = when (pubResult) {
+                    is Try.Success -> pubResult.value
+                    is Try.Failure -> {
+                        val epubError = EpubState.Error("Failed to open EPUB: ${pubResult.value.message}")
+                        state = epubError
+                        return@withContext epubError
+                    }
+                }
+
                 publication = parsedPublication
                 currentFile = file
 
@@ -164,7 +190,7 @@ class EpubParser(private val context: Context) {
                 // Build loaded state from metadata
                 val metadata = parsedPublication.metadata
                 val loaded = EpubState.Loaded(
-                    title = metadata.title ?: file.nameWithoutExtension,
+                    title = metadata.title?.string ?: file.nameWithoutExtension,
                     author = extractAuthor(metadata),
                     description = metadata.description,
                     chapterCount = chapters.size,
@@ -194,7 +220,7 @@ class EpubParser(private val context: Context) {
      * Returns the list of chapters in reading order.
      *
      * Each chapter corresponds to a spine item in the EPUB's OPF manifest,
-     * with a title derived from the TOC or the spine item's own title.
+     * with a title derived from the TOC or the spine item's own title/link.
      */
     suspend fun getChapters(): List<EpubChapter> = mutex.withLock {
         return@withLock chapters
@@ -238,56 +264,62 @@ class EpubParser(private val context: Context) {
             val pub = publication ?: return@withContext CoverResult.Error("No EPUB loaded")
 
             try {
-                // Try to find the cover resource via the cover link
-                val coverLink = pub.coverLink
+                // Try to find the cover via the "cover" link relation
+                val coverLink = pub.linksWithRel("cover").firstOrNull()
                 if (coverLink != null) {
-                    val coverResource = pub.get(coverLink)
-                    val bytes = coverResource.read().getOrNull()
-                    if (bytes != null && bytes.isNotEmpty()) {
-                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        if (bitmap != null) {
-                            return@withContext CoverResult.Success(
-                                bitmap = bitmap,
-                                mimeType = coverLink.type ?: "image/jpeg"
-                            )
-                        }
-                    }
-                }
-
-                // Fallback: search for common cover image resource IDs
-                val coverResourceNames = listOf("cover", "Cover", "COVER", "cover-image", "cover_image")
-                for (link in pub.readingOrder) {
-                    val href = link.href.substringAfterLast("/")
-                    val nameWithoutExt = href.substringBeforeLast(".")
-                    if (nameWithoutExt in coverResourceNames) {
-                        val resource = pub.get(link)
+                    val resource = pub.get(coverLink)
+                    if (resource != null) {
                         val bytes = resource.read().getOrNull()
                         if (bytes != null && bytes.isNotEmpty()) {
                             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                             if (bitmap != null) {
                                 return@withContext CoverResult.Success(
                                     bitmap = bitmap,
-                                    mimeType = link.type ?: "image/jpeg"
+                                    mimeType = coverLink.mediaType?.toString() ?: "image/jpeg"
                                 )
                             }
                         }
                     }
                 }
 
-                // Fallback: search manifest items for cover-type properties
-                for (link in pub.resources) {
-                    val href = link.href.substringAfterLast("/")
-                    val nameWithoutExt = href.substringBeforeLast(".")
+                // Fallback: search for common cover image resource names in reading order
+                val coverResourceNames = listOf("cover", "Cover", "COVER", "cover-image", "cover_image")
+                for (link in pub.readingOrder) {
+                    val href = link.href.toString()
+                    val nameWithoutExt = href.substringAfterLast("/").substringBeforeLast(".")
                     if (nameWithoutExt in coverResourceNames) {
                         val resource = pub.get(link)
-                        val bytes = resource.read().getOrNull()
-                        if (bytes != null && bytes.isNotEmpty()) {
-                            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                            if (bitmap != null) {
-                                return@withContext CoverResult.Success(
-                                    bitmap = bitmap,
-                                    mimeType = link.type ?: "image/jpeg"
-                                )
+                        if (resource != null) {
+                            val bytes = resource.read().getOrNull()
+                            if (bytes != null && bytes.isNotEmpty()) {
+                                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                if (bitmap != null) {
+                                    return@withContext CoverResult.Success(
+                                        bitmap = bitmap,
+                                        mimeType = link.mediaType?.toString() ?: "image/jpeg"
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: search resources for cover-type patterns
+                for (link in pub.resources) {
+                    val href = link.href.toString()
+                    val nameWithoutExt = href.substringAfterLast("/").substringBeforeLast(".")
+                    if (nameWithoutExt in coverResourceNames) {
+                        val resource = pub.get(link)
+                        if (resource != null) {
+                            val bytes = resource.read().getOrNull()
+                            if (bytes != null && bytes.isNotEmpty()) {
+                                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                                if (bitmap != null) {
+                                    return@withContext CoverResult.Success(
+                                        bitmap = bitmap,
+                                        mimeType = link.mediaType?.toString() ?: "image/jpeg"
+                                    )
+                                }
                             }
                         }
                     }
@@ -327,7 +359,7 @@ class EpubParser(private val context: Context) {
         buildTocTitleMap(pub.tableOfContents, tocTitleMap)
 
         return spine.mapIndexed { index, link ->
-            val href = link.href
+            val href = link.href.toString()
             // Try to get title from TOC, then from link title, then fallback
             val title = tocTitleMap[href]
                 ?: link.title
@@ -337,7 +369,7 @@ class EpubParser(private val context: Context) {
                 index = index,
                 title = title,
                 href = href,
-                mediaType = link.type ?: "application/xhtml+xml"
+                mediaType = link.mediaType?.toString() ?: "application/xhtml+xml"
             )
         }
     }
@@ -349,7 +381,7 @@ class EpubParser(private val context: Context) {
         for (link in links) {
             val title = link.title ?: ""
             if (title.isNotBlank()) {
-                map[link.href] = title
+                map[link.href.toString()] = title
             }
             if (link.children.isNotEmpty()) {
                 buildTocTitleMap(link.children, map)
@@ -372,7 +404,7 @@ class EpubParser(private val context: Context) {
         for (link in links) {
             val entry = TocEntry(
                 title = link.title ?: "",
-                href = link.href,
+                href = link.href.toString(),
                 depth = depth,
                 children = emptyList() // Flattened; depth carries the nesting info
             )
@@ -390,11 +422,11 @@ class EpubParser(private val context: Context) {
      * Extracts the author string from publication metadata.
      * Handles both single and multiple authors.
      */
-    private fun extractAuthor(metadata: Metadata): String? {
+    private fun extractAuthor(metadata: org.readium.r2.shared.publication.Metadata): String? {
         val authors = metadata.authors
         if (authors.isEmpty()) return null
         return authors.joinToString(", ") { author ->
-            author.name ?: "Unknown"
+            author.name
         }
     }
 
@@ -402,12 +434,14 @@ class EpubParser(private val context: Context) {
      * Finds the cover image path from the publication.
      */
     private fun findCoverPath(pub: Publication): String? {
-        return pub.coverLink?.href
+        return pub.linksWithRel("cover").firstOrNull()?.href?.toString()
     }
 
     private fun closeInternal() {
+        publication?.close()
         publication = null
-        streamer = null
+        publicationOpener = null
+        assetRetriever = null
         currentFile = null
         chapters = emptyList()
         tocEntries = emptyList()

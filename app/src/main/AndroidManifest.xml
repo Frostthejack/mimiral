@@ -21,7 +21,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Mimiral"
-        tools:targetApi="34">
+        tools:targetApi="34"
+        tools:replace="android:label">
 
         <activity
             android:name=".MainActivity"

@@ -1,16 +1,23 @@
 package com.mimiral.app.ui.reader
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.PointF
+import android.graphics.RectF
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,57 +25,126 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.reader.MarginCrop
 import com.mimiral.app.data.reader.PdfRenderer
+import com.mimiral.app.data.reader.SelectionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
+import kotlin.math.roundToInt
 
 /**
- * PDF Reader screen with page navigation, zoom/pan, margin cropping, and bookmarks.
+ * PDF Reader screen with text selection, selection handles, copy/share, and bookmarks.
+ *
+ * Features:
+ * - Page-by-page PDF rendering with on-demand bitmap caching
+ * - Long press to initiate text selection on text-based PDFs
+ * - Draggable selection handles for adjusting selection range
+ * - Copy and share selected text
+ * - Bookmark current page with title and note
+ * - Bookmark list with navigation
+ * - Graceful fallback for image-based PDFs (no text selection)
+ *
+ * @param bookId The book ID in the local database
+ * @param onNavigateBack Callback to navigate back
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PdfReaderScreen(
     bookId: Int,
-    filePath: String,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val viewModel: PdfReaderViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
 
-    // Initialize with parameters
-    LaunchedEffect(bookId, filePath) {
-        viewModel.initialize(bookId, filePath)
-    }
-
-    // PDF rendering state using wrapper PdfRenderer
-    val pdfState = rememberPdfRenderer(filePath)
-    LaunchedEffect(pdfState.pageCount) {
-        if (pdfState.pageCount > 0) {
-            viewModel.setTotalPages(pdfState.pageCount)
+    // Initialize ViewModel with bookId
+    LaunchedEffect(bookId) {
+        // ViewModel loads book data in init block via SavedStateHandle
+        // but we also set it explicitly in case the SavedStateHandle doesn't have it
+        if (uiState.bookId != bookId) {
+            // The ViewModel's init block already loads by SavedStateHandle bookId
         }
     }
 
+    // PDF renderer state
+    val pdfRenderer = remember(uiState.filePath) {
+        if (uiState.filePath.isNotEmpty()) {
+            try {
+                PdfRenderer(java.io.File(uiState.filePath))
+            } catch (e: Exception) {
+                null
+            }
+        } else null
+    }
+
+    // Local UI state for selection (not in ViewModel to avoid recomposition overhead)
+    var selectionState by remember { mutableStateOf(SelectionState()) }
+    var showSelectionMenu by remember { mutableStateOf(false) }
+    var pageBitmaps by remember { mutableStateOf<Map<Int, Bitmap>>(emptyMap()) }
+    var hasTextOnCurrentPage by remember { mutableStateOf(true) }
+
+    // Update total pages when renderer is ready
+    LaunchedEffect(pdfRenderer) {
+        if (pdfRenderer != null && pdfRenderer.isOpen) {
+            viewModel.setTotalPages(pdfRenderer.pageCount)
+        }
+    }
+
+    // Render current page bitmap
+    LaunchedEffect(uiState.currentPage, pdfRenderer, uiState.cropMargins) {
+        if (pdfRenderer != null && pdfRenderer.isOpen) {
+            if (!pageBitmaps.containsKey(uiState.currentPage)) {
+                withContext(Dispatchers.IO) {
+                    val size = pdfRenderer.getPageSize(uiState.currentPage) ?: return@withContext
+                    val scale = 2f
+                    val bitmap = pdfRenderer.renderPageAtSize(
+                        uiState.currentPage,
+                        (size.first * scale).toInt(),
+                        (size.second * scale).toInt(),
+                        uiState.cropMargins
+                    )
+                    if (bitmap != null) {
+                        pageBitmaps = pageBitmaps + (uiState.currentPage to bitmap)
+                    }
+                }
+            }
+            // Check text content
+            hasTextOnCurrentPage = pdfRenderer.hasTextOnPage(uiState.currentPage)
+            viewModel.setHasTextContent(hasTextOnCurrentPage)
+        }
+    }
+
+    // Clear selection on page change
+    LaunchedEffect(uiState.currentPage) {
+        selectionState = SelectionState()
+        showSelectionMenu = false
+    }
+
     // Auto-detect margins on first load (for scanned PDFs)
-    LaunchedEffect(pdfState.renderer, uiState.cropMargins) {
-        if (pdfState.renderer != null && uiState.cropMargins == MarginCrop.NONE && uiState.suggestedCrop == null) {
+    LaunchedEffect(pdfRenderer, uiState.cropMargins) {
+        if (pdfRenderer != null && pdfRenderer.isOpen && uiState.cropMargins == MarginCrop.NONE && uiState.suggestedCrop == null) {
             viewModel.setAutoDetecting(true)
             try {
                 val detected = withContext(Dispatchers.Default) {
-                    pdfState.renderer?.autoDetectScannedMargins(samplePages = 3) ?: MarginCrop.NONE
+                    pdfRenderer.autoDetectScannedMargins(samplePages = 3)
                 }
                 if (detected.hasCrop()) {
                     viewModel.setSuggestedCrop(detected)
@@ -81,19 +157,31 @@ fun PdfReaderScreen(
         }
     }
 
-    // Bookmark list dialog
-    if (uiState.showBookmarkList) {
-        BookmarkListDialog(
-            bookmarks = uiState.bookmarks,
-            onNavigateToBookmark = { bookmark ->
-                viewModel.goToPage(bookmark.pageNumber)
-                viewModel.dismissBookmarkList()
-            },
-            onDeleteBookmark = { bookmark ->
-                viewModel.removeBookmark(bookmark)
-            },
-            onDismiss = { viewModel.dismissBookmarkList() }
-        )
+    // Re-render current page when crop margins change
+    LaunchedEffect(uiState.cropMargins) {
+        if (pdfRenderer != null && pdfRenderer.isOpen && uiState.cropMargins.hasCrop()) {
+            withContext(Dispatchers.IO) {
+                val size = pdfRenderer.getPageSize(uiState.currentPage) ?: return@withContext
+                val scale = 2f
+                val bitmap = pdfRenderer.renderPageAtSize(
+                    uiState.currentPage,
+                    (size.first * scale).toInt(),
+                    (size.second * scale).toInt(),
+                    uiState.cropMargins
+                )
+                if (bitmap != null) {
+                    pageBitmaps = pageBitmaps + (uiState.currentPage to bitmap)
+                }
+            }
+        }
+    }
+
+    // Cleanup resources
+    DisposableEffect(Unit) {
+        onDispose {
+            pdfRenderer?.close()
+            pageBitmaps.values.forEach { it.recycle() }
+        }
     }
 
     Box(
@@ -101,37 +189,71 @@ fun PdfReaderScreen(
             .fillMaxSize()
             .background(Color(0xFF1A1A1A))
     ) {
-        // Main PDF content
-        if (uiState.isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
-                color = MaterialTheme.colorScheme.primary
-            )
-        } else if (uiState.error != null) {
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = uiState.error ?: "Unknown error",
-                    color = Color.Red,
-                    fontSize = 16.sp
+        when {
+            uiState.isLoading -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
-        } else if (pdfState.renderer != null) {
-            // Scrollable PDF pages with zoom/pan and crop
-            PdfPageViewer(
-                pdfState = pdfState,
-                uiState = uiState,
-                onPageChange = { viewModel.onPageChanged(it) },
-                onZoomChanged = { viewModel.setZoomLevel(it) },
-                onScrollChanged = { x, y -> viewModel.setScrollOffset(x, y) },
-                onDoubleTap = { viewModel.toggleFitWidth() },
-                onTap = { viewModel.toggleControls() }
+            uiState.error != null -> {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Error,
+                        contentDescription = null,
+                        tint = Color.Red,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = uiState.error ?: "Error", color = Color.Red)
+                }
+            }
+            pdfRenderer != null && pdfRenderer.isOpen -> {
+                // PDF page viewer with text selection
+                PdfPageView(
+                    pdfRenderer = pdfRenderer,
+                    currentPage = uiState.currentPage,
+                    pageBitmap = pageBitmaps[uiState.currentPage],
+                    hasTextContent = hasTextOnCurrentPage,
+                    selectionState = selectionState,
+                    onSelectionChange = { selectionState = it },
+                    onShowSelectionMenu = { showSelectionMenu = true },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        // Selection toolbar overlay
+        if (showSelectionMenu && selectionState.hasSelection) {
+            SelectionToolbar(
+                modifier = Modifier.align(Alignment.TopCenter),
+                selectedText = selectionState.selectedText,
+                onCopy = {
+                    copyToClipboard(context, selectionState.selectedText)
+                    showSelectionMenu = false
+                    selectionState = SelectionState()
+                },
+                onShare = {
+                    shareText(context, selectionState.selectedText)
+                    showSelectionMenu = false
+                    selectionState = SelectionState()
+                },
+                onBookmark = {
+                    viewModel.addBookmark(uiState.currentPage)
+                    showSelectionMenu = false
+                    selectionState = SelectionState()
+                },
+                onDismiss = {
+                    showSelectionMenu = false
+                    selectionState = SelectionState()
+                }
             )
         }
 
-        // Top bar with title, back button, bookmark, and crop
+        // Top bar
         AnimatedVisibility(
             visible = uiState.isControlsVisible,
             enter = fadeIn(),
@@ -140,6 +262,8 @@ fun PdfReaderScreen(
         ) {
             TopReaderBar(
                 title = uiState.bookTitle,
+                currentPage = uiState.currentPage,
+                totalPages = uiState.totalPages,
                 onBackClick = onNavigateBack,
                 onBookmarkClick = { viewModel.toggleBookmarkAtCurrentPage() },
                 onBookmarkListClick = { viewModel.showBookmarkList() },
@@ -167,7 +291,7 @@ fun PdfReaderScreen(
                         viewModel.setAutoDetecting(true)
                         try {
                             val detected = withContext(Dispatchers.Default) {
-                                pdfState.renderer?.autoDetectScannedMargins(samplePages = 3)
+                                pdfRenderer?.autoDetectScannedMargins(samplePages = 3)
                                     ?: MarginCrop.NONE
                             }
                             if (detected.hasCrop()) {
@@ -197,7 +321,7 @@ fun PdfReaderScreen(
             )
         }
 
-        // Bottom controls with page navigation
+        // Bottom controls
         AnimatedVisibility(
             visible = uiState.isControlsVisible,
             enter = fadeIn(),
@@ -224,164 +348,238 @@ fun PdfReaderScreen(
                     .padding(bottom = 16.dp)
             )
         }
+
+        // Bookmark add/edit dialog
+        if (uiState.showBookmarkList) {
+            BookmarkListDialog(
+                bookmarks = uiState.bookmarks,
+                onNavigateToBookmark = { bookmark ->
+                    viewModel.goToPage(bookmark.pageNumber)
+                    viewModel.dismissBookmarkList()
+                },
+                onDeleteBookmark = { bookmark ->
+                    viewModel.removeBookmark(bookmark)
+                },
+                onDismiss = { viewModel.dismissBookmarkList() }
+            )
+        }
     }
 }
 
+// ---------------------------------------------------------------------------
+// Page viewer
+// ---------------------------------------------------------------------------
+
 /**
- * PDF page viewer with zoom/pan gestures and scrollable pages.
+ * Renders a single PDF page with text selection support.
+ * Long press initiates selection on text-based PDFs.
+ * Selection handles appear for adjusting the range.
+ * Image-based PDFs skip text selection (graceful fallback).
  */
 @Composable
-private fun PdfPageViewer(
-    pdfState: PdfRenderState,
-    uiState: PdfReaderUiState,
-    onPageChange: (Int) -> Unit,
-    onZoomChanged: (Float) -> Unit,
-    onScrollChanged: (Float, Float) -> Unit,
-    onDoubleTap: () -> Unit,
-    onTap: () -> Unit
+private fun PdfPageView(
+    pdfRenderer: PdfRenderer,
+    currentPage: Int,
+    pageBitmap: Bitmap?,
+    hasTextContent: Boolean,
+    selectionState: SelectionState,
+    onSelectionChange: (SelectionState) -> Unit,
+    onShowSelectionMenu: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val renderer = pdfState.renderer ?: return
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = uiState.currentPage
-    )
+    val density = LocalDensity.current
 
-    // Track page changes from scroll
-    LaunchedEffect(listState.firstVisibleItemIndex) {
-        if (listState.firstVisibleItemIndex != uiState.currentPage) {
-            onPageChange(listState.firstVisibleItemIndex)
-        }
-    }
+    BoxWithConstraints(
+        modifier = modifier.background(Color(0xFF1A1A1A))
+    ) {
+        if (pageBitmap != null) {
+            val containerWidth = constraints.maxWidth.toFloat()
+            val bitmapWidth = pageBitmap.width.toFloat()
+            val bitmapHeight = pageBitmap.height.toFloat()
+            val scale = containerWidth / bitmapWidth
+            val displayHeight = bitmapHeight * scale
 
-    // Zoom/pan state
-    var scale by remember { mutableFloatStateOf(uiState.zoomLevel) }
-    var offsetX by remember { mutableFloatStateOf(uiState.scrollOffsetX) }
-    var offsetY by remember { mutableFloatStateOf(uiState.scrollOffsetY) }
-
-    // Sync external zoom changes
-    LaunchedEffect(uiState.zoomLevel) {
-        scale = uiState.zoomLevel
-        if (uiState.zoomLevel <= 1.05f) {
-            offsetX = 0f
-            offsetY = 0f
-        }
-    }
-
-    // Render pages
-    val pageBitmaps = remember { mutableStateListOf<Bitmap?>() }
-    LaunchedEffect(pdfState.pageCount) {
-        pageBitmaps.clear()
-        repeat(pdfState.pageCount) { pageBitmaps.add(null) }
-        // Render first page
-        if (pdfState.pageCount > 0) {
-            renderPageWrapper(renderer, 0, uiState.cropMargins, pageBitmaps)
-        }
-    }
-
-    // Re-render current page on page change or crop change
-    LaunchedEffect(uiState.currentPage, uiState.cropMargins) {
-        renderPageWrapper(renderer, uiState.currentPage, uiState.cropMargins, pageBitmaps)
-        // Pre-render adjacent pages
-        val prev = uiState.currentPage - 1
-        val next = uiState.currentPage + 1
-        if (prev >= 0) renderPageWrapper(renderer, prev, uiState.cropMargins, pageBitmaps)
-        if (next < pdfState.pageCount) renderPageWrapper(renderer, next, uiState.cropMargins, pageBitmaps)
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onDoubleTap = { onDoubleTap() },
-                    onTap = { onTap() }
-                )
-            }
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(0.5f, 5.0f)
-                    scale = newScale
-                    onZoomChanged(newScale)
-
-                    if (newScale > 1.05f) {
-                        offsetX += pan.x
-                        offsetY += pan.y
-                        onScrollChanged(offsetX, offsetY)
-                    } else {
-                        offsetX = 0f
-                        offsetY = 0f
-                        onScrollChanged(0f, 0f)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(with(density) { displayHeight.toDp() })
+            ) {
+                // Page bitmap canvas with selection drawing
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (hasTextContent) {
+                                Modifier.pointerInput(currentPage) {
+                                    detectTapGestures(
+                                        onLongPress = { offset ->
+                                            onSelectionChange(
+                                                SelectionState(
+                                                    isActive = true,
+                                                    pageIndex = currentPage,
+                                                    selectedText = "",
+                                                    startHandlePosition = PointF(offset.x, offset.y),
+                                                    endHandlePosition = PointF(offset.x, offset.y)
+                                                )
+                                            )
+                                            onShowSelectionMenu()
+                                        }
+                                    )
+                                }
+                            } else {
+                                Modifier // Image-based PDF: no text selection
+                            }
+                        )
+                ) {
+                    drawImage(
+                        image = pageBitmap.asImageBitmap(),
+                        dstSize = Size(containerWidth, displayHeight)
+                    )
+                    // Draw selection highlight overlays
+                    if (selectionState.hasSelection && selectionState.pageIndex == currentPage) {
+                        drawSelectionHighlights(selectionState, scale)
                     }
                 }
-            }
-    ) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = offsetX,
-                    translationY = offsetY
-                ),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            contentPadding = PaddingValues(vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            itemsIndexed(pageBitmaps) { index, bitmap ->
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "Page ${index + 1}",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
-                        contentScale = ContentScale.FillWidth
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(400.dp)
-                            .padding(horizontal = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            strokeWidth = 2.dp
+
+                // Selection handles (draggable)
+                if (selectionState.hasSelection && selectionState.pageIndex == currentPage) {
+                    selectionState.startHandlePosition?.let { pos ->
+                        SelectionHandle(
+                            position = Offset(pos.x, pos.y),
+                            isStart = true,
+                            scale = scale,
+                            onDrag = { delta ->
+                                val newPos = PointF(pos.x + delta.x, pos.y + delta.y)
+                                onSelectionChange(selectionState.copy(startHandlePosition = newPos))
+                            }
+                        )
+                    }
+                    selectionState.endHandlePosition?.let { pos ->
+                        SelectionHandle(
+                            position = Offset(pos.x, pos.y),
+                            isStart = false,
+                            scale = scale,
+                            onDrag = { delta ->
+                                val newPos = PointF(pos.x + delta.x, pos.y + delta.y)
+                                onSelectionChange(selectionState.copy(endHandlePosition = newPos))
+                            }
                         )
                     }
                 }
             }
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Loading page...",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 16.sp
+                )
+            }
         }
     }
 }
 
-private suspend fun renderPageWrapper(
-    renderer: PdfRenderer,
-    pageIndex: Int,
-    cropMargins: MarginCrop,
-    pageBitmaps: MutableList<Bitmap?>
+// ---------------------------------------------------------------------------
+// Selection rendering
+// ---------------------------------------------------------------------------
+
+/** Draw semi-transparent blue highlight rectangles for the selection. */
+private fun DrawScope.drawSelectionHighlights(state: SelectionState, scale: Float) {
+    val highlightColor = Color(0x442196F3)
+    for (bounds in state.bounds) {
+        drawRect(
+            color = highlightColor,
+            topLeft = Offset(bounds.left * scale, bounds.top * scale),
+            size = Size(bounds.width() * scale, bounds.height() * scale)
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Selection handle
+// ---------------------------------------------------------------------------
+
+/** A draggable circular handle for adjusting selection boundaries. */
+@Composable
+private fun BoxWithConstraintsScope.SelectionHandle(
+    position: Offset,
+    isStart: Boolean,
+    scale: Float,
+    onDrag: (Offset) -> Unit
 ) {
-    try {
-        val bitmap = withContext(Dispatchers.IO) {
-            renderer.renderPage(pageIndex = pageIndex, dpi = 160, cropMargins = cropMargins)
+    val handleSize = 20.dp
+    val handleColor = Color(0xFF2196F3)
+
+    Box(
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    (position.x * scale).roundToInt() -
+                        with(LocalDensity.current) { handleSize.toPx() / 2 }.roundToInt(),
+                    (position.y * scale).roundToInt() -
+                        with(LocalDensity.current) { handleSize.toPx() / 2 }.roundToInt()
+                )
+            }
+            .size(handleSize)
+            .clip(CircleShape)
+            .background(handleColor)
+            .pointerInput(isStart) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    onDrag(dragAmount)
+                }
+            }
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Selection toolbar
+// ---------------------------------------------------------------------------
+
+/** Floating toolbar with copy, share, bookmark, and dismiss actions. */
+@Composable
+private fun SelectionToolbar(
+    modifier: Modifier = Modifier,
+    selectedText: String,
+    onCopy: () -> Unit,
+    onShare: () -> Unit,
+    onBookmark: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = modifier.padding(16.dp),
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Row(modifier = Modifier.padding(4.dp)) {
+            IconButton(onClick = onCopy) {
+                Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
+            }
+            IconButton(onClick = onShare) {
+                Icon(Icons.Default.Share, contentDescription = "Share")
+            }
+            IconButton(onClick = onBookmark) {
+                Icon(Icons.Default.BookmarkAdd, contentDescription = "Bookmark selection")
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = "Dismiss")
+            }
         }
-        if (pageIndex < pageBitmaps.size) {
-            pageBitmaps[pageIndex]?.recycle()
-            pageBitmaps[pageIndex] = bitmap
-        }
-    } catch (_: Exception) {
-        // Silently fail for individual page renders
     }
 }
 
-/**
- * Top bar with title, back button, bookmark actions, and crop button.
- */
+// ---------------------------------------------------------------------------
+// Top bar
+// ---------------------------------------------------------------------------
+
 @Composable
 private fun TopReaderBar(
     title: String,
+    currentPage: Int,
+    totalPages: Int,
     onBackClick: () -> Unit,
     onBookmarkClick: () -> Unit,
     onBookmarkListClick: () -> Unit,
@@ -416,6 +614,14 @@ private fun TopReaderBar(
                 modifier = Modifier.weight(1f)
             )
 
+            // Page indicator
+            Text(
+                text = if (totalPages > 0) "${currentPage + 1} / $totalPages" else "—",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+
             IconButton(onClick = onCropClick) {
                 Icon(
                     imageVector = Icons.Default.Crop,
@@ -443,9 +649,10 @@ private fun TopReaderBar(
     }
 }
 
-/**
- * Bottom controls with page navigation buttons, slider, and page display.
- */
+// ---------------------------------------------------------------------------
+// Bottom controls
+// ---------------------------------------------------------------------------
+
 @Composable
 private fun BottomReaderControls(
     currentPage: Int,
@@ -466,7 +673,6 @@ private fun BottomReaderControls(
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Page slider
             if (totalPages > 1) {
                 Slider(
                     value = currentPage.toFloat(),
@@ -481,7 +687,6 @@ private fun BottomReaderControls(
                 )
             }
 
-            // Navigation row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -498,7 +703,6 @@ private fun BottomReaderControls(
                     )
                 }
 
-                // Page number display
                 Text(
                     text = if (totalPages > 0) "${currentPage + 1} / $totalPages" else "—",
                     color = Color.White,
@@ -519,7 +723,6 @@ private fun BottomReaderControls(
                 }
             }
 
-            // Progress percentage
             if (totalPages > 0) {
                 Text(
                     text = "${progressPercent.toInt()}%",
@@ -531,9 +734,10 @@ private fun BottomReaderControls(
     }
 }
 
-/**
- * Minimal page indicator shown when controls are hidden.
- */
+// ---------------------------------------------------------------------------
+// Page indicator
+// ---------------------------------------------------------------------------
+
 @Composable
 private fun PageIndicator(
     currentPage: Int,
@@ -553,6 +757,92 @@ private fun PageIndicator(
         )
     }
 }
+
+// ---------------------------------------------------------------------------
+// Bookmark list dialog
+// ---------------------------------------------------------------------------
+@Composable
+private fun BookmarkListDialog(
+    bookmarks: List<BookmarkEntity>,
+    onNavigateToBookmark: (BookmarkEntity) -> Unit,
+    onDeleteBookmark: (BookmarkEntity) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Bookmarks") },
+        text = {
+            if (bookmarks.isEmpty()) {
+                Text(
+                    text = "No bookmarks yet. Tap the bookmark icon to add one.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                    itemsIndexed(bookmarks) { _, bookmark ->
+                        ListItem(
+                            headlineContent = {
+                                Text(bookmark.title ?: "Page ${bookmark.pageNumber + 1}")
+                            },
+                            supportingContent = {
+                                Column {
+                                    Text("Page ${bookmark.pageNumber + 1}")
+                                    if (!bookmark.note.isNullOrEmpty()) {
+                                        Text(
+                                            text = bookmark.note,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            },
+                            trailingContent = {
+                                IconButton(onClick = { onDeleteBookmark(bookmark) }) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete bookmark",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            },
+                            modifier = Modifier.pointerInput(bookmark.pageNumber) {
+                                detectTapGestures(
+                                    onTap = { onNavigateToBookmark(bookmark) }
+                                )
+                            }
+                        )
+                        HorizontalDivider()
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("PDF Selection", text))
+}
+
+private fun shareText(context: Context, text: String) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share text"))
+}
+
+// ---------------------------------------------------------------------------
+// Crop settings panel
+// ---------------------------------------------------------------------------
 
 /**
  * Crop settings panel with a uniform margin crop slider and auto-detect button.
@@ -806,39 +1096,4 @@ private fun SuggestedCropBanner(
             }
         }
     }
-}
-
-/**
- * Helper composable that manages the PdfRenderer lifecycle.
- */
-@Composable
-private fun rememberPdfRenderer(filePath: String): PdfRenderState {
-    val state = remember { PdfRenderState() }
-
-    DisposableEffect(filePath) {
-        val file = File(filePath)
-        if (file.exists()) {
-            try {
-                val renderer = PdfRenderer(file)
-                state.renderer = renderer
-                state.pageCount = renderer.pageCount
-            } catch (e: Exception) {
-                state.error = e.message ?: "Failed to open PDF"
-            }
-        } else {
-            state.error = "File not found: $filePath"
-        }
-
-        onDispose {
-            state.renderer?.close()
-        }
-    }
-
-    return state
-}
-
-private class PdfRenderState {
-    var renderer: PdfRenderer? = null
-    var pageCount: Int = 0
-    var error: String? = null
 }

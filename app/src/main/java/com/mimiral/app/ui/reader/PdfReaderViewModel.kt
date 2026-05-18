@@ -37,7 +37,12 @@ data class PdfReaderUiState(
     val selectedText: String = "",
     val isTextSelected: Boolean = false,
     val hasTextContent: Boolean = false,
-    val showSelectionMenu: Boolean = false
+    val showSelectionMenu: Boolean = false,
+    // PDF crop settings
+    val cropMargins: MarginCrop = MarginCrop.NONE,
+    val showCropSettings: Boolean = false,
+    val autoDetecting: Boolean = false,
+    val suggestedCrop: MarginCrop? = null
 )
 
 @HiltViewModel
@@ -313,7 +318,95 @@ class PdfReaderViewModel @Inject constructor(
         _uiState.update { it.copy(showSelectionMenu = false) }
     }
 
+    // --- PDF Crop Settings ---
+
+    /**
+     * Set crop margins and persist to storage.
+     */
+    fun setCropMargins(crop: MarginCrop) {
+        _uiState.update { it.copy(cropMargins = crop) }
+        persistCropSettings(crop)
+    }
+
+    /**
+     * Set uniform crop (same value for all sides).
+     */
+    fun setUniformCrop(percent: Int) {
+        val crop = MarginCrop.uniform(percent)
+        setCropMargins(crop)
+    }
+
+    /**
+     * Reset crop to no cropping.
+     */
+    fun resetCrop() {
+        setCropMargins(MarginCrop.NONE)
+    }
+
+    /**
+     * Show the crop settings panel.
+     */
+    fun showCropSettings() {
+        _uiState.update { it.copy(showCropSettings = true) }
+    }
+
+    /**
+     * Hide the crop settings panel.
+     */
+    fun hideCropSettings() {
+        _uiState.update { it.copy(showCropSettings = false) }
+    }
+
+    /**
+     * Toggle the crop settings panel.
+     */
+    fun toggleCropSettings() {
+        _uiState.update { it.copy(showCropSettings = !it.showCropSettings) }
+    }
+
+    /**
+     * Set the suggested crop (from auto-detect).
+     */
+    fun setSuggestedCrop(crop: MarginCrop) {
+        _uiState.update { it.copy(suggestedCrop = crop) }
+    }
+
+    /**
+     * Apply the suggested crop to the current settings.
+     */
+    fun applySuggestedCrop() {
+        val suggested = _uiState.value.suggestedCrop ?: return
+        setCropMargins(suggested)
+        _uiState.update { it.copy(suggestedCrop = null) }
+    }
+
+    /**
+     * Set the auto-detecting state.
+     */
+    fun setAutoDetecting(detecting: Boolean) {
+        _uiState.update { it.copy(autoDetecting = detecting) }
+    }
+
     // --- Private helpers ---
+
+    private fun persistCropSettings(crop: MarginCrop) {
+        viewModelScope.launch {
+            try {
+                bookRepository.savePdfSettings(
+                    com.mimiral.app.data.local.entity.PdfSettingsEntity(
+                        bookId = bookId,
+                        cropLeft = crop.left,
+                        cropTop = crop.top,
+                        cropRight = crop.right,
+                        cropBottom = crop.bottom,
+                        autoDetected = false
+                    )
+                )
+            } catch (_: Exception) {
+                // Silently fail -- crop persistence should not disrupt reading
+            }
+        }
+    }
 
     private fun updateProgress(currentPage: Int, totalPages: Int) {
         _uiState.update {

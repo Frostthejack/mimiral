@@ -40,6 +40,7 @@ data class ReaderUiState(
     val showToc: Boolean = false,
     val showBookmarks: Boolean = false,
     val isCurrentPageBookmarked: Boolean = false,
+    val bookmarks: List<BookmarkEntity> = emptyList(),
     val error: String? = null
 )
 
@@ -132,7 +133,12 @@ class EpubReaderViewModel @Inject constructor(
                         bookmark.chapterIndex == currentChapterIndex &&
                             bookmark.pageNumber == currentPageNumber
                     }
-                    _uiState.update { it.copy(isCurrentPageBookmarked = isBookmarked) }
+                    _uiState.update {
+                        it.copy(
+                            isCurrentPageBookmarked = isBookmarked,
+                            bookmarks = bookmarks
+                        )
+                    }
                 }
             } catch (_: Exception) {
                 // Non-critical — bookmark state can default to false
@@ -268,6 +274,19 @@ class EpubReaderViewModel @Inject constructor(
                     )
                 }
                 // Bookmark state will auto-update via the Flow in loadBookmarks()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Bookmark error: ${e.message}") }
+            }
+        }
+    }
+
+    /**
+     * Delete a specific bookmark.
+     */
+    fun deleteBookmark(bookmark: BookmarkEntity) {
+        viewModelScope.launch {
+            try {
+                bookRepository.deleteBookmark(bookmark)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Bookmark error: ${e.message}") }
             }

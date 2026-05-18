@@ -1,0 +1,229 @@
+package com.mimiral.app.ui.settings
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import com.mimiral.app.ui.theme.MimiralThemeSwitcher
+import com.mimiral.app.ui.theme.MimiralThemeType
+import com.mimiral.app.ui.theme.ThemeState
+import kotlinx.coroutines.launch
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen() {
+    val context = LocalContext.current
+    val settingsRepository = remember { ReaderSettingsRepository(context) }
+    val scope = rememberCoroutineScope()
+    val settings by settingsRepository.settings.collectAsState(
+        initial = com.mimiral.app.data.local.settings.ReaderSettings()
+    )
+
+    val currentTheme = try {
+        MimiralThemeType.valueOf(settings.themeName)
+    } catch (_: IllegalArgumentException) {
+        MimiralThemeType.DAY
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // ── Appearance Section ────────────────────────────
+            Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Palette,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Reading Theme",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "Choose a theme for your reading experience. Changes apply immediately.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    MimiralThemeSwitcher(
+                        currentTheme = currentTheme,
+                        onThemeSelected = { theme ->
+                            scope.launch {
+                                settingsRepository.setTheme(theme.name)
+                            }
+                        }
+                    )
+                }
+            }
+
+            // ── Theme Preview Section ─────────────────────────
+            Text(
+                text = "Theme Preview",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ThemePreviewItem("Day", MimiralThemeType.DAY, currentTheme == MimiralThemeType.DAY)
+                    ThemePreviewItem("Sepia", MimiralThemeType.SEPIA, currentTheme == MimiralThemeType.SEPIA)
+                    ThemePreviewItem("Dark", MimiralThemeType.DARK, currentTheme == MimiralThemeType.DARK)
+                    ThemePreviewItem("Night", MimiralThemeType.NIGHT, currentTheme == MimiralThemeType.NIGHT)
+                }
+            }
+
+            // ── About Section ─────────────────────────────────
+            HorizontalDivider()
+            Text(
+                text = "About",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Mimiral",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Version 0.1.0",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemePreviewItem(
+    name: String,
+    themeType: MimiralThemeType,
+    isSelected: Boolean
+) {
+    val bgColor = when (themeType) {
+        MimiralThemeType.DAY -> com.mimiral.app.ui.theme.DayBackground
+        MimiralThemeType.SEPIA -> com.mimiral.app.ui.theme.SepiaBackground
+        MimiralThemeType.DARK -> com.mimiral.app.ui.theme.DarkBackground
+        MimiralThemeType.NIGHT -> com.mimiral.app.ui.theme.NightBackground
+    }
+    val textColor = when (themeType) {
+        MimiralThemeType.DAY -> com.mimiral.app.ui.theme.DayOnBackground
+        MimiralThemeType.SEPIA -> com.mimiral.app.ui.theme.SepiaOnBackground
+        MimiralThemeType.DARK -> com.mimiral.app.ui.theme.DarkOnBackground
+        MimiralThemeType.NIGHT -> com.mimiral.app.ui.theme.NightOnBackground
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Color swatch
+        Surface(
+            modifier = Modifier.size(32.dp),
+            shape = MaterialTheme.shapes.small,
+            color = bgColor,
+            border = ButtonDefaults.outlinedButtonBorder
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Aa",
+                    color = textColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Text(
+            text = name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        if (isSelected) {
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "Active",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}

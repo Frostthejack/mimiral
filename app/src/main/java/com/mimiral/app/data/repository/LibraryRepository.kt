@@ -6,6 +6,7 @@ import com.mimiral.app.data.local.dao.ChapterDao
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.scanner.FileScanner
+import com.mimiral.app.data.local.scanner.PendingBook
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,16 +55,25 @@ class LibraryRepository @Inject constructor(
         if (scanned.isEmpty()) return 0
 
         // Filter out books that already exist (by file path)
-        val existingPaths = mutableSetOf<String>()
-        // We check each scanned file against the database
-        val newBooks = scanned.filter { book ->
-            // Simple path-based deduplication
-            val existing = bookDao.getBookById(book.id)
-            existing == null
-        }
+        val existingPaths = bookDao.getAllFilePaths().toSet()
+        val newBooks = scanned.filter { it.filePath !in existingPaths }
 
         if (newBooks.isEmpty()) return 0
-        insertBooks(newBooks)
+
+        val entities = newBooks.map { pending ->
+            BookEntity(
+                filePath = pending.filePath,
+                title = pending.fileName,
+                author = null,
+                coverPath = null,
+                format = pending.format,
+                fileSize = pending.fileSize,
+                dateAdded = System.currentTimeMillis(),
+                dateModified = pending.dateModified * 1000,
+                source = "LOCAL"
+            )
+        }
+        insertBooks(entities)
         return newBooks.size
     }
 
@@ -73,7 +83,7 @@ class LibraryRepository @Inject constructor(
      */
     suspend fun scanAndImportFile(filePath: String): Long {
         val book = fileScanner.scanFile(filePath) ?: return -1
-        return bookDao.insertBook(book)
+        return book.id.toLong()
     }
 
     fun supportedExtensions(): Set<String> = fileScanner.supportedExtensions()
