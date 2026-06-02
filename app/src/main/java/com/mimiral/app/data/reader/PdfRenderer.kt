@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.RectF
 import android.graphics.pdf.PdfRenderer as AndroidPdfRenderer
-import android.os.Build
 import android.os.ParcelFileDescriptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -14,8 +13,11 @@ import java.io.FileNotFoundException
 /**
  * PDF renderer wrapper around Android's platform PdfRenderer.
  *
- * Provides page rendering, text extraction, password handling,
- * and on-demand page rendering for large PDFs.
+ * Provides page rendering, margin detection, and on-demand page rendering for large PDFs.
+ *
+ * NOTE: Text extraction is not supported by Android's PdfRenderer.Page API.
+ * The extractPageText() and hasTextOnPage() methods return stub values for Phase 1.
+ * Full text extraction requires a separate library (e.g., PDFBox).
  *
  * Supports two constructors:
  * - PdfRenderer(context) — for use with open(filePath)
@@ -153,7 +155,11 @@ class PdfRenderer : AutoCloseable {
     // ---- Text Extraction ----
 
     /**
-     * Extract text from a page using the platform PdfRenderer.Page.getText() API (API 26+).
+     * Extract text from a page.
+     *
+     * NOTE: Android's PdfRenderer.Page does not have a text property.
+     * Text extraction requires a separate library (e.g., PDFBox).
+     * Currently returns empty text for Phase 1.
      *
      * @param pageIndex Zero-based page index
      * @return PageText containing extracted text and metadata
@@ -167,18 +173,12 @@ class PdfRenderer : AutoCloseable {
         try {
             val page = renderer.openPage(pageIndex)
             try {
-                val text = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    try {
-                        page.text
-                    } catch (e: Exception) {
-                        ""
-                    }
-                } else {
-                    ""
-                }
+                // Android PdfRenderer.Page does not have a text property.
+                // Text extraction requires a separate library (e.g., PDFBox).
+                // Returning empty text for Phase 1.
                 PageText(
-                    text = text,
-                    hasText = text.isNotBlank(),
+                    text = "",
+                    hasText = false,
                     pageIndex = pageIndex,
                     pageWidth = page.width,
                     pageHeight = page.height
@@ -201,15 +201,10 @@ class PdfRenderer : AutoCloseable {
         try {
             val page = renderer.openPage(pageIndex)
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    try {
-                        page.text.isNotBlank()
-                    } catch (e: Exception) {
-                        false
-                    }
-                } else {
-                    false
-                }
+                // Android PdfRenderer.Page does not have a text property.
+                // Text extraction requires a separate library (e.g., PDFBox).
+                // Returning false for Phase 1.
+                false
             } finally {
                 page.close()
             }

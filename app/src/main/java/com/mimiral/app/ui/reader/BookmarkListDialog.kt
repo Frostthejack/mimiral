@@ -109,9 +109,9 @@ fun BookmarkListDialog(
                             items = bookmarks,
                             key = { it.id }
                         ) { bookmark ->
-                            val dismissState = rememberDismissState(
+                            val dismissState = rememberSwipeToDismissBoxState(
                                 confirmValueChange = { dismissValue ->
-                                    if (dismissValue == DismissValue.DismissedToStart) {
+                                    if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
                                         onDeleteBookmark(bookmark)
                                         true
                                     } else {
@@ -120,12 +120,12 @@ fun BookmarkListDialog(
                                 }
                             )
 
-                            SwipeToDismiss(
+                            SwipeToDismissBox(
                                 state = dismissState,
-                                background = {
+                                backgroundContent = {
                                     val color by animateColorAsState(
                                         when (dismissState.targetValue) {
-                                            DismissValue.DismissedToStart -> MaterialTheme.colorScheme.errorContainer
+                                            SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
                                             else -> Color.Transparent
                                         },
                                         label = "dismissBg"
@@ -144,8 +144,9 @@ fun BookmarkListDialog(
                                         )
                                     }
                                 },
-                                directions = setOf(DismissDirection.EndToStart),
-                                dismissContent = {
+                                enableDismissFromStartToEnd = false,
+                                enableDismissFromEndToStart = true,
+                                content = {
                                     BookmarkListItem(
                                         bookmark = bookmark,
                                         onClick = { onNavigateToBookmark(bookmark) }

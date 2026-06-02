@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -353,11 +354,11 @@ fun PdfReaderScreen(
         if (uiState.showBookmarkList) {
             BookmarkListDialog(
                 bookmarks = uiState.bookmarks,
-                onNavigateToBookmark = { bookmark ->
+                onNavigateToBookmark = { bookmark: BookmarkEntity ->
                     viewModel.goToPage(bookmark.pageNumber)
                     viewModel.dismissBookmarkList()
                 },
-                onDeleteBookmark = { bookmark ->
+                onDeleteBookmark = { bookmark: BookmarkEntity ->
                     viewModel.removeBookmark(bookmark)
                 },
                 onDismiss = { viewModel.dismissBookmarkList() }
@@ -433,7 +434,7 @@ private fun PdfPageView(
                 ) {
                     drawImage(
                         image = pageBitmap.asImageBitmap(),
-                        dstSize = Size(containerWidth, displayHeight)
+                        dstSize = IntSize(containerWidth.toInt(), displayHeight.toInt())
                     )
                     // Draw selection highlight overlays
                     if (selectionState.hasSelection && selectionState.pageIndex == currentPage) {
@@ -504,7 +505,7 @@ private fun DrawScope.drawSelectionHighlights(state: SelectionState, scale: Floa
 
 /** A draggable circular handle for adjusting selection boundaries. */
 @Composable
-private fun BoxWithConstraintsScope.SelectionHandle(
+private fun SelectionHandle(
     position: Offset,
     isStart: Boolean,
     scale: Float,
@@ -512,15 +513,15 @@ private fun BoxWithConstraintsScope.SelectionHandle(
 ) {
     val handleSize = 20.dp
     val handleColor = Color(0xFF2196F3)
+    val density = LocalDensity.current
+    val handleOffset = with(density) { handleSize.toPx() / 2 }.roundToInt()
 
     Box(
         modifier = Modifier
             .offset {
                 IntOffset(
-                    (position.x * scale).roundToInt() -
-                        with(LocalDensity.current) { handleSize.toPx() / 2 }.roundToInt(),
-                    (position.y * scale).roundToInt() -
-                        with(LocalDensity.current) { handleSize.toPx() / 2 }.roundToInt()
+                    (position.x * scale).roundToInt() - handleOffset,
+                    (position.y * scale).roundToInt() - handleOffset
                 )
             }
             .size(handleSize)
@@ -756,71 +757,6 @@ private fun PageIndicator(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
     }
-}
-
-// ---------------------------------------------------------------------------
-// Bookmark list dialog
-// ---------------------------------------------------------------------------
-@Composable
-private fun BookmarkListDialog(
-    bookmarks: List<BookmarkEntity>,
-    onNavigateToBookmark: (BookmarkEntity) -> Unit,
-    onDeleteBookmark: (BookmarkEntity) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Bookmarks") },
-        text = {
-            if (bookmarks.isEmpty()) {
-                Text(
-                    text = "No bookmarks yet. Tap the bookmark icon to add one.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                    itemsIndexed(bookmarks) { _, bookmark ->
-                        ListItem(
-                            headlineContent = {
-                                Text(bookmark.title ?: "Page ${bookmark.pageNumber + 1}")
-                            },
-                            supportingContent = {
-                                Column {
-                                    Text("Page ${bookmark.pageNumber + 1}")
-                                    if (!bookmark.note.isNullOrEmpty()) {
-                                        Text(
-                                            text = bookmark.note,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            },
-                            trailingContent = {
-                                IconButton(onClick = { onDeleteBookmark(bookmark) }) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Delete bookmark",
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            },
-                            modifier = Modifier.pointerInput(bookmark.pageNumber) {
-                                detectTapGestures(
-                                    onTap = { onNavigateToBookmark(bookmark) }
-                                )
-                            }
-                        )
-                        HorizontalDivider()
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
-        }
-    )
 }
 
 // ---------------------------------------------------------------------------

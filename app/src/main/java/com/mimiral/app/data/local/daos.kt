@@ -124,7 +124,7 @@ interface CollectionDao {
     @Delete
     suspend fun deleteCollection(collection: CollectionEntity)
 
-    @Query("SELECT * FROM books INNER JOIN book_collections ON books.id = book_collections.book_id WHERE book_collections.collection_id = :collectionId")
+    @Query("SELECT books.* FROM books INNER JOIN book_collections ON books.id = book_collections.book_id WHERE book_collections.collection_id = :collectionId")
     fun getBooksInCollection(collectionId: Int): Flow<List<BookEntity>>
 }
 
@@ -194,8 +194,7 @@ interface ChapterDao {
     @Query(
         "SELECT chapters.* FROM chapters " +
         "INNER JOIN chapters_fts ON chapters.id = chapters_fts.rowid " +
-        "WHERE chapters_fts MATCH :query " +
-        "ORDER BY rank"
+        "WHERE chapters_fts MATCH :query"
     )
     fun searchChapters(query: String): Flow<List<ChapterEntity>>
 
@@ -205,8 +204,7 @@ interface ChapterDao {
     @Query(
         "SELECT chapters.* FROM chapters " +
         "INNER JOIN chapters_fts ON chapters.id = chapters_fts.rowid " +
-        "WHERE chapters_fts MATCH :query AND chapters.book_id = :bookId " +
-        "ORDER BY rank"
+        "WHERE chapters_fts MATCH :query AND chapters.book_id = :bookId"
     )
     fun searchChaptersInBook(bookId: Int, query: String): Flow<List<ChapterEntity>>
 }

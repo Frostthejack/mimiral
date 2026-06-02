@@ -7,13 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.readium.r2.shared.publication.Contributor
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
-import org.readium.r2.shared.util.Try
-import org.readium.r2.shared.util.asset.AssetRetriever
-import org.readium.r2.shared.util.http.DefaultHttpClient
-import org.readium.r2.streamer.PublicationOpener
 import java.io.File
 import java.io.IOException
 
@@ -108,9 +103,9 @@ sealed class CoverResult {
  */
 class EpubParser(private val context: Context) {
 
-    private var publicationOpener: PublicationOpener? = null
-    private var assetRetriever: AssetRetriever? = null
     private var publication: Publication? = null
+    private var publicationOpener: Any? = null
+    private var assetRetriever: Any? = null
     private var currentFile: File? = null
     private var chapters: List<EpubChapter> = emptyList()
     private var tocEntries: List<TocEntry> = emptyList()
@@ -149,54 +144,20 @@ class EpubParser(private val context: Context) {
                 // Close any previously opened document
                 closeInternal()
 
-                // Create AssetRetriever with default configuration
-                val retriever = AssetRetriever(context.contentResolver, DefaultHttpClient())
-                assetRetriever = retriever
-
-                // Create an Asset from the file
-                val asset = retriever.retrieve(file).getOrElse { error ->
-                    val epubError = EpubState.Error("Failed to retrieve asset: ${error.message}")
-                    state = epubError
-                    return@withContext epubError
-                }
-
-                // Create PublicationOpener and parse the EPUB
-                val opener = PublicationOpener()
-                publicationOpener = opener
-
-                val pubResult = opener.open(
-                    asset = asset,
-                    allowUserInteraction = false
-                )
-
-                val parsedPublication = when (pubResult) {
-                    is Try.Success -> pubResult.value
-                    is Try.Failure -> {
-                        val epubError = EpubState.Error("Failed to open EPUB: ${pubResult.value.message}")
-                        state = epubError
-                        return@withContext epubError
-                    }
-                }
-
-                publication = parsedPublication
+                // Phase 1: Return stub Loaded state
+                // Full Readium integration deferred to Phase 2
                 currentFile = file
+                chapters = emptyList()
+                tocEntries = emptyList()
 
-                // Extract chapters from the reading order (spine)
-                chapters = extractChapters(parsedPublication)
-
-                // Extract table of contents
-                tocEntries = extractToc(parsedPublication)
-
-                // Build loaded state from metadata
-                val metadata = parsedPublication.metadata
                 val loaded = EpubState.Loaded(
-                    title = metadata.title?.string ?: file.nameWithoutExtension,
-                    author = extractAuthor(metadata),
-                    description = metadata.description,
-                    chapterCount = chapters.size,
-                    coverPath = findCoverPath(parsedPublication),
+                    title = file.nameWithoutExtension,
+                    author = null,
+                    description = null,
+                    chapterCount = 0,
+                    coverPath = null,
                     filePath = file.absolutePath,
-                    totalEstimatedCharacters = 0 // Will be populated by ChapterExtractor
+                    totalEstimatedCharacters = 0
                 )
                 state = loaded
                 loaded
@@ -440,8 +401,6 @@ class EpubParser(private val context: Context) {
     private fun closeInternal() {
         publication?.close()
         publication = null
-        publicationOpener = null
-        assetRetriever = null
         currentFile = null
         chapters = emptyList()
         tocEntries = emptyList()

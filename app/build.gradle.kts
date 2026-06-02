@@ -87,9 +87,6 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
-    // PDF Viewer
-    implementation("androidx.pdf:pdf-viewer:1.0.0-alpha01")
-
     // Readium Mobile (EPUB parsing)
     implementation("org.readium.kotlin-toolkit:readium-shared:3.0.0")
     implementation("org.readium.kotlin-toolkit:readium-streamer:3.0.0")

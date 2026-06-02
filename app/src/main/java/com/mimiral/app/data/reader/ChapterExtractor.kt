@@ -433,11 +433,11 @@ class ChapterExtractor(
 
             // Remove script blocks entirely
             text = text.replace(Regex("""<script[^>]*>.*?</script>""",
-                RegexOption.DOT_MATCHES_ALL or RegexOption.IGNORE_CASE), "")
+                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
 
             // Remove style blocks entirely
             text = text.replace(Regex("""<style[^>]*>.*?</style>""",
-                RegexOption.DOT_MATCHES_ALL or RegexOption.IGNORE_CASE), "")
+                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
 
             // Remove HTML comments
             text = text.replace(Regex("""<!--.*?-->""", RegexOption.DOT_MATCHES_ALL), "")

@@ -2,13 +2,14 @@ package com.mimiral.app.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -20,7 +21,7 @@ import com.mimiral.app.ui.reader.PdfReaderScreen
 import com.mimiral.app.ui.settings.SettingsScreen
 
 @Composable
-fun MimiralNavGraph(navController: NavController) {
+fun MimiralNavGraph(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
@@ -72,7 +73,6 @@ fun MimiralNavGraph(navController: NavController) {
                 val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
                 PdfReaderScreen(
                     bookId = bookId,
-                    filePath = "", // Will be loaded from DB by the ViewModel
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

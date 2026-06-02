@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.window.Dialog
 
 /**
@@ -536,8 +538,8 @@ private fun PreviewSection(settings: TextSettings) {
             Text(
                 text = "The quick brown fox jumps over the lazy dog. This is a preview of how your text will appear with the current settings.",
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = settings.fontSize.sp.coerceAtMost(20.sp),
-                    lineHeight = (settings.fontSize * settings.lineSpacingMultiplier).sp
+                    fontSize = if (settings.fontSize <= 20) settings.fontSize.sp else 20.sp,
+                    lineHeight = TextUnit((settings.fontSize * settings.lineSpacingMultiplier).toFloat(), TextUnitType.Sp)
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 4,

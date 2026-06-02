@@ -8,6 +8,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBackIos
@@ -340,7 +341,7 @@ fun EpubReaderScreen(
                                                 }
                                             }
                                         }
-                                        offset.x > tapZoneWidth * 2 -> {
+                                        offset.x > (size.width * 2f / 3f) -> {
                                             if (pagerState.currentPage < pageCount - 1) {
                                                 coroutineScope.launch {
                                                     pagerState.animateScrollToPage(

@@ -23,7 +23,7 @@ import com.mimiral.app.data.local.entity.*
         ChapterFtsEntity::class
     ],
     version = 3,
-    exportSchema = true
+    exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao

@@ -8,19 +8,19 @@ Mimiral combines the best features of Moon+ Reader, Librera, and KOReader with u
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Language | Kotlin |
-| UI Framework | Jetpack Compose (Material Design 3) |
-| Architecture | MVVM + Clean Architecture |
-| Dependency Injection | Hilt |
-| Database | Room |
-| Networking | Retrofit + OkHttp |
-| EPUB Parsing | Readium Mobile |
-| PDF Rendering | androidx.pdf (Jetpack PDF Viewer) |
-| TTS | Android TextToSpeech API + custom preprocessing |
-| Image Loading | Coil |
-| Async | Kotlin Coroutines + Flow |
+|| Layer | Technology |
+||-------|-----------|
+|| Language | Kotlin |
+|| UI Framework | Jetpack Compose (Material Design 3) |
+|| Architecture | MVVM + Clean Architecture |
+|| Dependency Injection | Hilt |
+|| Database | Room |
+|| Networking | Retrofit + OkHttp |
+|| EPUB Parsing | Readium Mobile |
+|| PDF Rendering | Android PdfRenderer (platform) + custom wrapper |
+|| TTS | Android TextToSpeech API + custom preprocessing |
+|| Image Loading | Coil |
+|| Async | Kotlin Coroutines + Flow |
 
 ## Project Structure
 
