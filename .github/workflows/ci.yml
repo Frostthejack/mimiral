@@ -32,7 +32,6 @@ jobs:
 
       - name: Lint (ktlint check)
         run: ./gradlew ktlintCheck --no-daemon
-        continue-on-error: true
 
       - name: Unit tests
         run: ./gradlew testDebugUnitTest --no-daemon
@@ -52,5 +51,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: app/build/reports/tests/
+          path: app/build/reports/tests/testDebugUnitTest/
           retention-days: 7
