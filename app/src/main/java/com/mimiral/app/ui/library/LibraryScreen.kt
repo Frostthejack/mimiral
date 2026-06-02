@@ -88,10 +88,16 @@ fun LibraryScreen(
                     // View toggle button
                     IconButton(onClick = { viewModel.toggleViewMode() }) {
                         Icon(
-                            imageVector = if (uiState.viewMode == ViewMode.GRID)
-                                Icons.Default.List else Icons.Default.GridView,
-                            contentDescription = if (uiState.viewMode == ViewMode.GRID)
-                                "Switch to list view" else "Switch to grid view"
+                            imageVector = if (uiState.viewMode == ViewMode.GRID) {
+                                Icons.Default.List
+                            } else {
+                                Icons.Default.GridView
+                            },
+                            contentDescription = if (uiState.viewMode == ViewMode.GRID) {
+                                "Switch to list view"
+                            } else {
+                                "Switch to grid view"
+                            }
                         )
                     }
                 }
@@ -184,9 +190,9 @@ fun LibraryScreen(
                         )
                     }
                 } else {
-                    val showRecent = recentBooks.isNotEmpty()
-                            && uiState.searchQuery.isBlank()
-                            && uiState.filterOption == FilterOption.ALL
+                    val showRecent = recentBooks.isNotEmpty() &&
+                        uiState.searchQuery.isBlank() &&
+                        uiState.filterOption == FilterOption.ALL
 
                     val hasBooks = uiState.books.isNotEmpty() || showRecent
 
@@ -203,14 +209,17 @@ fun LibraryScreen(
                                     imageVector = Icons.Default.SearchOff,
                                     contentDescription = null,
                                     modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                        alpha = 0.5f
+                                    )
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = if (uiState.searchQuery.isNotBlank())
+                                    text = if (uiState.searchQuery.isNotBlank()) {
                                         "No books match your search"
-                                    else
-                                        "No books found",
+                                    } else {
+                                        "No books found"
+                                    },
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -219,7 +228,9 @@ fun LibraryScreen(
                                     Text(
                                         text = "Try adjusting your filters",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = 0.7f
+                                        )
                                     )
                                 }
                             }
@@ -414,8 +425,11 @@ private fun GridBookItem(
                         )
                     } else {
                         Icon(
-                            imageVector = if (bookWithProgress.book.format == "PDF")
-                                Icons.Default.MenuBook else Icons.Default.Book,
+                            imageVector = if (bookWithProgress.book.format == "PDF") {
+                                Icons.Default.MenuBook
+                            } else {
+                                Icons.Default.Book
+                            },
                             contentDescription = null,
                             modifier = Modifier.size(40.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -528,8 +542,11 @@ private fun ListBookItem(
                         )
                     } else {
                         Icon(
-                            imageVector = if (bookWithProgress.book.format == "PDF")
-                                Icons.Default.MenuBook else Icons.Default.Book,
+                            imageVector = if (bookWithProgress.book.format == "PDF") {
+                                Icons.Default.MenuBook
+                            } else {
+                                Icons.Default.Book
+                            },
                             contentDescription = null,
                             modifier = Modifier.size(28.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -570,10 +587,11 @@ private fun ListBookItem(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = if (bookWithProgress.isFinished)
+                            text = if (bookWithProgress.isFinished) {
                                 "Finished"
-                            else
-                                "Page ${bookWithProgress.currentPage + 1} of ${bookWithProgress.totalPages} (${bookWithProgress.progressPercent.toInt()}%)",
+                            } else {
+                                "Page ${bookWithProgress.currentPage + 1} of ${bookWithProgress.totalPages} (${bookWithProgress.progressPercent.toInt()}%)"
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

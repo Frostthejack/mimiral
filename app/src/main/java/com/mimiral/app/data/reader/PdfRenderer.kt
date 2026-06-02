@@ -5,10 +5,10 @@ import android.graphics.Bitmap
 import android.graphics.RectF
 import android.graphics.pdf.PdfRenderer as AndroidPdfRenderer
 import android.os.ParcelFileDescriptor
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileNotFoundException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * PDF renderer wrapper around Android's platform PdfRenderer.
@@ -328,8 +328,14 @@ class PdfRenderer : AutoCloseable {
                 MarginCrop(
                     left = (margins.left.toFloat() / width * 100).toInt().coerceIn(0, 50),
                     top = (margins.top.toFloat() / height * 100).toInt().coerceIn(0, 50),
-                    right = ((width - margins.right).toFloat() / width * 100).toInt().coerceIn(0, 50),
-                    bottom = ((height - margins.bottom).toFloat() / height * 100).toInt().coerceIn(0, 50)
+                    right = ((width - margins.right).toFloat() / width * 100).toInt().coerceIn(
+                        0,
+                        50
+                    ),
+                    bottom = ((height - margins.bottom).toFloat() / height * 100).toInt().coerceIn(
+                        0,
+                        50
+                    )
                 )
             } finally {
                 page.close()

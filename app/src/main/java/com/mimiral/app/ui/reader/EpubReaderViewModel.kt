@@ -6,12 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class EpubChapter(
     val index: Int,
@@ -258,7 +258,10 @@ class EpubReaderViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val existing = bookRepository.getBookmarkAtPosition(
-                    bookId, currentChapterIndex, currentPageNumber, currentPosition
+                    bookId,
+                    currentChapterIndex,
+                    currentPageNumber,
+                    currentPosition
                 )
                 if (existing != null) {
                     bookRepository.deleteBookmark(existing)

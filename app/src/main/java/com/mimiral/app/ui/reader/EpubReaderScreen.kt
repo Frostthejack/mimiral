@@ -8,7 +8,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBackIos
@@ -26,6 +25,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -35,8 +35,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
-import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -133,48 +133,52 @@ fun EpubReaderScreen(
     }
 
     // Volume key handler
-    val handleVolumeKey: (Int) -> Boolean = remember(settings) { { keyCode ->
-        if (!settings.volumeKeyNavigationEnabled) {
-            return@remember false
-        }
-
-        val isVolumeUp = keyCode == KeyEvent.KEYCODE_VOLUME_UP
-        val isVolumeDown = keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
-
-        if (!isVolumeUp && !isVolumeDown) {
-            return@remember false
-        }
-
-        val swap = settings.volumeKeyDirectionSwapped
-        val goNext = if (swap) isVolumeUp else isVolumeDown
-        val goPrev = if (swap) isVolumeDown else isVolumeUp
-
-        when {
-            goNext && pagerState.currentPage < pageCount - 1 -> {
-                coroutineScope.launch {
-                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                }
-                true
+    val handleVolumeKey: (Int) -> Boolean = remember(settings) {
+        { keyCode ->
+            if (!settings.volumeKeyNavigationEnabled) {
+                return@remember false
             }
-            goPrev && pagerState.currentPage > 0 -> {
-                coroutineScope.launch {
-                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
-                }
-                true
+
+            val isVolumeUp = keyCode == KeyEvent.KEYCODE_VOLUME_UP
+            val isVolumeDown = keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+
+            if (!isVolumeUp && !isVolumeDown) {
+                return@remember false
             }
-            else -> true
+
+            val swap = settings.volumeKeyDirectionSwapped
+            val goNext = if (swap) isVolumeUp else isVolumeDown
+            val goPrev = if (swap) isVolumeDown else isVolumeUp
+
+            when {
+                goNext && pagerState.currentPage < pageCount - 1 -> {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                    }
+                    true
+                }
+                goPrev && pagerState.currentPage > 0 -> {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                    }
+                    true
+                }
+                else -> true
+            }
         }
-    } }
+    }
 
     val isBookmarked = uiState.isCurrentPageBookmarked
     val currentChapterTitle = uiState.chapters.getOrNull(uiState.currentChapter)?.title ?: "Reader"
 
     // Text settings change handler - persists via DataStore
-    val onTextSettingsChanged: (TextSettings) -> Unit = remember(settingsRepository) { { newSettings ->
-        coroutineScope.launch {
-            settingsRepository.setTextSettings(newSettings)
+    val onTextSettingsChanged: (TextSettings) -> Unit = remember(settingsRepository) {
+        { newSettings ->
+            coroutineScope.launch {
+                settingsRepository.setTextSettings(newSettings)
+            }
         }
-    } }
+    }
 
     Scaffold(
         topBar = {
@@ -230,7 +234,9 @@ fun EpubReaderScreen(
                             if (viewModel.hasPreviousChapter()) {
                                 viewModel.previousChapter()
                                 coroutineScope.launch {
-                                    val chapter = uiState.chapters.getOrNull(uiState.currentChapter - 1)
+                                    val chapter = uiState.chapters.getOrNull(
+                                        uiState.currentChapter - 1
+                                    )
                                     if (chapter != null) {
                                         pagerState.animateScrollToPage(chapter.startPage)
                                     }
@@ -238,7 +244,12 @@ fun EpubReaderScreen(
                             }
                         },
                         enabled = viewModel.hasPreviousChapter(),
-                        icon = { Icon(Icons.Default.ArrowBackIos, contentDescription = "Previous chapter") },
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowBackIos,
+                                contentDescription = "Previous chapter"
+                            )
+                        },
                         label = { Text("Prev Ch") }
                     )
                     NavigationBarItem(
@@ -253,7 +264,9 @@ fun EpubReaderScreen(
                             if (viewModel.hasNextChapter()) {
                                 viewModel.nextChapter()
                                 coroutineScope.launch {
-                                    val chapter = uiState.chapters.getOrNull(uiState.currentChapter + 1)
+                                    val chapter = uiState.chapters.getOrNull(
+                                        uiState.currentChapter + 1
+                                    )
                                     if (chapter != null) {
                                         pagerState.animateScrollToPage(chapter.startPage)
                                     }
@@ -261,7 +274,12 @@ fun EpubReaderScreen(
                             }
                         },
                         enabled = viewModel.hasNextChapter(),
-                        icon = { Icon(Icons.Default.ArrowForwardIos, contentDescription = "Next chapter") },
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowForwardIos,
+                                contentDescription = "Next chapter"
+                            )
+                        },
                         label = { Text("Next Ch") }
                     )
                 }
@@ -310,7 +328,7 @@ fun EpubReaderScreen(
                 ) { pageIndex ->
                     val pageOffset = (
                         (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction
-                    )
+                        )
 
                     Box(
                         modifier = Modifier
@@ -362,7 +380,13 @@ fun EpubReaderScreen(
                             pageText = pageText,
                             pageNumber = pageIndex + 1,
                             totalPages = pageCount,
-                            chapterTitle = if (pageIndex == 0) uiState.chapters.getOrNull(uiState.currentChapter)?.title else null,
+                            chapterTitle = if (pageIndex == 0) {
+                                uiState.chapters.getOrNull(
+                                    uiState.currentChapter
+                                )?.title
+                            } else {
+                                null
+                            },
                             textSettings = textSettings
                         )
                     }
@@ -547,10 +571,11 @@ fun ReaderSettingsDialog(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Swap volume direction")
                         Text(
-                            if (settings.volumeKeyDirectionSwapped)
+                            if (settings.volumeKeyDirectionSwapped) {
                                 "Vol Up = Next, Vol Down = Prev"
-                            else
-                                "Vol Up = Prev, Vol Down = Next",
+                            } else {
+                                "Vol Up = Prev, Vol Down = Next"
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

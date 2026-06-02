@@ -7,12 +7,12 @@ import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.reader.MarginCrop
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class PdfReaderUiState(
     val bookId: Int = 0,

@@ -6,7 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -19,10 +18,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 
 /**
@@ -539,7 +538,10 @@ private fun PreviewSection(settings: TextSettings) {
                 text = "The quick brown fox jumps over the lazy dog. This is a preview of how your text will appear with the current settings.",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = if (settings.fontSize <= 20) settings.fontSize.sp else 20.sp,
-                    lineHeight = TextUnit((settings.fontSize * settings.lineSpacingMultiplier).toFloat(), TextUnitType.Sp)
+                    lineHeight = TextUnit(
+                        (settings.fontSize * settings.lineSpacingMultiplier).toFloat(),
+                        TextUnitType.Sp
+                    )
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 4,
@@ -588,7 +590,7 @@ private fun CustomFontPickerDialog(
                     try {
                         context.assets.list("fonts")?.filter {
                             it.endsWith(".ttf", ignoreCase = true) ||
-                            it.endsWith(".otf", ignoreCase = true)
+                                it.endsWith(".otf", ignoreCase = true)
                         } ?: emptyList()
                     } catch (e: Exception) {
                         emptyList()

@@ -12,9 +12,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.NavDestination.Companion.hierarchy
 
 data class BottomNavItem(
     val screen: Screen,
@@ -26,7 +25,7 @@ val bottomNavItems = listOf(
     BottomNavItem(Screen.Library, "Library", Icons.Filled.MenuBook),
     BottomNavItem(Screen.Discover, "Discover", Icons.Filled.Explore),
     BottomNavItem(Screen.NowReading, "Now Reading", Icons.Filled.PlayArrow),
-    BottomNavItem(Screen.Settings, "Settings", Icons.Filled.Settings),
+    BottomNavItem(Screen.Settings, "Settings", Icons.Filled.Settings)
 )
 
 @Composable

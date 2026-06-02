@@ -2,17 +2,14 @@ package com.mimiral.app.ui.theme
 
 import android.app.Activity
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
-import kotlinx.coroutines.launch
 
 // ── Theme enum ─────────────────────────────────────────────
 enum class MimiralThemeType(val label: String) {
@@ -32,7 +29,7 @@ private val DayColorScheme = lightColorScheme(
     background = DayBackground,
     onBackground = DayOnBackground,
     surface = DaySurface,
-    onSurface = DayOnSurface,
+    onSurface = DayOnSurface
 )
 
 private val SepiaColorScheme = lightColorScheme(
@@ -43,7 +40,7 @@ private val SepiaColorScheme = lightColorScheme(
     background = SepiaBackground,
     onBackground = SepiaOnBackground,
     surface = SepiaSurface,
-    onSurface = SepiaOnSurface,
+    onSurface = SepiaOnSurface
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -54,7 +51,7 @@ private val DarkColorScheme = darkColorScheme(
     background = DarkBackground,
     onBackground = DarkOnBackground,
     surface = DarkSurface,
-    onSurface = DarkOnSurface,
+    onSurface = DarkOnSurface
 )
 
 private val NightColorScheme = darkColorScheme(
@@ -65,7 +62,7 @@ private val NightColorScheme = darkColorScheme(
     background = NightBackground,
     onBackground = NightOnBackground,
     surface = NightSurface,
-    onSurface = NightOnSurface,
+    onSurface = NightOnSurface
 )
 
 // ── Theme State ────────────────────────────────────────────
@@ -162,7 +159,13 @@ fun MimiralTheme(
                     NightColorScheme
                 } else {
                     val context = view.context
-                    if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                    if (isDark) {
+                        dynamicDarkColorScheme(context)
+                    } else {
+                        dynamicLightColorScheme(
+                            context
+                        )
+                    }
                 }
             }
         }

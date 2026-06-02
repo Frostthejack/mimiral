@@ -12,7 +12,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE id = :bookId")
     suspend fun getBookById(bookId: Int): BookEntity?
 
-    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%'")
+    @Query(
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%'"
+    )
     fun searchBooks(query: String): Flow<List<BookEntity>>
 
     // -- Sorted queries --
@@ -26,21 +28,31 @@ interface BookDao {
     @Query("SELECT * FROM books ORDER BY date_added DESC")
     fun getAllBooksSortedByDateAdded(): Flow<List<BookEntity>>
 
-    @Query("SELECT books.* FROM books LEFT JOIN reading_progress ON books.id = reading_progress.book_id ORDER BY reading_progress.last_read_time DESC")
+    @Query(
+        "SELECT books.* FROM books LEFT JOIN reading_progress ON books.id = reading_progress.book_id ORDER BY reading_progress.last_read_time DESC"
+    )
     fun getAllBooksSortedByRecent(): Flow<List<BookEntity>>
 
     // -- Sorted + searched queries --
 
-    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY title ASC")
+    @Query(
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY title ASC"
+    )
     fun searchBooksSortedByTitle(query: String): Flow<List<BookEntity>>
 
-    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY author ASC")
+    @Query(
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY author ASC"
+    )
     fun searchBooksSortedByAuthor(query: String): Flow<List<BookEntity>>
 
-    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY date_added DESC")
+    @Query(
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY date_added DESC"
+    )
     fun searchBooksSortedByDateAdded(query: String): Flow<List<BookEntity>>
 
-    @Query("SELECT books.* FROM books LEFT JOIN reading_progress ON books.id = reading_progress.book_id WHERE books.title LIKE '%' || :query || '%' OR books.author LIKE '%' || :query || '%' ORDER BY reading_progress.last_read_time DESC")
+    @Query(
+        "SELECT books.* FROM books LEFT JOIN reading_progress ON books.id = reading_progress.book_id WHERE books.title LIKE '%' || :query || '%' OR books.author LIKE '%' || :query || '%' ORDER BY reading_progress.last_read_time DESC"
+    )
     fun searchBooksSortedByRecent(query: String): Flow<List<BookEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -94,11 +106,25 @@ interface BookmarkDao {
     @Query("SELECT * FROM bookmarks WHERE kavita_synced = 0")
     suspend fun getUnsyncedBookmarks(): List<BookmarkEntity>
 
-    @Query("SELECT COUNT(*) FROM bookmarks WHERE book_id = :bookId AND chapter_index = :chapterIndex AND page_number = :pageNumber AND (position = :position OR (position IS NULL AND :position IS NULL))")
-    suspend fun countBookmarksAtPosition(bookId: Int, chapterIndex: Int, pageNumber: Int, position: String?): Int
+    @Query(
+        "SELECT COUNT(*) FROM bookmarks WHERE book_id = :bookId AND chapter_index = :chapterIndex AND page_number = :pageNumber AND (position = :position OR (position IS NULL AND :position IS NULL))"
+    )
+    suspend fun countBookmarksAtPosition(
+        bookId: Int,
+        chapterIndex: Int,
+        pageNumber: Int,
+        position: String?
+    ): Int
 
-    @Query("SELECT * FROM bookmarks WHERE book_id = :bookId AND chapter_index = :chapterIndex AND page_number = :pageNumber AND (position = :position OR (position IS NULL AND :position IS NULL)) LIMIT 1")
-    suspend fun getBookmarkAtPosition(bookId: Int, chapterIndex: Int, pageNumber: Int, position: String?): BookmarkEntity?
+    @Query(
+        "SELECT * FROM bookmarks WHERE book_id = :bookId AND chapter_index = :chapterIndex AND page_number = :pageNumber AND (position = :position OR (position IS NULL AND :position IS NULL)) LIMIT 1"
+    )
+    suspend fun getBookmarkAtPosition(
+        bookId: Int,
+        chapterIndex: Int,
+        pageNumber: Int,
+        position: String?
+    ): BookmarkEntity?
 }
 
 @Dao
@@ -124,7 +150,9 @@ interface CollectionDao {
     @Delete
     suspend fun deleteCollection(collection: CollectionEntity)
 
-    @Query("SELECT books.* FROM books INNER JOIN book_collections ON books.id = book_collections.book_id WHERE book_collections.collection_id = :collectionId")
+    @Query(
+        "SELECT books.* FROM books INNER JOIN book_collections ON books.id = book_collections.book_id WHERE book_collections.collection_id = :collectionId"
+    )
     fun getBooksInCollection(collectionId: Int): Flow<List<BookEntity>>
 }
 
@@ -193,8 +221,8 @@ interface ChapterDao {
      */
     @Query(
         "SELECT chapters.* FROM chapters " +
-        "INNER JOIN chapters_fts ON chapters.id = chapters_fts.rowid " +
-        "WHERE chapters_fts MATCH :query"
+            "INNER JOIN chapters_fts ON chapters.id = chapters_fts.rowid " +
+            "WHERE chapters_fts MATCH :query"
     )
     fun searchChapters(query: String): Flow<List<ChapterEntity>>
 
@@ -203,8 +231,8 @@ interface ChapterDao {
      */
     @Query(
         "SELECT chapters.* FROM chapters " +
-        "INNER JOIN chapters_fts ON chapters.id = chapters_fts.rowid " +
-        "WHERE chapters_fts MATCH :query AND chapters.book_id = :bookId"
+            "INNER JOIN chapters_fts ON chapters.id = chapters_fts.rowid " +
+            "WHERE chapters_fts MATCH :query AND chapters.book_id = :bookId"
     )
     fun searchChaptersInBook(bookId: Int, query: String): Flow<List<ChapterEntity>>
 }

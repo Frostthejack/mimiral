@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.PointF
-import android.graphics.RectF
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,8 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -45,10 +42,10 @@ import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.reader.MarginCrop
 import com.mimiral.app.data.reader.PdfRenderer
 import com.mimiral.app.data.reader.SelectionState
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 /**
  * PDF Reader screen with text selection, selection handles, copy/share, and bookmarks.
@@ -93,7 +90,9 @@ fun PdfReaderScreen(
             } catch (e: Exception) {
                 null
             }
-        } else null
+        } else {
+            null
+        }
     }
 
     // Local UI state for selection (not in ViewModel to avoid recomposition overhead)
@@ -719,7 +718,13 @@ private fun BottomReaderControls(
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = "Next page",
-                        tint = if (currentPage < totalPages - 1) Color.White else Color.White.copy(alpha = 0.3f)
+                        tint = if (currentPage < totalPages - 1) {
+                            Color.White
+                        } else {
+                            Color.White.copy(
+                                alpha = 0.3f
+                            )
+                        }
                     )
                 }
             }

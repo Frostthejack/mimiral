@@ -136,7 +136,7 @@ private fun GridBookCard(
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp)),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
             }
@@ -223,7 +223,7 @@ private fun ListBookCard(
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp)),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
             }

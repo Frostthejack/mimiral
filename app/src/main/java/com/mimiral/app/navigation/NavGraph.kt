@@ -29,10 +29,12 @@ fun MimiralNavGraph(navController: NavHostController) {
         bottomBar = {
             // Hide bottom bar on reader screens
             val route = currentDestination?.route
-            if (route == null || (route != Screen.Library.route
-                        && route != Screen.Discover.route
-                        && route != Screen.NowReading.route
-                        && route != Screen.Settings.route)
+            if (route == null || (
+                route != Screen.Library.route &&
+                    route != Screen.Discover.route &&
+                    route != Screen.NowReading.route &&
+                    route != Screen.Settings.route
+                )
             ) {
                 // Don't show bottom bar
             } else {

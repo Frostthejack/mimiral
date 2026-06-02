@@ -5,13 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class BookmarkUiState(
     val bookmarks: List<BookmarkEntity> = emptyList(),
@@ -122,7 +122,12 @@ class BookmarkManager @Inject constructor(
         val position = _currentPosition.value
 
         viewModelScope.launch {
-            val isBookmarked = bookRepository.isBookmarkedAtPosition(bookId, chapter, page, position)
+            val isBookmarked = bookRepository.isBookmarkedAtPosition(
+                bookId,
+                chapter,
+                page,
+                position
+            )
             _uiState.value = _uiState.value.copy(isCurrentPositionBookmarked = isBookmarked)
         }
     }

@@ -95,7 +95,9 @@ fun BookmarkListDialog(
                             Text(
                                 text = "Tap the bookmark icon to save your place",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.7f
+                                )
                             )
                         }
                     }

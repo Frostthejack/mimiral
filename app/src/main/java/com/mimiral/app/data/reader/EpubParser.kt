@@ -3,14 +3,14 @@ package com.mimiral.app.data.reader
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
-import java.io.File
-import java.io.IOException
 
 /**
  * Represents the state of an EPUB document being parsed.
@@ -161,13 +161,11 @@ class EpubParser(private val context: Context) {
                 )
                 state = loaded
                 loaded
-
             } catch (e: IOException) {
                 closeInternal()
                 val error = EpubState.Error("Failed to open EPUB: ${e.message}", e)
                 state = error
                 error
-
             } catch (e: Exception) {
                 closeInternal()
                 val error = EpubState.Error("Unexpected error parsing EPUB: ${e.message}", e)
@@ -244,7 +242,13 @@ class EpubParser(private val context: Context) {
                 }
 
                 // Fallback: search for common cover image resource names in reading order
-                val coverResourceNames = listOf("cover", "Cover", "COVER", "cover-image", "cover_image")
+                val coverResourceNames = listOf(
+                    "cover",
+                    "Cover",
+                    "COVER",
+                    "cover-image",
+                    "cover_image"
+                )
                 for (link in pub.readingOrder) {
                     val href = link.href.toString()
                     val nameWithoutExt = href.substringAfterLast("/").substringBeforeLast(".")
@@ -287,7 +291,6 @@ class EpubParser(private val context: Context) {
                 }
 
                 CoverResult.NotFound()
-
             } catch (e: Exception) {
                 CoverResult.Error("Failed to extract cover: ${e.message}", e)
             }

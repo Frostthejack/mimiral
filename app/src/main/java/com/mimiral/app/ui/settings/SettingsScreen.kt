@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.ui.theme.MimiralThemeSwitcher
 import com.mimiral.app.ui.theme.MimiralThemeType
-import com.mimiral.app.ui.theme.ThemeState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -121,10 +120,26 @@ fun SettingsScreen() {
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ThemePreviewItem("Day", MimiralThemeType.DAY, currentTheme == MimiralThemeType.DAY)
-                    ThemePreviewItem("Sepia", MimiralThemeType.SEPIA, currentTheme == MimiralThemeType.SEPIA)
-                    ThemePreviewItem("Dark", MimiralThemeType.DARK, currentTheme == MimiralThemeType.DARK)
-                    ThemePreviewItem("Night", MimiralThemeType.NIGHT, currentTheme == MimiralThemeType.NIGHT)
+                    ThemePreviewItem(
+                        "Day",
+                        MimiralThemeType.DAY,
+                        currentTheme == MimiralThemeType.DAY
+                    )
+                    ThemePreviewItem(
+                        "Sepia",
+                        MimiralThemeType.SEPIA,
+                        currentTheme == MimiralThemeType.SEPIA
+                    )
+                    ThemePreviewItem(
+                        "Dark",
+                        MimiralThemeType.DARK,
+                        currentTheme == MimiralThemeType.DARK
+                    )
+                    ThemePreviewItem(
+                        "Night",
+                        MimiralThemeType.NIGHT,
+                        currentTheme == MimiralThemeType.NIGHT
+                    )
                 }
             }
 
@@ -213,8 +228,11 @@ private fun ThemePreviewItem(
             text = name,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (isSelected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
 
         if (isSelected) {

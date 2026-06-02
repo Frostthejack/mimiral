@@ -46,13 +46,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.text.BreakIterator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
 
 /**
  * Data class representing a dictionary definition result.
@@ -404,7 +404,7 @@ fun DictionaryPopup(
                                 openInBrowser(
                                     context,
                                     "https://www.google.com/search?q=define+${
-                                        URLEncoder.encode(word, "UTF-8")
+                                    URLEncoder.encode(word, "UTF-8")
                                     }"
                                 )
                             }

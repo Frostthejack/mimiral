@@ -9,7 +9,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private val Context.libraryDataStore: DataStore<Preferences> by preferencesDataStore(name = "library_settings")
+private val Context.libraryDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "library_settings"
+)
 
 class LibrarySettingsRepository(private val context: Context) {
 

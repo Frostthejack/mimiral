@@ -1,14 +1,11 @@
 package com.mimiral.app.data.reader
 
+import java.util.LinkedHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.readium.r2.shared.publication.Link
-import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.Try
-import java.io.IOException
-import java.util.LinkedHashMap
 
 /**
  * Result of a chapter text extraction operation.
@@ -144,7 +141,6 @@ class ChapterExtractor(
                     prefetchAdjacent(chapterIndex)
                 }
                 result
-
             } catch (e: Exception) {
                 ChapterExtractionResult.Error(
                     "Failed to extract chapter $chapterIndex: ${e.message}",
@@ -432,12 +428,22 @@ class ChapterExtractor(
             text = text.replace(Regex("""<!\[CDATA\[.*?\]\]>""", RegexOption.DOT_MATCHES_ALL), "")
 
             // Remove script blocks entirely
-            text = text.replace(Regex("""<script[^>]*>.*?</script>""",
-                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
+            text = text.replace(
+                Regex(
+                    """<script[^>]*>.*?</script>""",
+                    setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+                ),
+                ""
+            )
 
             // Remove style blocks entirely
-            text = text.replace(Regex("""<style[^>]*>.*?</style>""",
-                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
+            text = text.replace(
+                Regex(
+                    """<style[^>]*>.*?</style>""",
+                    setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+                ),
+                ""
+            )
 
             // Remove HTML comments
             text = text.replace(Regex("""<!--.*?-->""", RegexOption.DOT_MATCHES_ALL), "")
@@ -468,10 +474,10 @@ class ChapterExtractor(
             text = decodeHtmlEntities(text)
 
             // Normalize whitespace: collapse multiple spaces, preserve paragraph breaks
-            text = text.replace(Regex("""[ \t]+"""), " ")       // Collapse horizontal whitespace
-            text = text.replace(Regex("""\n{3,}"""), "\n\n")    // Max 2 consecutive newlines
-            text = text.replace(Regex(""" +\n"""), "\n")         // Remove trailing spaces before newlines
-            text = text.replace(Regex("""\n +"""), "\n")         // Remove leading spaces after newlines
+            text = text.replace(Regex("""[ \t]+"""), " ") // Collapse horizontal whitespace
+            text = text.replace(Regex("""\n{3,}"""), "\n\n") // Max 2 consecutive newlines
+            text = text.replace(Regex(""" +\n"""), "\n") // Remove trailing spaces before newlines
+            text = text.replace(Regex("""\n +"""), "\n") // Remove leading spaces after newlines
 
             return text.trim()
         }
@@ -488,26 +494,26 @@ class ChapterExtractor(
                 .replace("&apos;", "'")
                 .replace("&nbsp;", " ")
                 .replace("&#160;", " ")
-                .replace("&#8211;", "\u2013")  // en-dash
-                .replace("&#8212;", "\u2014")  // em-dash
-                .replace("&#8216;", "\u2018")  // left single quote
-                .replace("&#8217;", "\u2019")  // right single quote
-                .replace("&#8220;", "\u201C")  // left double quote
-                .replace("&#8221;", "\u201D")  // right double quote
-                .replace("&#8230;", "\u2026")  // ellipsis
-                .replace("&#8217;", "\u2019")  // right single quotation mark
-                .replace("&#8222;", "\u201E")  // double low-9 quotation mark
-                .replace("&#176;", "\u00B0")   // degree sign
-                .replace("&#215;", "\u00D7")   // multiplication sign
-                .replace("&#247;", "\u00F7")   // division sign
-                .replace("&#169;", "\u00A9")   // copyright
-                .replace("&#174;", "\u00AE")   // registered trademark
-                .replace("&#8482;", "\u2122")  // trademark
-                .replace("&#8226;", "\u2022")  // bullet
-                .replace("&#8203;", "")        // zero-width space (remove)
-                .replace("&#8201;", " ")       // thin space
-                .replace("&#8194;", " ")       // en space
-                .replace("&#8195;", " ")       // em space
+                .replace("&#8211;", "\u2013") // en-dash
+                .replace("&#8212;", "\u2014") // em-dash
+                .replace("&#8216;", "\u2018") // left single quote
+                .replace("&#8217;", "\u2019") // right single quote
+                .replace("&#8220;", "\u201C") // left double quote
+                .replace("&#8221;", "\u201D") // right double quote
+                .replace("&#8230;", "\u2026") // ellipsis
+                .replace("&#8217;", "\u2019") // right single quotation mark
+                .replace("&#8222;", "\u201E") // double low-9 quotation mark
+                .replace("&#176;", "\u00B0") // degree sign
+                .replace("&#215;", "\u00D7") // multiplication sign
+                .replace("&#247;", "\u00F7") // division sign
+                .replace("&#169;", "\u00A9") // copyright
+                .replace("&#174;", "\u00AE") // registered trademark
+                .replace("&#8482;", "\u2122") // trademark
+                .replace("&#8226;", "\u2022") // bullet
+                .replace("&#8203;", "") // zero-width space (remove)
+                .replace("&#8201;", " ") // thin space
+                .replace("&#8194;", " ") // en space
+                .replace("&#8195;", " ") // em space
                 // Handle numeric entities: &#123;
                 .replace(Regex("""&#(\d+);""")) { matchResult ->
                     val code = matchResult.groupValues[1].toIntOrNull()

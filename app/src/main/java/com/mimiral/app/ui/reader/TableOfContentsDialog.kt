@@ -96,7 +96,9 @@ fun TableOfContentsDialog(
                             Text(
                                 text = "This book does not have a table of contents",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.7f
+                                )
                             )
                         }
                     }
@@ -194,7 +196,9 @@ fun TableOfContentsDialog(
                             if (index < chapters.lastIndex) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 24.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                        alpha = 0.5f
+                                    )
                                 )
                             }
                         }
