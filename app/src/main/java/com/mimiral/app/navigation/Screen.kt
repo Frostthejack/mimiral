@@ -11,4 +11,7 @@ sealed class Screen(val route: String) {
     object PdfReader : Screen("pdf_reader/{bookId}") {
         fun createRoute(bookId: Int): String = "pdf_reader/$bookId"
     }
+    object DjvuReader : Screen("djvu_reader/{bookId}") {
+        fun createRoute(bookId: Int): String = "djvu_reader/$bookId"
+    }
 }
