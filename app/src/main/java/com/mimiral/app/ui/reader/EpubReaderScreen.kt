@@ -451,8 +451,6 @@ fun EpubReaderScreen(
                             }
                     ) {
                         val pageText = pages.getOrNull(pageIndex)?.text ?: ""
-                        val pageStartOffset = pages.getOrNull(pageIndex)?.startOffset ?: 0
-                        val ttsSentence = uiState.currentTtsSentence
 
                         EpubPageContent(
                             pageText = pageText,
@@ -466,8 +464,6 @@ fun EpubReaderScreen(
                                 null
                             },
                             textSettings = textSettings,
-                            ttsSentence = ttsSentence,
-                            pageStartOffset = pageStartOffset,
                             highlights = currentChapterHighlights,
                             onLongPress = onTextLongPress
                         )
@@ -586,8 +582,6 @@ private fun EpubPageContent(
     totalPages: Int,
     chapterTitle: String? = null,
     textSettings: TextSettings = TextSettings(),
-    ttsSentence: TtsSentence? = null,
-    pageStartOffset: Int = 0,
     highlights: List<ReaderHighlight> = emptyList(),
     onLongPress: (String, Int, Int) -> Unit = { _, _, _ -> }
 ) {
@@ -623,43 +617,6 @@ private fun EpubPageContent(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Determine if this page has an active TTS sentence highlight
-        val hasSentenceHighlight = ttsSentence != null &&
-            ttsSentence.start < pageStartOffset + pageText.length &&
-            ttsSentence.end > pageStartOffset
-
-        if (hasSentenceHighlight && ttsSentence != null) {
-            val pageEndOffset = pageStartOffset + pageText.length
-            val sentenceOverlapStart = ttsSentence.start.coerceIn(pageStartOffset, pageEndOffset)
-            val sentenceOverlapEnd = ttsSentence.end.coerceIn(pageStartOffset, pageEndOffset)
-
-            if (sentenceOverlapStart < sentenceOverlapEnd) {
-                val highlightStartInPage = (sentenceOverlapStart - pageStartOffset).coerceAtLeast(0)
-                val highlightEndInPage = (sentenceOverlapEnd - pageStartOffset).coerceAtMost(pageText.length)
-
-                val annotatedText = buildPageTextWithHighlight(
-                    pageText = pageText,
-                    highlightStart = highlightStartInPage,
-                    highlightEnd = highlightEndInPage,
-                    baseStyle = textStyle
-                )
-                Text(
-                    text = annotatedText,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            } else {
-                Text(
-                    text = pageText,
-                    style = textStyle
-                )
-            }
-        } else {
-            Text(
-                text = pageText,
-                style = textStyle
-            )
-        }
-
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
@@ -671,53 +628,6 @@ private fun EpubPageContent(
                 .padding(top = 16.dp)
                 .wrapContentWidth(Alignment.CenterHorizontally)
         )
-    }
-}
-
-/**
- * Builds an AnnotatedString for page text with the current sentence highlighted.
- * Uses Material 3 secondaryContainer color for the highlight background,
- * providing clear visual distinction from user-created highlights.
- */
-@Composable
-private fun buildPageTextWithHighlight(
-    pageText: String,
-    highlightStart: Int,
-    highlightEnd: Int,
-    baseStyle: androidx.compose.ui.text.TextStyle
-): androidx.compose.ui.text.AnnotatedString {
-    val highlightColor = MaterialTheme.colorScheme.secondaryContainer
-    val highlightTextColor = MaterialTheme.colorScheme.onSecondaryContainer
-
-    return buildAnnotatedString {
-        // Text before highlight
-        if (highlightStart > 0) {
-            withStyle(SpanStyle(color = baseStyle.color)) {
-                append(pageText.substring(0, highlightStart.coerceAtMost(pageText.length)))
-            }
-        }
-
-        // Highlighted sentence portion
-        if (highlightStart < highlightEnd && highlightStart >= 0) {
-            val clampedEnd = highlightEnd.coerceAtMost(pageText.length)
-            val clampedStart = highlightStart.coerceAtMost(clampedEnd)
-            withStyle(
-                SpanStyle(
-                    background = highlightColor,
-                    color = highlightTextColor
-                )
-            ) {
-                append(pageText.substring(clampedStart, clampedEnd))
-            }
-        }
-
-        // Text after highlight
-        val afterStart = highlightEnd.coerceAtLeast(0)
-        if (afterStart < pageText.length) {
-            withStyle(SpanStyle(color = baseStyle.color)) {
-                append(pageText.substring(afterStart))
-            }
-        }
     }
 }
 
