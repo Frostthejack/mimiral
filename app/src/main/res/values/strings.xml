@@ -1,4 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Mimiral</string>
+
+    <!-- TTS notification channel -->
+    <string name="tts_notification_channel_name">TTS Playback</string>
+    <string name="tts_notification_channel_desc">Controls for text-to-speech playback</string>
+
+    <!-- TTS notification -->
+    <string name="tts_notification_title">Reading Aloud</string>
+    <string name="tts_notification_text">TTS is active</string>
+    <string name="tts_notification_play">Play</string>
+    <string name="tts_notification_pause">Pause</string>
+    <string name="tts_notification_stop">Stop</string>
+    <string name="tts_notification_cancel_sleep">Cancel Sleep Timer</string>
+    <string name="tts_notif_prev_chapter">Previous Chapter</string>
+    <string name="tts_notif_next_chapter">Next Chapter</string>
+    <string name="tts_notif_prev_sentence">Previous Sentence</string>
+    <string name="tts_notif_next_sentence">Next Sentence</string>
+
+    <!-- TTS skip controls -->
+    <string name="tts_skip_chapter_prev">Skip Chapter Backward</string>
+    <string name="tts_skip_chapter_next">Skip Chapter Forward</string>
+    <string name="tts_skip_sentence_prev">Skip Sentence Backward</string>
+    <string name="tts_skip_sentence_next">Skip Sentence Forward</string>
+    <string name="tts_skip_paragraph_prev">Skip Paragraph Backward</string>
+    <string name="tts_skip_paragraph_next">Skip Paragraph Forward</string>
+    <string name="tts_play">Play</string>
+    <string name="tts_pause">Pause</string>
+    <string name="tts_stop">Stop</string>
+
+    <!-- Highlight -->
+    <string name="highlight_color_picker_title">Highlight Color</string>
+    <string name="highlight_cancel">Cancel</string>
+    <string name="highlight_apply">Highlight</string>
+    <string name="highlight_deleted">Highlight deleted</string>
+    <string name="highlight_saved">Highlight saved</string>
 </resources>

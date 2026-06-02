@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookmarkEntity
+import com.mimiral.app.data.local.entity.HighlightEntity
+import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -12,6 +14,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+data class ReaderHighlight(
+    val id: Int = 0,
+    val bookId: Int = -1,
+    val chapterIndex: Int = 0,
+    val startOffset: Int = 0,
+    val endOffset: Int = 0,
+    val selectedText: String = "",
+    val color: String = "#FFFFEB3B",
+    val note: String? = null
+)
 
 data class EpubChapter(
     val index: Int,
@@ -29,6 +42,12 @@ data class ReaderProgress(
     val lastReadPosition: String? = null
 )
 
+/**
+ * Represents the current TTS sentence being read, using the data-layer Sentence type.
+ * Alias for clarity in the reader UI context.
+ */
+typealias TtsSentence = Sentence
+
 data class ReaderUiState(
     val bookId: Int = -1,
     val isLoading: Boolean = true,
@@ -41,7 +60,16 @@ data class ReaderUiState(
     val showBookmarks: Boolean = false,
     val isCurrentPageBookmarked: Boolean = false,
     val bookmarks: List<BookmarkEntity> = emptyList(),
-    val error: String? = null
+    val highlights: List<ReaderHighlight> = emptyList(),
+    val showHighlightColorPicker: Boolean = false,
+    val pendingHighlightText: String = "",
+    val pendingHighlightStartOffset: Int = 0,
+    val pendingHighlightEndOffset: Int = 0,
+    val error: String? = null,
+    val ttsPlaying: Boolean = false,
+    val ttsPaused: Boolean = false,
+    /** The sentence currently being read by TTS, or null if no TTS active. */
+    val currentTtsSentence: TtsSentence? = null
 )
 
 @HiltViewModel
@@ -63,6 +91,7 @@ class EpubReaderViewModel @Inject constructor(
     init {
         restoreProgress()
         loadToc()
+        loadHighlights()
     }
 
     /**
@@ -118,6 +147,35 @@ class EpubReaderViewModel @Inject constructor(
                 loadBookmarks()
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    /**
+     * Load highlights for the current book from the database.
+     */
+    private fun loadHighlights() {
+        if (bookId == -1) return
+
+        viewModelScope.launch {
+            try {
+                bookRepository.getHighlightsForBook(bookId).collect { entities ->
+                    val highlights = entities.map { entity ->
+                        ReaderHighlight(
+                            id = entity.id,
+                            bookId = entity.bookId,
+                            chapterIndex = entity.chapterIndex,
+                            startOffset = entity.startPosition?.toIntOrNull() ?: 0,
+                            endOffset = entity.endPosition?.toIntOrNull() ?: 0,
+                            selectedText = entity.selectedText ?: "",
+                            color = entity.color,
+                            note = entity.note
+                        )
+                    }
+                    _uiState.update { it.copy(highlights = highlights) }
+                }
+            } catch (_: Exception) {
+                // Non-critical — highlights can default to empty
             }
         }
     }
@@ -344,6 +402,106 @@ class EpubReaderViewModel @Inject constructor(
         )
     }
 
+    // ---- Highlight methods ----
+
+    /**
+     * Called when user long-presses text. Stores the selected text and shows the
+     * color picker bottom sheet.
+     */
+    fun onTextLongPressed(
+        selectedText: String,
+        startOffset: Int,
+        endOffset: Int
+    ) {
+        _uiState.update {
+            it.copy(
+                showHighlightColorPicker = true,
+                pendingHighlightText = selectedText,
+                pendingHighlightStartOffset = startOffset,
+                pendingHighlightEndOffset = endOffset
+            )
+        }
+    }
+
+    /**
+     * Dismiss the highlight color picker without saving.
+     */
+    fun dismissHighlightColorPicker() {
+        _uiState.update {
+            it.copy(
+                showHighlightColorPicker = false,
+                pendingHighlightText = "",
+                pendingHighlightStartOffset = 0,
+                pendingHighlightEndOffset = 0
+            )
+        }
+    }
+
+    /**
+     * Save a highlight with the selected color and dismiss the picker.
+     */
+    fun saveHighlight(colorHex: String) {
+        if (bookId == -1) return
+
+        val state = _uiState.value
+        val text = state.pendingHighlightText
+        val startOffset = state.pendingHighlightStartOffset
+        val endOffset = state.pendingHighlightEndOffset
+
+        if (text.isBlank()) {
+            dismissHighlightColorPicker()
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                bookRepository.addHighlight(
+                    bookId = bookId,
+                    chapterIndex = currentChapterIndex,
+                    startPosition = startOffset.toString(),
+                    endPosition = endOffset.toString(),
+                    selectedText = text,
+                    color = colorHex
+                )
+                dismissHighlightColorPicker()
+                // Highlights will auto-update via Flow in loadHighlights()
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = "Failed to save highlight: ${e.message}",
+                        showHighlightColorPicker = false
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Delete a specific highlight.
+     */
+    fun deleteHighlight(highlight: ReaderHighlight) {
+        if (bookId == -1) return
+
+        viewModelScope.launch {
+            try {
+                val entity = HighlightEntity(
+                    id = highlight.id,
+                    bookId = highlight.bookId,
+                    chapterIndex = highlight.chapterIndex,
+                    startPosition = highlight.startOffset.toString(),
+                    endPosition = highlight.endOffset.toString(),
+                    selectedText = highlight.selectedText,
+                    color = highlight.color,
+                    note = highlight.note,
+                    createdTime = 0
+                )
+                bookRepository.deleteHighlight(entity)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to delete highlight: ${e.message}") }
+            }
+        }
+    }
+
     /**
      * Calculate progress percentage from character offset.
      */
@@ -404,5 +562,29 @@ class EpubReaderViewModel @Inject constructor(
             pageNumber = state.progress.pageNumber,
             lastReadPosition = state.progress.lastReadPosition
         )
+    }
+
+    // --- TTS state management ---
+
+    fun setTtsPlaying(playing: Boolean) {
+        _uiState.update { it.copy(ttsPlaying = playing, ttsPaused = false) }
+    }
+
+    fun setTtsPaused(paused: Boolean) {
+        _uiState.update { it.copy(ttsPlaying = false, ttsPaused = paused) }
+    }
+
+    fun setTtsStopped() {
+        _uiState.update { it.copy(ttsPlaying = false, ttsPaused = false) }
+    }
+
+    /**
+     * Update the current TTS sentence being read.
+     * Called from the UI layer when a sentence broadcast is received.
+     *
+     * @param sentence The active sentence, or null if playback stopped/paused.
+     */
+    fun onTtsSentenceChanged(sentence: TtsSentence?) {
+        _uiState.update { it.copy(currentTtsSentence = sentence) }
     }
 }
