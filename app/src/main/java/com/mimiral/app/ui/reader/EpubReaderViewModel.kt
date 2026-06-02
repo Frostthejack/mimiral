@@ -41,7 +41,9 @@ data class ReaderUiState(
     val showBookmarks: Boolean = false,
     val isCurrentPageBookmarked: Boolean = false,
     val bookmarks: List<BookmarkEntity> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    val ttsPlaying: Boolean = false,
+    val ttsPaused: Boolean = false
 )
 
 @HiltViewModel
@@ -404,5 +406,19 @@ class EpubReaderViewModel @Inject constructor(
             pageNumber = state.progress.pageNumber,
             lastReadPosition = state.progress.lastReadPosition
         )
+    }
+
+    // --- TTS state management ---
+
+    fun setTtsPlaying(playing: Boolean) {
+        _uiState.update { it.copy(ttsPlaying = playing, ttsPaused = false) }
+    }
+
+    fun setTtsPaused(paused: Boolean) {
+        _uiState.update { it.copy(ttsPlaying = false, ttsPaused = paused) }
+    }
+
+    fun setTtsStopped() {
+        _uiState.update { it.copy(ttsPlaying = false, ttsPaused = false) }
     }
 }

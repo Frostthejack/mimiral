@@ -1,5 +1,10 @@
 package com.mimiral.app.ui.reader
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.util.Log
 import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -9,13 +14,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBackIos
-import androidx.compose.material.icons.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,12 +28,17 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import com.mimiral.app.tts.TTSService
+import com.mimiral.app.R
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -114,6 +118,31 @@ fun EpubReaderScreen(
 
     var toolbarVisible by remember { mutableStateOf(false) }
     var showTextSettings by remember { mutableStateOf(false) }
+
+    // TTS state
+    var ttsPlaying by remember { mutableStateOf(false) }
+    var ttsPaused by remember { mutableStateOf(false) }
+
+    // Listen for skip performed broadcasts from TTSService
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == TTSService.ACTION_SKIP_PERFORMED) {
+                    val skipType = intent.getStringExtra(TTSService.EXTRA_SKIP_TYPE) ?: ""
+                    Log.d("EpubReader", "Skip performed: $skipType")
+                }
+            }
+        }
+        val filter = IntentFilter(TTSService.ACTION_SKIP_PERFORMED)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
 
     // Track page changes and notify ViewModel
     LaunchedEffect(pagerState.currentPage) {
@@ -227,61 +256,121 @@ fun EpubReaderScreen(
         },
         bottomBar = {
             if (toolbarVisible) {
-                NavigationBar {
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = {
-                            if (viewModel.hasPreviousChapter()) {
-                                viewModel.previousChapter()
-                                coroutineScope.launch {
-                                    val chapter = uiState.chapters.getOrNull(
-                                        uiState.currentChapter - 1
-                                    )
-                                    if (chapter != null) {
-                                        pagerState.animateScrollToPage(chapter.startPage)
+                Column {
+                    // TTS Controls bar
+                    TtsControlsBar(
+                        isPlaying = ttsPlaying,
+                        isPaused = ttsPaused,
+                        onPlay = {
+                            val intent = TTSService.createPlayIntent(context, chapterText)
+                            context.startService(intent)
+                            ttsPlaying = true
+                            ttsPaused = false
+                            viewModel.setTtsPlaying(true)
+                        },
+                        onPause = {
+                            val intent = TTSService.createPauseIntent(context)
+                            context.startService(intent)
+                            ttsPlaying = false
+                            ttsPaused = true
+                            viewModel.setTtsPaused(true)
+                        },
+                        onResume = {
+                            val intent = TTSService.createResumeIntent(context)
+                            context.startService(intent)
+                            ttsPlaying = true
+                            ttsPaused = false
+                            viewModel.setTtsPlaying(true)
+                        },
+                        onStop = {
+                            val intent = TTSService.createStopIntent(context)
+                            context.startService(intent)
+                            ttsPlaying = false
+                            ttsPaused = false
+                            viewModel.setTtsStopped()
+                        },
+                        onSkipChapterBackward = {
+                            val intent = TTSService.createSkipChapterBackwardIntent(context)
+                            context.startService(intent)
+                        },
+                        onSkipSentenceBackward = {
+                            val intent = TTSService.createSkipSentenceBackwardIntent(context)
+                            context.startService(intent)
+                        },
+                        onSkipSentenceForward = {
+                            val intent = TTSService.createSkipSentenceForwardIntent(context)
+                            context.startService(intent)
+                        },
+                        onSkipChapterForward = {
+                            val intent = TTSService.createSkipChapterForwardIntent(context)
+                            context.startService(intent)
+                        },
+                        onSkipParagraphBackward = {
+                            val intent = TTSService.createSkipParagraphBackwardIntent(context)
+                            context.startService(intent)
+                        },
+                        onSkipParagraphForward = {
+                            val intent = TTSService.createSkipParagraphForwardIntent(context)
+                            context.startService(intent)
+                        }
+                    )
+                    // Navigation bar
+                    NavigationBar {
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = {
+                                if (viewModel.hasPreviousChapter()) {
+                                    viewModel.previousChapter()
+                                    coroutineScope.launch {
+                                        val chapter = uiState.chapters.getOrNull(
+                                            uiState.currentChapter - 1
+                                        )
+                                        if (chapter != null) {
+                                            pagerState.animateScrollToPage(chapter.startPage)
+                                        }
                                     }
                                 }
-                            }
-                        },
-                        enabled = viewModel.hasPreviousChapter(),
-                        icon = {
-                            Icon(
-                                Icons.Default.ArrowBackIos,
-                                contentDescription = "Previous chapter"
-                            )
-                        },
-                        label = { Text("Prev Ch") }
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = { viewModel.showToc() },
-                        icon = { Text("${pagerState.currentPage + 1}/$pageCount") },
-                        label = { Text("Page") }
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = {
-                            if (viewModel.hasNextChapter()) {
-                                viewModel.nextChapter()
-                                coroutineScope.launch {
-                                    val chapter = uiState.chapters.getOrNull(
-                                        uiState.currentChapter + 1
-                                    )
-                                    if (chapter != null) {
-                                        pagerState.animateScrollToPage(chapter.startPage)
+                            },
+                            enabled = viewModel.hasPreviousChapter(),
+                            icon = {
+                                Icon(
+                                    Icons.Default.ArrowBackIos,
+                                    contentDescription = "Previous chapter"
+                                )
+                            },
+                            label = { Text("Prev Ch") }
+                        )
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = { viewModel.showToc() },
+                            icon = { Text("${pagerState.currentPage + 1}/$pageCount") },
+                            label = { Text("Page") }
+                        )
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = {
+                                if (viewModel.hasNextChapter()) {
+                                    viewModel.nextChapter()
+                                    coroutineScope.launch {
+                                        val chapter = uiState.chapters.getOrNull(
+                                            uiState.currentChapter + 1
+                                        )
+                                        if (chapter != null) {
+                                            pagerState.animateScrollToPage(chapter.startPage)
+                                        }
                                     }
                                 }
-                            }
-                        },
-                        enabled = viewModel.hasNextChapter(),
-                        icon = {
-                            Icon(
-                                Icons.Default.ArrowForwardIos,
-                                contentDescription = "Next chapter"
-                            )
-                        },
-                        label = { Text("Next Ch") }
-                    )
+                            },
+                            enabled = viewModel.hasNextChapter(),
+                            icon = {
+                                Icon(
+                                    Icons.Default.ArrowForwardIos,
+                                    contentDescription = "Next chapter"
+                                )
+                            },
+                            label = { Text("Next Ch") }
+                        )
+                    }
                 }
             }
         }
@@ -536,6 +625,146 @@ private fun EpubPageContent(
                 .padding(top = 16.dp)
                 .wrapContentWidth(Alignment.CenterHorizontally)
         )
+    }
+}
+
+/**
+ * TTS controls bar with skip forward/back buttons for sentence, paragraph, and chapter.
+ * Layout: two rows of controls.
+ * Row 1: [Ch Prev] [Sent Prev] [Play/Pause/Resume] [Sent Next] [Ch Next]
+ * Row 2: [Parag Prev] [Stop] [Parag Next]
+ */
+@Composable
+private fun TtsControlsBar(
+    isPlaying: Boolean,
+    isPaused: Boolean,
+    onPlay: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onStop: () -> Unit,
+    onSkipChapterBackward: () -> Unit,
+    onSkipSentenceBackward: () -> Unit,
+    onSkipSentenceForward: () -> Unit,
+    onSkipChapterForward: () -> Unit,
+    onSkipParagraphBackward: () -> Unit,
+    onSkipParagraphForward: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Row 1: Chapter skip + Sentence skip + Play/Pause + Sentence skip + Chapter skip
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onSkipChapterBackward,
+                    modifier = Modifier.semantics { contentDescription = "Skip chapter backward" }
+                ) {
+                    Icon(
+                        Icons.Default.FastRewind,
+                        contentDescription = stringResource(R.string.tts_skip_chapter_prev),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = onSkipSentenceBackward,
+                    modifier = Modifier.semantics { contentDescription = "Skip sentence backward" }
+                ) {
+                    Icon(
+                        Icons.Default.SkipPrevious,
+                        contentDescription = stringResource(R.string.tts_skip_sentence_prev),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FilledIconButton(
+                    onClick = {
+                        when {
+                            isPlaying -> onPause()
+                            isPaused -> onResume()
+                            else -> onPlay()
+                        }
+                    },
+                    modifier = Modifier.semantics {
+                        contentDescription = if (isPlaying) "Pause TTS" else "Play TTS"
+                    }
+                ) {
+                    Icon(
+                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) stringResource(R.string.tts_pause) else stringResource(R.string.tts_play),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                IconButton(
+                    onClick = onSkipSentenceForward,
+                    modifier = Modifier.semantics { contentDescription = "Skip sentence forward" }
+                ) {
+                    Icon(
+                        Icons.Default.SkipNext,
+                        contentDescription = stringResource(R.string.tts_skip_sentence_next),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(
+                    onClick = onSkipChapterForward,
+                    modifier = Modifier.semantics { contentDescription = "Skip chapter forward" }
+                ) {
+                    Icon(
+                        Icons.Default.FastForward,
+                        contentDescription = stringResource(R.string.tts_skip_chapter_next),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            // Row 2: Paragraph skip + Stop + Paragraph skip
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onSkipParagraphBackward,
+                    modifier = Modifier.semantics { contentDescription = "Skip paragraph backward" }
+                ) {
+                    Icon(
+                        Icons.Default.KeyboardDoubleArrowLeft,
+                        contentDescription = stringResource(R.string.tts_skip_paragraph_prev),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FilledIconButton(
+                    onClick = onStop,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.semantics { contentDescription = "Stop TTS" }
+                ) {
+                    Icon(
+                        Icons.Default.Stop,
+                        contentDescription = stringResource(R.string.tts_stop),
+                        tint = MaterialTheme.colorScheme.onError
+                    )
+                }
+                IconButton(
+                    onClick = onSkipParagraphForward,
+                    modifier = Modifier.semantics { contentDescription = "Skip paragraph forward" }
+                ) {
+                    Icon(
+                        Icons.Default.KeyboardDoubleArrowRight,
+                        contentDescription = stringResource(R.string.tts_skip_paragraph_next),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }
 
