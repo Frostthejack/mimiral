@@ -73,7 +73,7 @@ import com.mimiral.app.data.local.settings.ViewMode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
-    onBookClick: (Int) -> Unit,
+    onBookClick: (Int, String) -> Unit,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -263,7 +263,7 @@ fun LibraryScreen(
 private fun GridLibraryContent(
     books: List<BookWithProgress>,
     recentBooks: List<BookWithProgress>,
-    onBookClick: (Int) -> Unit,
+    onBookClick: (Int, String) -> Unit,
     onBookLongPress: (BookWithProgress) -> Unit
 ) {
     LazyVerticalGrid(
@@ -290,7 +290,7 @@ private fun GridLibraryContent(
             items(recentBooks, key = { "recent_${it.book.id}" }) { bookWithProgress ->
                 GridBookItem(
                     bookWithProgress = bookWithProgress,
-                    onClick = { onBookClick(bookWithProgress.book.id) },
+                    onClick = { onBookClick(bookWithProgress.book.id, bookWithProgress.book.format) },
                     onLongClick = { onBookLongPress(bookWithProgress) }
                 )
             }
@@ -316,7 +316,7 @@ private fun GridLibraryContent(
         items(books, key = { it.book.id }) { bookWithProgress ->
             GridBookItem(
                 bookWithProgress = bookWithProgress,
-                onClick = { onBookClick(bookWithProgress.book.id) },
+                onClick = { onBookClick(bookWithProgress.book.id, bookWithProgress.book.format) },
                 onLongClick = { onBookLongPress(bookWithProgress) }
             )
         }
@@ -328,7 +328,7 @@ private fun GridLibraryContent(
 private fun ListLibraryContent(
     books: List<BookWithProgress>,
     recentBooks: List<BookWithProgress>,
-    onBookClick: (Int) -> Unit,
+    onBookClick: (Int, String) -> Unit,
     onBookLongPress: (BookWithProgress) -> Unit
 ) {
     LazyColumn(
@@ -349,7 +349,7 @@ private fun ListLibraryContent(
             items(recentBooks, key = { "recent_${it.book.id}" }) { bookWithProgress ->
                 ListBookItem(
                     bookWithProgress = bookWithProgress,
-                    onClick = { onBookClick(bookWithProgress.book.id) },
+                    onClick = { onBookClick(bookWithProgress.book.id, bookWithProgress.book.format) },
                     onLongClick = { onBookLongPress(bookWithProgress) }
                 )
             }
@@ -375,7 +375,7 @@ private fun ListLibraryContent(
         items(books, key = { it.book.id }) { bookWithProgress ->
             ListBookItem(
                 bookWithProgress = bookWithProgress,
-                onClick = { onBookClick(bookWithProgress.book.id) },
+                onClick = { onBookClick(bookWithProgress.book.id, bookWithProgress.book.format) },
                 onLongClick = { onBookLongPress(bookWithProgress) }
             )
         }
@@ -425,10 +425,10 @@ private fun GridBookItem(
                         )
                     } else {
                         Icon(
-                            imageVector = if (bookWithProgress.book.format == "PDF") {
-                                Icons.Default.MenuBook
-                            } else {
-                                Icons.Default.Book
+                            imageVector = when (bookWithProgress.book.format) {
+                                "PDF" -> Icons.Default.MenuBook
+                                "DJVU" -> Icons.Default.Description,
+                                else -> Icons.Default.Book
                             },
                             contentDescription = null,
                             modifier = Modifier.size(40.dp),
@@ -542,10 +542,10 @@ private fun ListBookItem(
                         )
                     } else {
                         Icon(
-                            imageVector = if (bookWithProgress.book.format == "PDF") {
-                                Icons.Default.MenuBook
-                            } else {
-                                Icons.Default.Book
+                            imageVector = when (bookWithProgress.book.format) {
+                                "PDF" -> Icons.Default.MenuBook
+                                "DJVU" -> Icons.Default.Description,
+                                else -> Icons.Default.Book
                             },
                             contentDescription = null,
                             modifier = Modifier.size(28.dp),
