@@ -28,4 +28,11 @@
     <string name="tts_play">Play</string>
     <string name="tts_pause">Pause</string>
     <string name="tts_stop">Stop</string>
+
+    <!-- Highlight -->
+    <string name="highlight_color_picker_title">Highlight Color</string>
+    <string name="highlight_cancel">Cancel</string>
+    <string name="highlight_apply">Highlight</string>
+    <string name="highlight_deleted">Highlight deleted</string>
+    <string name="highlight_saved">Highlight saved</string>
 </resources>

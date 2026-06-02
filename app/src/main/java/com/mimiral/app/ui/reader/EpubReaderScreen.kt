@@ -216,6 +216,25 @@ fun EpubReaderScreen(
         }
     }
 
+    // Get current page text for highlighting
+    val currentPageText = if (pages.isNotEmpty()) {
+        pages.getOrNull(pagerState.currentPage)?.text ?: ""
+    } else {
+        ""
+    }
+
+    // Filter highlights for current chapter
+    val currentChapterHighlights = remember(uiState.highlights, uiState.currentChapter) {
+        uiState.highlights.filter { it.chapterIndex == uiState.currentChapter }
+    }
+
+    // Long press handler
+    val onTextLongPress: (String, Int, Int) -> Unit = remember(viewModel) {
+        { selectedText, startOffset, endOffset ->
+            viewModel.onTextLongPressed(selectedText, startOffset, endOffset)
+        }
+    }
+
     Scaffold(
         topBar = {
             if (toolbarVisible) {
@@ -382,33 +401,53 @@ fun EpubReaderScreen(
                                 clip = true
                             }
                             .pointerInput(Unit) {
-                                detectTapGestures { offset ->
-                                    val tapZoneWidth = size.width / 3f
+                                detectTapGestures(
+                                    onLongPress = { offset ->
+                                        // Calculate approximate character offset from tap position
+                                        val avgCharWidth = 8f
+                                        val charOffset = (offset.x / avgCharWidth).toInt()
+                                            .coerceIn(0, currentPageText.length)
 
-                                    when {
-                                        offset.x < tapZoneWidth -> {
-                                            if (pagerState.currentPage > 0) {
-                                                coroutineScope.launch {
-                                                    pagerState.animateScrollToPage(
-                                                        pagerState.currentPage - 1
-                                                    )
+                                        // Select a word around the tapped position
+                                        val wordStart = currentPageText.lastIndexOf(' ', charOffset
+                                            .coerceAtMost((currentPageText.length - 1).coerceAtLeast(0))
+                                        ).let { if (it == -1) 0 else it + 1 }
+                                        val wordEnd = currentPageText.indexOf(' ', charOffset)
+                                            .let { if (it == -1) currentPageText.length else it }
+
+                                        val selectedText = currentPageText.substring(wordStart, wordEnd).trim()
+                                        if (selectedText.isNotEmpty()) {
+                                            onTextLongPress(selectedText, wordStart, wordEnd)
+                                        }
+                                    },
+                                    onTap = { offset ->
+                                        val tapZoneWidth = size.width / 3f
+
+                                        when {
+                                            offset.x < tapZoneWidth -> {
+                                                if (pagerState.currentPage > 0) {
+                                                    coroutineScope.launch {
+                                                        pagerState.animateScrollToPage(
+                                                            pagerState.currentPage - 1
+                                                        )
+                                                    }
                                                 }
                                             }
-                                        }
-                                        offset.x > (size.width * 2f / 3f) -> {
-                                            if (pagerState.currentPage < pageCount - 1) {
-                                                coroutineScope.launch {
-                                                    pagerState.animateScrollToPage(
-                                                        pagerState.currentPage + 1
-                                                    )
+                                            offset.x > (size.width * 2f / 3f) -> {
+                                                if (pagerState.currentPage < pageCount - 1) {
+                                                    coroutineScope.launch {
+                                                        pagerState.animateScrollToPage(
+                                                            pagerState.currentPage + 1
+                                                        )
+                                                    }
                                                 }
                                             }
-                                        }
-                                        else -> {
-                                            toolbarVisible = !toolbarVisible
+                                            else -> {
+                                                toolbarVisible = !toolbarVisible
+                                            }
                                         }
                                     }
-                                }
+                                )
                             }
                     ) {
                         val pageText = pages.getOrNull(pageIndex)?.text ?: ""
@@ -428,7 +467,9 @@ fun EpubReaderScreen(
                             },
                             textSettings = textSettings,
                             ttsSentence = ttsSentence,
-                            pageStartOffset = pageStartOffset
+                            pageStartOffset = pageStartOffset,
+                            highlights = currentChapterHighlights,
+                            onLongPress = onTextLongPress
                         )
                     }
                 }
@@ -516,6 +557,20 @@ fun EpubReaderScreen(
             paginationEngine = paginationEngine
         )
     }
+
+    // Highlight color picker bottom sheet
+    if (uiState.showHighlightColorPicker) {
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.dismissHighlightColorPicker() }
+        ) {
+            HighlightColorSheet(
+                onColorSelected = { highlightColor ->
+                    viewModel.saveHighlight(highlightColor.hex)
+                },
+                onDismiss = { viewModel.dismissHighlightColorPicker() }
+            )
+        }
+    }
 }
 
 private fun buildProgressText(uiState: ReaderUiState): String {
@@ -532,7 +587,9 @@ private fun EpubPageContent(
     chapterTitle: String? = null,
     textSettings: TextSettings = TextSettings(),
     ttsSentence: TtsSentence? = null,
-    pageStartOffset: Int = 0
+    pageStartOffset: Int = 0,
+    highlights: List<ReaderHighlight> = emptyList(),
+    onLongPress: (String, Int, Int) -> Unit = { _, _, _ -> }
 ) {
     val scrollState = rememberScrollState()
 
@@ -558,11 +615,12 @@ private fun EpubPageContent(
             HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
         }
 
-        val textStyle = MaterialTheme.typography.bodyLarge.copy(
-            lineHeight = (textSettings.fontSize * textSettings.lineSpacingMultiplier).sp,
-            fontSize = textSettings.fontSize.sp,
-            fontFamily = textSettings.selectedFontFamily.fontFamily,
-            color = MaterialTheme.colorScheme.onBackground
+        HighlightableText(
+            text = pageText,
+            highlights = highlights,
+            textSettings = textSettings,
+            onLongPress = onLongPress,
+            modifier = Modifier.fillMaxWidth()
         )
 
         // Determine if this page has an active TTS sentence highlight

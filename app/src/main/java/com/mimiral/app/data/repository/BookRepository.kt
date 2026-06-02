@@ -2,11 +2,13 @@ package com.mimiral.app.data.repository
 import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.BookmarkDao
 import com.mimiral.app.data.local.dao.ChapterDao
+import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
+import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.settings.FilterOption
@@ -22,7 +24,8 @@ class BookRepository @Inject constructor(
     private val readingProgressDao: ReadingProgressDao,
     private val bookmarkDao: BookmarkDao,
     private val pdfSettingsDao: PdfSettingsDao,
-    private val chapterDao: ChapterDao
+    private val chapterDao: ChapterDao,
+    private val highlightDao: HighlightDao
 ) {
     fun getAllBooks(): Flow<List<BookEntity>> = bookDao.getAllBooks()
 
@@ -283,4 +286,34 @@ class BookRepository @Inject constructor(
         position: String?
     ): Boolean =
         bookmarkDao.countBookmarksAtPosition(bookId, chapterIndex, pageNumber, position) > 0
+
+    // ---- Highlight wrappers ----
+
+    fun getHighlightsForBook(bookId: Int): Flow<List<HighlightEntity>> =
+        highlightDao.getHighlightsForBook(bookId)
+
+    suspend fun addHighlight(
+        bookId: Int,
+        chapterIndex: Int,
+        startPosition: String?,
+        endPosition: String?,
+        selectedText: String?,
+        color: String,
+        note: String? = null
+    ): Long {
+        val entity = HighlightEntity(
+            bookId = bookId,
+            chapterIndex = chapterIndex,
+            startPosition = startPosition,
+            endPosition = endPosition,
+            selectedText = selectedText,
+            color = color,
+            note = note,
+            createdTime = System.currentTimeMillis()
+        )
+        return highlightDao.insertHighlight(entity)
+    }
+
+    suspend fun deleteHighlight(highlight: HighlightEntity) =
+        highlightDao.deleteHighlight(highlight)
 }
