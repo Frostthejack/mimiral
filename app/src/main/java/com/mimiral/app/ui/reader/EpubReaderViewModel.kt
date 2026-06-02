@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookmarkEntity
+import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -29,6 +30,12 @@ data class ReaderProgress(
     val lastReadPosition: String? = null
 )
 
+/**
+ * Represents the current TTS sentence being read, using the data-layer Sentence type.
+ * Alias for clarity in the reader UI context.
+ */
+typealias TtsSentence = Sentence
+
 data class ReaderUiState(
     val bookId: Int = -1,
     val isLoading: Boolean = true,
@@ -43,7 +50,9 @@ data class ReaderUiState(
     val bookmarks: List<BookmarkEntity> = emptyList(),
     val error: String? = null,
     val ttsPlaying: Boolean = false,
-    val ttsPaused: Boolean = false
+    val ttsPaused: Boolean = false,
+    /** The sentence currently being read by TTS, or null if no TTS active. */
+    val currentTtsSentence: TtsSentence? = null
 )
 
 @HiltViewModel
@@ -420,5 +429,15 @@ class EpubReaderViewModel @Inject constructor(
 
     fun setTtsStopped() {
         _uiState.update { it.copy(ttsPlaying = false, ttsPaused = false) }
+    }
+
+    /**
+     * Update the current TTS sentence being read.
+     * Called from the UI layer when a sentence broadcast is received.
+     *
+     * @param sentence The active sentence, or null if playback stopped/paused.
+     */
+    fun onTtsSentenceChanged(sentence: TtsSentence?) {
+        _uiState.update { it.copy(currentTtsSentence = sentence) }
     }
 }

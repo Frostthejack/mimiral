@@ -56,6 +56,13 @@ class TTSService : Service() {
         const val ACTION_SKIP_PERFORMED = "com.mimiral.app.tts.ACTION_SKIP_PERFORMED"
         const val EXTRA_SKIP_TYPE = "extra_skip_type"
 
+        /** Broadcast: sentence-level progress for TTS highlighting. */
+        const val ACTION_TTS_SENTENCE = "com.mimiral.app.tts.ACTION_TTS_SENTENCE"
+        const val EXTRA_SENTENCE_START = "extra_sentence_start"
+        const val EXTRA_SENTENCE_END = "extra_sentence_end"
+        const val EXTRA_SENTENCE_TEXT = "extra_sentence_text"
+        const val EXTRA_SENTENCE_ACTIVE = "extra_sentence_active"
+
         fun createPlayIntent(context: Context, text: String? = null): Intent {
             return Intent(context, TTSService::class.java).apply {
                 action = ACTION_PLAY
@@ -152,6 +159,9 @@ class TTSService : Service() {
             }
             onSkip.add { skipType ->
                 broadcastSkipPerformed(skipType)
+            }
+            onSentenceChanged.add { sentence ->
+                broadcastSentence(sentence)
             }
         }
         ttsManager?.initialize()
@@ -280,6 +290,19 @@ class TTSService : Service() {
     private fun broadcastSkipPerformed(skipType: String) {
         val broadcastIntent = Intent(ACTION_SKIP_PERFORMED).apply {
             putExtra(EXTRA_SKIP_TYPE, skipType)
+            setPackage(packageName)
+        }
+        sendBroadcast(broadcastIntent)
+    }
+
+    private fun broadcastSentence(sentence: com.mimiral.app.data.reader.Sentence?) {
+        val broadcastIntent = Intent(ACTION_TTS_SENTENCE).apply {
+            putExtra(EXTRA_SENTENCE_ACTIVE, sentence != null)
+            if (sentence != null) {
+                putExtra(EXTRA_SENTENCE_START, sentence.start)
+                putExtra(EXTRA_SENTENCE_END, sentence.end)
+                putExtra(EXTRA_SENTENCE_TEXT, sentence.text)
+            }
             setPackage(packageName)
         }
         sendBroadcast(broadcastIntent)

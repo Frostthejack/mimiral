@@ -6,6 +6,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
 import android.util.Log
+import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.reader.SentenceBoundaryDetector
 import java.util.ArrayDeque
 import java.util.Locale
@@ -77,6 +78,20 @@ class TTSManager(
     val onRangeProgress: MutableList<(String, Int, Int) -> Unit> = mutableListOf()
     val onSkip: MutableList<(String) -> Unit> = mutableListOf()
 
+    /**
+     * Callback fired when the active sentence changes during TTS playback.
+     *
+     * @param sentence The sentence currently being read, or null if playback
+     *                 has stopped/paused and the highlight should be cleared.
+     */
+    val onSentenceChanged: MutableList<(Sentence?) -> Unit> = mutableListOf()
+
+    /** Sentences extracted from the currently playing text. */
+    private var currentSentences: List<Sentence> = emptyList()
+
+    /** Index of the sentence currently being read, or -1 if none. */
+    private var currentSentenceIndex: Int = -1
+
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             val engine = ttsEngine ?: return
@@ -138,6 +153,19 @@ class TTSManager(
         queue.addLast(item)
         fullText = text
         currentOffset = 0
+
+        // Extract sentence boundaries for highlighting
+        currentSentences = sentenceDetector.findSentences(fullText)
+        currentSentenceIndex = if (currentSentences.isNotEmpty()) 0 else -1
+        Log.d(TAG, "play: extracted ${currentSentences.size} sentences from ${fullText.length} chars")
+
+        // Fire callback for first sentence
+        if (currentSentenceIndex >= 0) {
+            currentSentences.getOrNull(currentSentenceIndex)?.let { sentence ->
+                onSentenceChanged.forEach { cb -> cb(sentence) }
+            }
+        }
+
         when (_state) {
             TTSState.READY -> speakNext()
             TTSState.PLAYING, TTSState.PAUSED, TTSState.INITIALIZING -> { }
@@ -167,12 +195,21 @@ class TTSManager(
         if (_state != TTSState.PLAYING) return
         ttsEngine?.stop()
         _state = TTSState.PAUSED
+        // Clear sentence highlight on pause
+        currentSentenceIndex = -1
+        onSentenceChanged.forEach { cb -> cb(null) }
         Log.d(TAG, "TTS paused, queue size=" + queue.size)
     }
 
     fun resume() {
         if (_state != TTSState.PAUSED) return
         _state = TTSState.READY
+        // Restore sentence highlight for current position
+        if (currentSentenceIndex >= 0) {
+            currentSentences.getOrNull(currentSentenceIndex)?.let { sentence ->
+                onSentenceChanged.forEach { cb -> cb(sentence) }
+            }
+        }
         speakNext()
         Log.d(TAG, "TTS resumed")
     }
@@ -180,6 +217,10 @@ class TTSManager(
     fun stop() {
         ttsEngine?.stop()
         queue.clear()
+        // Clear sentence highlight on stop
+        currentSentenceIndex = -1
+        currentSentences = emptyList()
+        onSentenceChanged.forEach { cb -> cb(null) }
         if (_state == TTSState.PLAYING || _state == TTSState.PAUSED) {
             _state = TTSState.READY
         }
@@ -234,6 +275,8 @@ class TTSManager(
         ttsEngine?.shutdown()
         ttsEngine = null
         queue.clear()
+        currentSentences = emptyList()
+        currentSentenceIndex = -1
         _state = TTSState.STOPPED
     }
 
@@ -368,6 +411,9 @@ class TTSManager(
         val engine = ttsEngine ?: return
         if (queue.isEmpty()) {
             _state = TTSState.READY
+            // All utterances done — clear sentence highlight
+            currentSentenceIndex = -1
+            onSentenceChanged.forEach { cb -> cb(null) }
             return
         }
         val item = queue.removeFirst()
@@ -417,8 +463,33 @@ class TTSManager(
                 }
                 override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
                     utteranceId?.let { id -> onRangeProgress.forEach { cb -> cb(id, start, end) } }
+                    // Update sentence highlight based on word position
+                    updateCurrentSentence(start)
                 }
             })
+        }
+    }
+
+    /**
+     * Update the current sentence based on the character offset reported
+     * by the TTS engine's onRangeStart callback.
+     *
+     * Called internally when range progress is reported. Finds which sentence
+     * contains the given offset and fires [onSentenceChanged] if it changed.
+     */
+    private fun updateCurrentSentence(charOffset: Int) {
+        if (currentSentences.isEmpty()) return
+
+        // Find which sentence contains this character offset
+        val newIndex = currentSentences.indexOfFirst { sentence ->
+            charOffset >= sentence.start && charOffset < sentence.end
+        }
+
+        if (newIndex >= 0 && newIndex != currentSentenceIndex) {
+            currentSentenceIndex = newIndex
+            val sentence = currentSentences[newIndex]
+            Log.d(TAG, "Sentence changed: #$newIndex [${sentence.start}-${sentence.end}] \"${sentence.text.take(40)}...\"")
+            onSentenceChanged.forEach { cb -> cb(sentence) }
         }
     }
 }

@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.util.Log
 import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -14,7 +13,13 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBackIos
+import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,17 +33,16 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.tts.TTSService
-import com.mimiral.app.R
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -119,31 +123,6 @@ fun EpubReaderScreen(
     var toolbarVisible by remember { mutableStateOf(false) }
     var showTextSettings by remember { mutableStateOf(false) }
 
-    // TTS state
-    var ttsPlaying by remember { mutableStateOf(false) }
-    var ttsPaused by remember { mutableStateOf(false) }
-
-    // Listen for skip performed broadcasts from TTSService
-    DisposableEffect(context) {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(ctx: Context?, intent: Intent?) {
-                if (intent?.action == TTSService.ACTION_SKIP_PERFORMED) {
-                    val skipType = intent.getStringExtra(TTSService.EXTRA_SKIP_TYPE) ?: ""
-                    Log.d("EpubReader", "Skip performed: $skipType")
-                }
-            }
-        }
-        val filter = IntentFilter(TTSService.ACTION_SKIP_PERFORMED)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(receiver, filter)
-        }
-        onDispose {
-            context.unregisterReceiver(receiver)
-        }
-    }
-
     // Track page changes and notify ViewModel
     LaunchedEffect(pagerState.currentPage) {
         val chapterIndex = uiState.currentChapter
@@ -194,6 +173,34 @@ fun EpubReaderScreen(
                 }
                 else -> true
             }
+        }
+    }
+
+    // TTS sentence broadcast receiver — updates ViewModel when TTS service
+    // broadcasts sentence-level progress for synchronized highlighting.
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == TTSService.ACTION_TTS_SENTENCE) {
+                    val isActive = intent.getBooleanExtra(TTSService.EXTRA_SENTENCE_ACTIVE, false)
+                    if (isActive) {
+                        val start = intent.getIntExtra(TTSService.EXTRA_SENTENCE_START, 0)
+                        val end = intent.getIntExtra(TTSService.EXTRA_SENTENCE_END, 0)
+                        val text = intent.getStringExtra(TTSService.EXTRA_SENTENCE_TEXT) ?: ""
+                        viewModel.onTtsSentenceChanged(
+                            TtsSentence(start = start, end = end, text = text)
+                        )
+                    } else {
+                        viewModel.onTtsSentenceChanged(null)
+                    }
+                }
+            }
+        }
+        val filter = IntentFilter(TTSService.ACTION_TTS_SENTENCE)
+        context.registerReceiver(receiver, filter)
+
+        onDispose {
+            context.unregisterReceiver(receiver)
         }
     }
 
@@ -256,121 +263,61 @@ fun EpubReaderScreen(
         },
         bottomBar = {
             if (toolbarVisible) {
-                Column {
-                    // TTS Controls bar
-                    TtsControlsBar(
-                        isPlaying = ttsPlaying,
-                        isPaused = ttsPaused,
-                        onPlay = {
-                            val intent = TTSService.createPlayIntent(context, chapterText)
-                            context.startService(intent)
-                            ttsPlaying = true
-                            ttsPaused = false
-                            viewModel.setTtsPlaying(true)
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            if (viewModel.hasPreviousChapter()) {
+                                viewModel.previousChapter()
+                                coroutineScope.launch {
+                                    val chapter = uiState.chapters.getOrNull(
+                                        uiState.currentChapter - 1
+                                    )
+                                    if (chapter != null) {
+                                        pagerState.animateScrollToPage(chapter.startPage)
+                                    }
+                                }
+                            }
                         },
-                        onPause = {
-                            val intent = TTSService.createPauseIntent(context)
-                            context.startService(intent)
-                            ttsPlaying = false
-                            ttsPaused = true
-                            viewModel.setTtsPaused(true)
+                        enabled = viewModel.hasPreviousChapter(),
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowBackIos,
+                                contentDescription = "Previous chapter"
+                            )
                         },
-                        onResume = {
-                            val intent = TTSService.createResumeIntent(context)
-                            context.startService(intent)
-                            ttsPlaying = true
-                            ttsPaused = false
-                            viewModel.setTtsPlaying(true)
-                        },
-                        onStop = {
-                            val intent = TTSService.createStopIntent(context)
-                            context.startService(intent)
-                            ttsPlaying = false
-                            ttsPaused = false
-                            viewModel.setTtsStopped()
-                        },
-                        onSkipChapterBackward = {
-                            val intent = TTSService.createSkipChapterBackwardIntent(context)
-                            context.startService(intent)
-                        },
-                        onSkipSentenceBackward = {
-                            val intent = TTSService.createSkipSentenceBackwardIntent(context)
-                            context.startService(intent)
-                        },
-                        onSkipSentenceForward = {
-                            val intent = TTSService.createSkipSentenceForwardIntent(context)
-                            context.startService(intent)
-                        },
-                        onSkipChapterForward = {
-                            val intent = TTSService.createSkipChapterForwardIntent(context)
-                            context.startService(intent)
-                        },
-                        onSkipParagraphBackward = {
-                            val intent = TTSService.createSkipParagraphBackwardIntent(context)
-                            context.startService(intent)
-                        },
-                        onSkipParagraphForward = {
-                            val intent = TTSService.createSkipParagraphForwardIntent(context)
-                            context.startService(intent)
-                        }
+                        label = { Text("Prev Ch") }
                     )
-                    // Navigation bar
-                    NavigationBar {
-                        NavigationBarItem(
-                            selected = false,
-                            onClick = {
-                                if (viewModel.hasPreviousChapter()) {
-                                    viewModel.previousChapter()
-                                    coroutineScope.launch {
-                                        val chapter = uiState.chapters.getOrNull(
-                                            uiState.currentChapter - 1
-                                        )
-                                        if (chapter != null) {
-                                            pagerState.animateScrollToPage(chapter.startPage)
-                                        }
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = { viewModel.showToc() },
+                        icon = { Text("${pagerState.currentPage + 1}/$pageCount") },
+                        label = { Text("Page") }
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            if (viewModel.hasNextChapter()) {
+                                viewModel.nextChapter()
+                                coroutineScope.launch {
+                                    val chapter = uiState.chapters.getOrNull(
+                                        uiState.currentChapter + 1
+                                    )
+                                    if (chapter != null) {
+                                        pagerState.animateScrollToPage(chapter.startPage)
                                     }
                                 }
-                            },
-                            enabled = viewModel.hasPreviousChapter(),
-                            icon = {
-                                Icon(
-                                    Icons.Default.ArrowBackIos,
-                                    contentDescription = "Previous chapter"
-                                )
-                            },
-                            label = { Text("Prev Ch") }
-                        )
-                        NavigationBarItem(
-                            selected = false,
-                            onClick = { viewModel.showToc() },
-                            icon = { Text("${pagerState.currentPage + 1}/$pageCount") },
-                            label = { Text("Page") }
-                        )
-                        NavigationBarItem(
-                            selected = false,
-                            onClick = {
-                                if (viewModel.hasNextChapter()) {
-                                    viewModel.nextChapter()
-                                    coroutineScope.launch {
-                                        val chapter = uiState.chapters.getOrNull(
-                                            uiState.currentChapter + 1
-                                        )
-                                        if (chapter != null) {
-                                            pagerState.animateScrollToPage(chapter.startPage)
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = viewModel.hasNextChapter(),
-                            icon = {
-                                Icon(
-                                    Icons.Default.ArrowForwardIos,
-                                    contentDescription = "Next chapter"
-                                )
-                            },
-                            label = { Text("Next Ch") }
-                        )
-                    }
+                            }
+                        },
+                        enabled = viewModel.hasNextChapter(),
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowForwardIos,
+                                contentDescription = "Next chapter"
+                            )
+                        },
+                        label = { Text("Next Ch") }
+                    )
                 }
             }
         }
@@ -465,6 +412,9 @@ fun EpubReaderScreen(
                             }
                     ) {
                         val pageText = pages.getOrNull(pageIndex)?.text ?: ""
+                        val pageStartOffset = pages.getOrNull(pageIndex)?.startOffset ?: 0
+                        val ttsSentence = uiState.currentTtsSentence
+
                         EpubPageContent(
                             pageText = pageText,
                             pageNumber = pageIndex + 1,
@@ -476,7 +426,9 @@ fun EpubReaderScreen(
                             } else {
                                 null
                             },
-                            textSettings = textSettings
+                            textSettings = textSettings,
+                            ttsSentence = ttsSentence,
+                            pageStartOffset = pageStartOffset
                         )
                     }
                 }
@@ -578,7 +530,9 @@ private fun EpubPageContent(
     pageNumber: Int,
     totalPages: Int,
     chapterTitle: String? = null,
-    textSettings: TextSettings = TextSettings()
+    textSettings: TextSettings = TextSettings(),
+    ttsSentence: TtsSentence? = null,
+    pageStartOffset: Int = 0
 ) {
     val scrollState = rememberScrollState()
 
@@ -604,15 +558,49 @@ private fun EpubPageContent(
             HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
         }
 
-        Text(
-            text = pageText,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                lineHeight = (textSettings.fontSize * textSettings.lineSpacingMultiplier).sp,
-                fontSize = textSettings.fontSize.sp,
-                fontFamily = textSettings.selectedFontFamily.fontFamily
-            ),
+        val textStyle = MaterialTheme.typography.bodyLarge.copy(
+            lineHeight = (textSettings.fontSize * textSettings.lineSpacingMultiplier).sp,
+            fontSize = textSettings.fontSize.sp,
+            fontFamily = textSettings.selectedFontFamily.fontFamily,
             color = MaterialTheme.colorScheme.onBackground
         )
+
+        // Determine if this page has an active TTS sentence highlight
+        val hasSentenceHighlight = ttsSentence != null &&
+            ttsSentence.start < pageStartOffset + pageText.length &&
+            ttsSentence.end > pageStartOffset
+
+        if (hasSentenceHighlight && ttsSentence != null) {
+            val pageEndOffset = pageStartOffset + pageText.length
+            val sentenceOverlapStart = ttsSentence.start.coerceIn(pageStartOffset, pageEndOffset)
+            val sentenceOverlapEnd = ttsSentence.end.coerceIn(pageStartOffset, pageEndOffset)
+
+            if (sentenceOverlapStart < sentenceOverlapEnd) {
+                val highlightStartInPage = (sentenceOverlapStart - pageStartOffset).coerceAtLeast(0)
+                val highlightEndInPage = (sentenceOverlapEnd - pageStartOffset).coerceAtMost(pageText.length)
+
+                val annotatedText = buildPageTextWithHighlight(
+                    pageText = pageText,
+                    highlightStart = highlightStartInPage,
+                    highlightEnd = highlightEndInPage,
+                    baseStyle = textStyle
+                )
+                Text(
+                    text = annotatedText,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                Text(
+                    text = pageText,
+                    style = textStyle
+                )
+            }
+        } else {
+            Text(
+                text = pageText,
+                style = textStyle
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -629,140 +617,47 @@ private fun EpubPageContent(
 }
 
 /**
- * TTS controls bar with skip forward/back buttons for sentence, paragraph, and chapter.
- * Layout: two rows of controls.
- * Row 1: [Ch Prev] [Sent Prev] [Play/Pause/Resume] [Sent Next] [Ch Next]
- * Row 2: [Parag Prev] [Stop] [Parag Next]
+ * Builds an AnnotatedString for page text with the current sentence highlighted.
+ * Uses Material 3 secondaryContainer color for the highlight background,
+ * providing clear visual distinction from user-created highlights.
  */
 @Composable
-private fun TtsControlsBar(
-    isPlaying: Boolean,
-    isPaused: Boolean,
-    onPlay: () -> Unit,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
-    onStop: () -> Unit,
-    onSkipChapterBackward: () -> Unit,
-    onSkipSentenceBackward: () -> Unit,
-    onSkipSentenceForward: () -> Unit,
-    onSkipChapterForward: () -> Unit,
-    onSkipParagraphBackward: () -> Unit,
-    onSkipParagraphForward: () -> Unit
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 2.dp
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Row 1: Chapter skip + Sentence skip + Play/Pause + Sentence skip + Chapter skip
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onSkipChapterBackward,
-                    modifier = Modifier.semantics { contentDescription = "Skip chapter backward" }
-                ) {
-                    Icon(
-                        Icons.Default.FastRewind,
-                        contentDescription = stringResource(R.string.tts_skip_chapter_prev),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(
-                    onClick = onSkipSentenceBackward,
-                    modifier = Modifier.semantics { contentDescription = "Skip sentence backward" }
-                ) {
-                    Icon(
-                        Icons.Default.SkipPrevious,
-                        contentDescription = stringResource(R.string.tts_skip_sentence_prev),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                FilledIconButton(
-                    onClick = {
-                        when {
-                            isPlaying -> onPause()
-                            isPaused -> onResume()
-                            else -> onPlay()
-                        }
-                    },
-                    modifier = Modifier.semantics {
-                        contentDescription = if (isPlaying) "Pause TTS" else "Play TTS"
-                    }
-                ) {
-                    Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) stringResource(R.string.tts_pause) else stringResource(R.string.tts_play),
-                        tint = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-                IconButton(
-                    onClick = onSkipSentenceForward,
-                    modifier = Modifier.semantics { contentDescription = "Skip sentence forward" }
-                ) {
-                    Icon(
-                        Icons.Default.SkipNext,
-                        contentDescription = stringResource(R.string.tts_skip_sentence_next),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(
-                    onClick = onSkipChapterForward,
-                    modifier = Modifier.semantics { contentDescription = "Skip chapter forward" }
-                ) {
-                    Icon(
-                        Icons.Default.FastForward,
-                        contentDescription = stringResource(R.string.tts_skip_chapter_next),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+private fun buildPageTextWithHighlight(
+    pageText: String,
+    highlightStart: Int,
+    highlightEnd: Int,
+    baseStyle: androidx.compose.ui.text.TextStyle
+): androidx.compose.ui.text.AnnotatedString {
+    val highlightColor = MaterialTheme.colorScheme.secondaryContainer
+    val highlightTextColor = MaterialTheme.colorScheme.onSecondaryContainer
+
+    return buildAnnotatedString {
+        // Text before highlight
+        if (highlightStart > 0) {
+            withStyle(SpanStyle(color = baseStyle.color)) {
+                append(pageText.substring(0, highlightStart.coerceAtMost(pageText.length)))
             }
-            // Row 2: Paragraph skip + Stop + Paragraph skip
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+        }
+
+        // Highlighted sentence portion
+        if (highlightStart < highlightEnd && highlightStart >= 0) {
+            val clampedEnd = highlightEnd.coerceAtMost(pageText.length)
+            val clampedStart = highlightStart.coerceAtMost(clampedEnd)
+            withStyle(
+                SpanStyle(
+                    background = highlightColor,
+                    color = highlightTextColor
+                )
             ) {
-                IconButton(
-                    onClick = onSkipParagraphBackward,
-                    modifier = Modifier.semantics { contentDescription = "Skip paragraph backward" }
-                ) {
-                    Icon(
-                        Icons.Default.KeyboardDoubleArrowLeft,
-                        contentDescription = stringResource(R.string.tts_skip_paragraph_prev),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                FilledIconButton(
-                    onClick = onStop,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
-                    modifier = Modifier.semantics { contentDescription = "Stop TTS" }
-                ) {
-                    Icon(
-                        Icons.Default.Stop,
-                        contentDescription = stringResource(R.string.tts_stop),
-                        tint = MaterialTheme.colorScheme.onError
-                    )
-                }
-                IconButton(
-                    onClick = onSkipParagraphForward,
-                    modifier = Modifier.semantics { contentDescription = "Skip paragraph forward" }
-                ) {
-                    Icon(
-                        Icons.Default.KeyboardDoubleArrowRight,
-                        contentDescription = stringResource(R.string.tts_skip_paragraph_next),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                append(pageText.substring(clampedStart, clampedEnd))
+            }
+        }
+
+        // Text after highlight
+        val afterStart = highlightEnd.coerceAtLeast(0)
+        if (afterStart < pageText.length) {
+            withStyle(SpanStyle(color = baseStyle.color)) {
+                append(pageText.substring(afterStart))
             }
         }
     }
