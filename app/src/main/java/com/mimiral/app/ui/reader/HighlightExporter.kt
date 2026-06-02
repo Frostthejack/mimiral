@@ -1,0 +1,144 @@
+package com.mimiral.app.ui.reader
+
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.FileProvider
+import com.mimiral.app.data.local.entity.BookEntity
+import com.mimiral.app.data.local.entity.HighlightEntity
+import com.mimiral.app.data.repository.BookRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/**
+ * Exports all highlights and notes for a book to a formatted text file,
+ * then shares it via Android intent.
+ */
+class HighlightExporter(
+    private val context: Context,
+    private val bookRepository: BookRepository
+) {
+    /**
+     * Export highlights for a book to a .txt file in the app's cache directory.
+     * Returns the File if successful, null if no highlights or on error.
+     */
+    suspend fun exportHighlightsToFile(
+        book: BookEntity,
+        highlights: List<HighlightEntity>
+    ): File? = withContext(Dispatchers.IO) {
+        if (highlights.isEmpty()) return@withContext null
+
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.US)
+        val timestamp = dateFormat.format(Date())
+        val safeTitle = book.title.replace(Regex("[^a-zA-Z0-9\\s-]"), "").trim()
+        val filename = "${safeTitle}_highlights_${timestamp}.txt"
+
+        val exportDir = File(context.cacheDir, "exports")
+        if (!exportDir.exists()) exportDir.mkdirs()
+
+        val file = File(exportDir, filename)
+
+        try {
+            val content = buildExportContent(book, highlights)
+            file.writeText(content)
+            file
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Share an exported file via Android SEND intent with FileProvider.
+     */
+    fun shareExportedFile(file: File) {
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, "Highlights: ${file.nameWithoutExtension}")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        val chooser = Intent.createChooser(shareIntent, "Share highlights via")
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
+    }
+
+    /**
+     * Build the formatted text content for the export file.
+     */
+    private fun buildExportContent(book: BookEntity, highlights: List<HighlightEntity>): String {
+        val sb = StringBuilder()
+
+        // Header
+        sb.appendLine("=" .repeat(60))
+        sb.appendLine("HIGHLIGHTS & NOTES")
+        sb.appendLine("=".repeat(60))
+        sb.appendLine()
+        sb.appendLine("Title:  ${book.title}")
+        if (!book.author.isNullOrBlank()) {
+            sb.appendLine("Author: ${book.author}")
+        }
+        sb.appendLine("Exported: ${SimpleDateFormat("MMMM dd, yyyy 'at' h:mm a", Locale.US).format(Date())}")
+        sb.appendLine("Total highlights: ${highlights.size}")
+        sb.appendLine()
+        sb.appendLine("=".repeat(60))
+        sb.appendLine()
+
+        // Group highlights by chapter
+        val grouped = highlights.groupBy { it.chapterIndex }
+
+        for ((chapterIndex, chapterHighlights) in grouped.toSortedMap()) {
+            // Chapter heading
+            val chapterLabel = "Chapter ${chapterIndex + 1}"
+            sb.appendLine(chapterLabel)
+            sb.appendLine("-".repeat(chapterLabel.length))
+            sb.appendLine()
+
+            for ((index, highlight) in chapterHighlights.withIndex()) {
+                // Highlight number
+                sb.appendLine("${index + 1}.")
+                sb.appendLine()
+
+                // Highlighted text
+                val text = highlight.selectedText?.trim()
+                if (!text.isNullOrBlank()) {
+                    sb.appendLine("\"$text\"")
+                    sb.appendLine()
+                }
+
+                // Note (if any)
+                val note = highlight.note?.trim()
+                if (!note.isNullOrBlank()) {
+                    sb.appendLine("Note: $note")
+                    sb.appendLine()
+                }
+
+                // Metadata line
+                val metaParts = mutableListOf<String>()
+                highlight.startPosition?.let { metaParts.add("Position: $it") }
+                metaParts.add("Color: ${highlight.color}")
+                val createdDate = SimpleDateFormat("MMM dd, yyyy", Locale.US)
+                    .format(Date(highlight.createdTime))
+                metaParts.add("Date: $createdDate")
+                sb.appendLine("— ${metaParts.joinToString(" | ")}")
+                sb.appendLine()
+                sb.appendLine()
+            }
+        }
+
+        sb.appendLine("=".repeat(60))
+        sb.appendLine("Generated by Mimiral")
+        sb.appendLine("=".repeat(60))
+
+        return sb.toString()
+    }
+}
