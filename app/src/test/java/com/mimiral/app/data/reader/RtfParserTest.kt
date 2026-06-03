@@ -25,14 +25,10 @@ class RtfParserTest {
 
     @Test
     fun `parse simple RTF file`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252\deff0\deflang1033
-" +
-            "{\colortbl;\red0\green0\blue0;}
-" +
-            "\viewkind4\uc1\pard\cf1\fs24 Hello, World!\par
-" +
-            "This is a test.\par
-}"
+        val rtf = "{\rtf1\ansi\ansicpg1252\deff0\deflang1033" +
+            "{\colortbl;\red0\green0\blue0;}" +
+            "\viewkind4\uc1\pard\cf1\fs24 Hello, World!\par" +
+            "This is a test.\par}"
         val file = tempFolder.newFile("test.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 

@@ -426,7 +426,7 @@ private fun GridBookItem(
                     } else {
                         Icon(
                             imageVector = when (bookWithProgress.book.format) {
-                                "PDF" -> Icons.Default.MenuBook
+                                "PDF" -> Icons.Default.MenuBook,
                                 "DJVU" -> Icons.Default.Description,
                                 else -> Icons.Default.Book
                             },
@@ -543,7 +543,7 @@ private fun ListBookItem(
                     } else {
                         Icon(
                             imageVector = when (bookWithProgress.book.format) {
-                                "PDF" -> Icons.Default.MenuBook
+                                "PDF" -> Icons.Default.MenuBook,
                                 "DJVU" -> Icons.Default.Description,
                                 else -> Icons.Default.Book
                             },
