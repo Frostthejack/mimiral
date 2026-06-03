@@ -1,6 +1,7 @@
 package com.mimiral.app.ui.library
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookEntity
@@ -39,6 +40,8 @@ data class LibraryUiState(
     val recentBooks: List<BookWithProgress> = emptyList(),
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isImporting: Boolean = false,
+    val importMessage: String? = null,
     val searchQuery: String = "",
     val sortOption: SortOption = SortOption.RECENT,
     val filterOption: FilterOption = FilterOption.ALL,
@@ -59,6 +62,8 @@ class LibraryViewModel @Inject constructor(
     private val _filterOption = MutableStateFlow(FilterOption.ALL)
     private val _viewMode = MutableStateFlow(ViewMode.GRID)
     private val _isRefreshing = MutableStateFlow(false)
+    private val _isImporting = MutableStateFlow(false)
+    private val _importMessage = MutableStateFlow<String?>(null)
 
     init {
         viewModelScope.launch {
@@ -113,6 +118,10 @@ class LibraryViewModel @Inject constructor(
         )
     }.combine(_isRefreshing) { state, refreshing ->
         state.copy(isRefreshing = refreshing)
+    }.combine(_isImporting) { state, importing ->
+        state.copy(isImporting = importing)
+    }.combine(_importMessage) { state, msg ->
+        state.copy(importMessage = msg)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -184,6 +193,33 @@ class LibraryViewModel @Inject constructor(
                 bookRepository.deleteBook(book)
             } catch (_: Exception) {
                 // Error handling could be added
+            }
+        }
+    }
+
+    /**
+     * Import a book from a SAF content URI.
+     * Called after the user picks a file via the file picker.
+     */
+    fun importBook(uri: Uri) {
+        viewModelScope.launch {
+            _isImporting.value = true
+            _importMessage.value = "Importing book..."
+            try {
+                val bookId = bookRepository.importBookFromUri(uri)
+                _importMessage.value = if (bookId > 0) {
+                    "Book imported successfully"
+                } else {
+                    "Failed to import book (unsupported format or error)"
+                }
+                // Room Flow will auto-emit new data, refreshing the library
+            } catch (e: Exception) {
+                _importMessage.value = "Import failed: ${e.message}"
+            } finally {
+                _isImporting.value = false
+                // Clear the message after a delay
+                kotlinx.coroutines.delay(3000)
+                _importMessage.value = null
             }
         }
     }

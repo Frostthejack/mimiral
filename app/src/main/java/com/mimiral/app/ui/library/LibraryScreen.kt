@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -426,8 +427,8 @@ private fun GridBookItem(
                     } else {
                         Icon(
                             imageVector = when (bookWithProgress.book.format) {
-                                "PDF" -> Icons.Default.MenuBook,
-                                "DJVU" -> Icons.Default.Description,
+                                "PDF" -> Icons.Default.MenuBook
+                                "DJVU" -> Icons.Default.TextFields
                                 else -> Icons.Default.Book
                             },
                             contentDescription = null,
@@ -543,8 +544,8 @@ private fun ListBookItem(
                     } else {
                         Icon(
                             imageVector = when (bookWithProgress.book.format) {
-                                "PDF" -> Icons.Default.MenuBook,
-                                "DJVU" -> Icons.Default.Description,
+                                "PDF" -> Icons.Default.MenuBook
+                                "DJVU" -> Icons.Default.TextFields
                                 else -> Icons.Default.Book
                             },
                             contentDescription = null,
