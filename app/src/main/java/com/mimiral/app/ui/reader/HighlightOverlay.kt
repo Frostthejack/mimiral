@@ -17,23 +17,28 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
+import com.mimiral.app.data.reader.Sentence
 
 /**
  * Renders page text with highlight overlays applied.
  * Supports long press gesture to trigger text selection for highlighting.
+ * Also renders TTS sentence-level highlight when a sentence is actively being read.
  */
 @Composable
 fun HighlightableText(
     text: String,
     highlights: List<ReaderHighlight>,
     textSettings: TextSettings,
+    ttsSentence: Sentence? = null,
     onLongPress: (selectedText: String, startOffset: Int, endOffset: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Build AnnotatedString with highlight spans applied
-    val annotatedText = remember(text, highlights) {
+    // Build AnnotatedString with highlight spans and TTS sentence highlight applied
+    val annotatedText = remember(text, highlights, ttsSentence) {
         buildAnnotatedString {
             append(text)
+
+            // User-created saved highlights
             highlights.forEach { highlight ->
                 val color = try {
                     Color(android.graphics.Color.parseColor(highlight.color))
@@ -47,6 +52,21 @@ fun HighlightableText(
                         SpanStyle(background = color.copy(alpha = 0.4f)),
                         start,
                         end
+                    )
+                }
+            }
+
+            // TTS sentence highlight — renders behind the text while TTS reads
+            if (ttsSentence != null) {
+                val sentenceStart = ttsSentence.start.coerceIn(0, text.length)
+                val sentenceEnd = ttsSentence.end.coerceIn(0, text.length)
+                if (sentenceStart < sentenceEnd) {
+                    addStyle(
+                        SpanStyle(
+                            background = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                        ),
+                        sentenceStart,
+                        sentenceEnd
                     )
                 }
             }

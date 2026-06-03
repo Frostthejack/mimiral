@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import com.mimiral.app.data.reader.Sentence
+import com.mimiral.app.data.reader.toHighlightColor
 import com.mimiral.app.tts.TTSService
 import kotlin.math.abs
 import kotlinx.coroutines.launch
@@ -465,6 +467,7 @@ fun EpubReaderScreen(
                             },
                             textSettings = textSettings,
                             highlights = currentChapterHighlights,
+                            ttsSentence = uiState.currentTtsSentence,
                             onLongPress = onTextLongPress
                         )
                     }
@@ -583,6 +586,7 @@ private fun EpubPageContent(
     chapterTitle: String? = null,
     textSettings: TextSettings = TextSettings(),
     highlights: List<ReaderHighlight> = emptyList(),
+    ttsSentence: Sentence? = null,
     onLongPress: (String, Int, Int) -> Unit = { _, _, _ -> }
 ) {
     val scrollState = rememberScrollState()
@@ -613,6 +617,7 @@ private fun EpubPageContent(
             text = pageText,
             highlights = highlights,
             textSettings = textSettings,
+            ttsSentence = currentTtsSentence,
             onLongPress = onLongPress,
             modifier = Modifier.fillMaxWidth()
         )
