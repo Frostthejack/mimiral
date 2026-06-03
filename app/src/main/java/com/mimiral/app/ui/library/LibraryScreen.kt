@@ -146,7 +146,7 @@ fun LibraryScreen(
                     }
                 }
             )
-        }
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
