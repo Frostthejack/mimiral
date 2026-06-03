@@ -71,8 +71,10 @@ data class CollectionEntity(
     @ColumnInfo(name = "sort_order") val sortOrder: Int = 0
 )
 
-@Entity(tableName = "book_collections",
-    primaryKeys = ["book_id", "collection_id"])
+@Entity(
+    tableName = "book_collections",
+    primaryKeys = ["book_id", "collection_id"]
+)
 data class BookCollectionCrossRef(
     @ColumnInfo(name = "book_id") val bookId: Int,
     @ColumnInfo(name = "collection_id") val collectionId: Int
@@ -84,8 +86,10 @@ data class TagEntity(
     val name: String
 )
 
-@Entity(tableName = "book_tags",
-    primaryKeys = ["book_id", "tag_id"])
+@Entity(
+    tableName = "book_tags",
+    primaryKeys = ["book_id", "tag_id"]
+)
 data class BookTagCrossRef(
     @ColumnInfo(name = "book_id") val bookId: Int,
     @ColumnInfo(name = "tag_id") val tagId: Int
@@ -120,7 +124,9 @@ data class OpdsCatalogEntity(
  */
 @Entity(tableName = "pdf_settings")
 data class PdfSettingsEntity(
-    @PrimaryKey @ColumnInfo(name = "book_id") val bookId: Int,
+    @PrimaryKey
+    @ColumnInfo(name = "book_id")
+    val bookId: Int,
     @ColumnInfo(name = "crop_left") val cropLeft: Int = 0,
     @ColumnInfo(name = "crop_top") val cropTop: Int = 0,
     @ColumnInfo(name = "crop_right") val cropRight: Int = 0,

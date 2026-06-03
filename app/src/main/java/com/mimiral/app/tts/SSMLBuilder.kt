@@ -37,13 +37,13 @@ class SSMLBuilder {
         // Matches "January 5, 2026" or "Jan 5, 2026"
         private val DATE_MONTH_DAY_YEAR = Pattern.compile(
             "(January|February|March|April|May|June|July|August|September|October|November|December|" +
-            "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\.?\\s+(\\d{1,2}),?\\s+(\\d{4})"
+                "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\.?\\s+(\\d{1,2}),?\\s+(\\d{4})"
         )
 
         // Matches "5 January 2026" or "5 Jan 2026" (non-US format)
         private val DAY_MONTH_YEAR = Pattern.compile(
             "(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December|" +
-            "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\.?,?\\s+(\\d{4})"
+                "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\.?,?\\s+(\\d{4})"
         )
 
         // Matches "2026-01-05" (ISO date)
@@ -236,11 +236,17 @@ class SSMLBuilder {
     private fun wrapDates(text: String): String {
         var result = text
         // Month Day Year: "January 5, 2026" -> <say-as interpret-as="date" format="mdy">January 5, 2026</say-as>
-        result = DATE_MONTH_DAY_YEAR.matcher(result).replaceAll("<say-as interpret-as='date' format='mdy'>$0</say-as>")
+        result = DATE_MONTH_DAY_YEAR.matcher(result).replaceAll(
+            "<say-as interpret-as='date' format='mdy'>$0</say-as>"
+        )
         // ISO dates: "2026-01-05" -> <say-as interpret-as="date" format="ymd">2026-01-05</say-as>
-        result = DATE_ISO.matcher(result).replaceAll("<say-as interpret-as='date' format='ymd'>$1-$2-$3</say-as>")
+        result = DATE_ISO.matcher(result).replaceAll(
+            "<say-as interpret-as='date' format='ymd'>$1-$2-$3</say-as>"
+        )
         // Slash dates: "01/05/2026" -> <say-as interpret-as="date" format="mdy">01/05/2026</say-as>
-        result = DATE_SLASH.matcher(result).replaceAll("<say-as interpret-as='date' format='mdy'>$1/$2/$3</say-as>")
+        result = DATE_SLASH.matcher(result).replaceAll(
+            "<say-as interpret-as='date' format='mdy'>$1/$2/$3</say-as>"
+        )
         return result
     }
 
@@ -249,22 +255,34 @@ class SSMLBuilder {
     private fun wrapNumbers(text: String): String {
         var result = text
         // Numbers with commas: "1,000,000" -> <say-as interpret-as="cardinal">1,000,000</say-as>
-        result = NUMBER_WITH_COMMAS.matcher(result).replaceAll("<say-as interpret-as='cardinal'>$0</say-as>")
+        result = NUMBER_WITH_COMMAS.matcher(result).replaceAll(
+            "<say-as interpret-as='cardinal'>$0</say-as>"
+        )
         // Decimal numbers: "3.14" -> <say-as interpret-as="cardinal">3.14</say-as>
-        result = DECIMAL_NUMBER.matcher(result).replaceAll("<say-as interpret-as='cardinal'>$1</say-as>")
+        result = DECIMAL_NUMBER.matcher(result).replaceAll(
+            "<say-as interpret-as='cardinal'>$1</say-as>"
+        )
         // Large integers (3+ digits): "1000" -> <say-as interpret-as="cardinal">1000</say-as>
-        result = INTEGER_NUMBER.matcher(result).replaceAll("<say-as interpret-as='cardinal'>$1</say-as>")
+        result = INTEGER_NUMBER.matcher(result).replaceAll(
+            "<say-as interpret-as='cardinal'>$1</say-as>"
+        )
         // Small integers (1-2 digits): "42" -> <say-as interpret-as="cardinal">42</say-as>
-        result = SMALL_INTEGER.matcher(result).replaceAll("<say-as interpret-as='cardinal'>$1</say-as>")
+        result = SMALL_INTEGER.matcher(result).replaceAll(
+            "<say-as interpret-as='cardinal'>$1</say-as>"
+        )
         return result
     }
 
     private fun wrapCurrency(text: String): String {
         var result = text
         // Dollar
-        result = CURRENCY_DOLLAR.matcher(result).replaceAll("<say-as interpret-as='unit'>dollars $1</say-as>")
+        result = CURRENCY_DOLLAR.matcher(result).replaceAll(
+            "<say-as interpret-as='unit'>dollars $1</say-as>"
+        )
         // Euro
-        result = CURRENCY_EURO.matcher(result).replaceAll("<say-as interpret-as='unit'>euros $1</say-as>")
+        result = CURRENCY_EURO.matcher(result).replaceAll(
+            "<say-as interpret-as='unit'>euros $1</say-as>"
+        )
         return result
     }
 
@@ -273,10 +291,14 @@ class SSMLBuilder {
     }
 
     private fun wrapTime(text: String): String {
-        return TIME.matcher(text).replaceAll("<say-as interpret-as='time' format='hms12'>$1:$2 $3</say-as>")
+        return TIME.matcher(text).replaceAll(
+            "<say-as interpret-as='time' format='hms12'>$1:$2 $3</say-as>"
+        )
     }
 
     private fun wrapPercentage(text: String): String {
-        return PERCENTAGE.matcher(text).replaceAll("<say-as interpret-as='percent'>$1 percent</say-as>")
+        return PERCENTAGE.matcher(text).replaceAll(
+            "<say-as interpret-as='percent'>$1 percent</say-as>"
+        )
     }
 }

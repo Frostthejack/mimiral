@@ -157,7 +157,10 @@ class TTSManager(
         // Extract sentence boundaries for highlighting
         currentSentences = sentenceDetector.findSentences(fullText)
         currentSentenceIndex = if (currentSentences.isNotEmpty()) 0 else -1
-        Log.d(TAG, "play: extracted ${currentSentences.size} sentences from ${fullText.length} chars")
+        Log.d(
+            TAG,
+            "play: extracted ${currentSentences.size} sentences from ${fullText.length} chars"
+        )
 
         // Fire callback for first sentence
         if (currentSentenceIndex >= 0) {
@@ -265,8 +268,8 @@ class TTSManager(
         val engine = ttsEngine ?: return false
         val result = engine.isLanguageAvailable(locale)
         return result == TextToSpeech.LANG_AVAILABLE ||
-                result == TextToSpeech.LANG_COUNTRY_AVAILABLE ||
-                result == TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE
+            result == TextToSpeech.LANG_COUNTRY_AVAILABLE ||
+            result == TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE
     }
 
     fun shutdown() {
@@ -305,12 +308,18 @@ class TTSManager(
         val prevSentence = sentences.lastOrNull { it.end <= currentOffset }
         when {
             currentSentence != null && currentSentence.start < currentOffset -> {
-                Log.d(TAG, "Skip sentence backward to current sentence start ${currentSentence.start}")
+                Log.d(
+                    TAG,
+                    "Skip sentence backward to current sentence start ${currentSentence.start}"
+                )
                 onSkip?.forEach { it("sentence_backward") }
                 playFromOffset(currentSentence.start)
             }
             prevSentence != null -> {
-                Log.d(TAG, "Skip sentence backward to previous sentence start ${prevSentence.start}")
+                Log.d(
+                    TAG,
+                    "Skip sentence backward to previous sentence start ${prevSentence.start}"
+                )
                 onSkip?.forEach { it("sentence_backward") }
                 playFromOffset(prevSentence.start)
             }
@@ -340,13 +349,19 @@ class TTSManager(
         val prevParagraph = paragraphBoundaries.lastOrNull { it.endOffset <= currentOffset }
         return when {
             currentParagraph != null && currentParagraph.startOffset < currentOffset -> {
-                Log.d(TAG, "Skip paragraph backward to current paragraph start ${currentParagraph.startOffset}")
+                Log.d(
+                    TAG,
+                    "Skip paragraph backward to current paragraph start ${currentParagraph.startOffset}"
+                )
                 onSkip?.forEach { it("paragraph_backward") }
                 playFromOffset(currentParagraph.startOffset)
                 true
             }
             prevParagraph != null -> {
-                Log.d(TAG, "Skip paragraph backward to previous paragraph start ${prevParagraph.startOffset}")
+                Log.d(
+                    TAG,
+                    "Skip paragraph backward to previous paragraph start ${prevParagraph.startOffset}"
+                )
                 onSkip?.forEach { it("paragraph_backward") }
                 playFromOffset(prevParagraph.startOffset)
                 true
@@ -367,7 +382,10 @@ class TTSManager(
             chapterBoundaries.firstOrNull { it.startOffset > currentOffset }
         }
         if (nextChapter != null) {
-            Log.d(TAG, "Skip chapter forward to chapter ${nextChapter.chapterIndex}: ${nextChapter.title}")
+            Log.d(
+                TAG,
+                "Skip chapter forward to chapter ${nextChapter.chapterIndex}: ${nextChapter.title}"
+            )
             onSkip?.forEach { it("chapter_forward") }
             playFromOffset(nextChapter.startOffset)
         } else {
@@ -389,7 +407,10 @@ class TTSManager(
             currentChapter
         }
         if (prevChapter != null) {
-            Log.d(TAG, "Skip chapter backward to chapter ${prevChapter.chapterIndex}: ${prevChapter.title}")
+            Log.d(
+                TAG,
+                "Skip chapter backward to chapter ${prevChapter.chapterIndex}: ${prevChapter.title}"
+            )
             onSkip?.forEach { it("chapter_backward") }
             playFromOffset(prevChapter.startOffset)
         } else {
@@ -450,6 +471,7 @@ class TTSManager(
                     utteranceId?.let { id -> onUtteranceDone.forEach { cb -> cb(id, true) } }
                     if (_state == TTSState.PLAYING || _state == TTSState.READY) { speakNext() }
                 }
+
                 @Deprecated("Deprecated in API")
                 override fun onError(utteranceId: String?) {
                     onError(utteranceId, TextToSpeech.ERROR)
@@ -488,7 +510,12 @@ class TTSManager(
         if (newIndex >= 0 && newIndex != currentSentenceIndex) {
             currentSentenceIndex = newIndex
             val sentence = currentSentences[newIndex]
-            Log.d(TAG, "Sentence changed: #$newIndex [${sentence.start}-${sentence.end}] \"${sentence.text.take(40)}...\"")
+            Log.d(
+                TAG,
+                "Sentence changed: #$newIndex [${sentence.start}-${sentence.end}] \"${sentence.text.take(
+                    40
+                )}...\""
+            )
             onSentenceChanged.forEach { cb -> cb(sentence) }
         }
     }

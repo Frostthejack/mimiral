@@ -433,7 +433,8 @@ class TTSService : Service() {
         val isPlaying = state == TTSState.PLAYING
 
         val contentIntent = PendingIntent.getActivity(
-            this, 0,
+            this,
+            0,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -455,22 +456,94 @@ class TTSService : Service() {
         // Add action buttons based on state
         when (state) {
             TTSState.PLAYING -> {
-                builder.addAction(buildAction(android.R.drawable.ic_media_previous, getString(R.string.tts_notif_prev_chapter), ACTION_SKIP_CHAPTER_BACKWARD))
-                builder.addAction(buildAction(android.R.drawable.ic_media_rew, getString(R.string.tts_notif_prev_sentence), ACTION_SKIP_SENTENCE_BACKWARD))
-                builder.addAction(buildAction(android.R.drawable.ic_media_pause, getString(R.string.tts_notification_pause), ACTION_PAUSE))
-                builder.addAction(buildAction(android.R.drawable.ic_media_ff, getString(R.string.tts_notif_next_sentence), ACTION_SKIP_SENTENCE_FORWARD))
-                builder.addAction(buildAction(android.R.drawable.ic_media_next, getString(R.string.tts_notif_next_chapter), ACTION_SKIP_CHAPTER_FORWARD))
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_previous,
+                        getString(R.string.tts_notif_prev_chapter),
+                        ACTION_SKIP_CHAPTER_BACKWARD
+                    )
+                )
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_rew,
+                        getString(R.string.tts_notif_prev_sentence),
+                        ACTION_SKIP_SENTENCE_BACKWARD
+                    )
+                )
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_pause,
+                        getString(R.string.tts_notification_pause),
+                        ACTION_PAUSE
+                    )
+                )
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_ff,
+                        getString(R.string.tts_notif_next_sentence),
+                        ACTION_SKIP_SENTENCE_FORWARD
+                    )
+                )
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_next,
+                        getString(R.string.tts_notif_next_chapter),
+                        ACTION_SKIP_CHAPTER_FORWARD
+                    )
+                )
             }
             TTSState.PAUSED -> {
-                builder.addAction(buildAction(android.R.drawable.ic_media_previous, getString(R.string.tts_notif_prev_chapter), ACTION_SKIP_CHAPTER_BACKWARD))
-                builder.addAction(buildAction(android.R.drawable.ic_media_rew, getString(R.string.tts_notif_prev_sentence), ACTION_SKIP_SENTENCE_BACKWARD))
-                builder.addAction(buildAction(android.R.drawable.ic_media_play, getString(R.string.tts_notification_play), ACTION_RESUME))
-                builder.addAction(buildAction(android.R.drawable.ic_media_ff, getString(R.string.tts_notif_next_sentence), ACTION_SKIP_SENTENCE_FORWARD))
-                builder.addAction(buildAction(android.R.drawable.ic_media_next, getString(R.string.tts_notif_next_chapter), ACTION_SKIP_CHAPTER_FORWARD))
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_previous,
+                        getString(R.string.tts_notif_prev_chapter),
+                        ACTION_SKIP_CHAPTER_BACKWARD
+                    )
+                )
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_rew,
+                        getString(R.string.tts_notif_prev_sentence),
+                        ACTION_SKIP_SENTENCE_BACKWARD
+                    )
+                )
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_play,
+                        getString(R.string.tts_notification_play),
+                        ACTION_RESUME
+                    )
+                )
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_ff,
+                        getString(R.string.tts_notif_next_sentence),
+                        ACTION_SKIP_SENTENCE_FORWARD
+                    )
+                )
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_next,
+                        getString(R.string.tts_notif_next_chapter),
+                        ACTION_SKIP_CHAPTER_FORWARD
+                    )
+                )
             }
             else -> {
-                builder.addAction(buildAction(android.R.drawable.ic_media_play, getString(R.string.tts_notification_play), ACTION_PLAY))
-                builder.addAction(buildAction(android.R.drawable.ic_delete, getString(R.string.tts_notification_stop), ACTION_STOP))
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_media_play,
+                        getString(R.string.tts_notification_play),
+                        ACTION_PLAY
+                    )
+                )
+                builder.addAction(
+                    buildAction(
+                        android.R.drawable.ic_delete,
+                        getString(R.string.tts_notification_stop),
+                        ACTION_STOP
+                    )
+                )
             }
         }
 
@@ -524,7 +597,9 @@ class TTSService : Service() {
     private fun createPendingIntent(action: String): PendingIntent {
         val intent = Intent(this, TTSService::class.java).apply { this.action = action }
         return PendingIntent.getService(
-            this, action.hashCode(), intent,
+            this,
+            action.hashCode(),
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
@@ -535,7 +610,7 @@ class TTSService : Service() {
         mediaSession = MediaSessionCompat(this, "TTSSession").apply {
             setFlags(
                 MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
-                        MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+                    MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
             )
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() { handlePlay() }
@@ -553,11 +628,11 @@ class TTSService : Service() {
         val playbackState = PlaybackStateCompat.Builder()
             .setActions(
                 PlaybackStateCompat.ACTION_PLAY or
-                        PlaybackStateCompat.ACTION_PAUSE or
-                        PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                        PlaybackStateCompat.ACTION_STOP or
-                        PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                        PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                    PlaybackStateCompat.ACTION_PAUSE or
+                    PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                    PlaybackStateCompat.ACTION_STOP or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
             )
             .setState(state, 0L, 1.0f)
             .build()

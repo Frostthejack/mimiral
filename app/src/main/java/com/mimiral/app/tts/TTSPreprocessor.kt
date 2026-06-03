@@ -28,54 +28,54 @@ class TTSPreprocessor {
      */
     companion object {
         // Dash replacements -> pause (comma or semicolon creates a natural pause)
-        val DASH_EM = '\u2014'      // — (em dash)
-        val DASH_EN = '\u2013'      // – (en dash)
-        val DASH_FIGURE = '\u2012'  // ‒ (figure dash)
-        val DASH_HBAR = '\u2015'    // ― (horizontal bar)
-        val DASH_SWUNG = '\u2015'   // ― (swung dash / tilde dash)
+        val DASH_EM = '\u2014' // — (em dash)
+        val DASH_EN = '\u2013' // – (en dash)
+        val DASH_FIGURE = '\u2012' // ‒ (figure dash)
+        val DASH_HBAR = '\u2015' // ― (horizontal bar)
+        val DASH_SWUNG = '\u2015' // ― (swung dash / tilde dash)
 
         // Smart quote replacements
-        val QUOTE_SINGLE_OPEN = '\u2018'   // '
-        val QUOTE_SINGLE_CLOSE = '\u2019'  // '
-        val QUOTE_SINGLE_LOW = '\u201a'    // ‚
+        val QUOTE_SINGLE_OPEN = '\u2018' // '
+        val QUOTE_SINGLE_CLOSE = '\u2019' // '
+        val QUOTE_SINGLE_LOW = '\u201a' // ‚
         val QUOTE_SINGLE_HIGH_REV = '\u201b' // ‛
-        val QUOTE_DOUBLE_OPEN = '\u201c'   // "
-        val QUOTE_DOUBLE_CLOSE = '\u201d'  // "
-        val QUOTE_DOUBLE_LOW = '\u201e'    // „
+        val QUOTE_DOUBLE_OPEN = '\u201c' // "
+        val QUOTE_DOUBLE_CLOSE = '\u201d' // "
+        val QUOTE_DOUBLE_LOW = '\u201e' // „
         val QUOTE_DOUBLE_HIGH_REV = '\u201f' // ‟
-        val QUOTE_ANGLE_LEFT = '\u00ab'    // «
-        val QUOTE_ANGLE_RIGHT = '\u00bb'   // »
-        val QUOTE_ANGLE_SINGLE_LEFT = '\u2039'  // ‹
+        val QUOTE_ANGLE_LEFT = '\u00ab' // «
+        val QUOTE_ANGLE_RIGHT = '\u00bb' // »
+        val QUOTE_ANGLE_SINGLE_LEFT = '\u2039' // ‹
         val QUOTE_ANGLE_SINGLE_RIGHT = '\u203a' // ›
-        val PRIME = '\u2032'               // ′
-        val PRIME_DOUBLE = '\u2033'        // ″
-        val PRIME_TRIPLE = '\u2034'        // ‴
+        val PRIME = '\u2032' // ′
+        val PRIME_DOUBLE = '\u2033' // ″
+        val PRIME_TRIPLE = '\u2034' // ‴
 
         // Ligature replacements
-        val LIGATURE_AE = '\u00c6'         // Æ
-        val LIGATURE_ae = '\u00e6'         // æ
-        val LIGATURE_OE = '\u0152'         // Œ
-        val LIGATURE_oe = '\u0153'         // œ
-        val LIGATURE_SS = '\u00df'         // ß (Eszett / sharp s)
-        val LIGATURE_ff = '\ufb00'         // ﬀ
-        val LIGATURE_fi = '\ufb01'         // ﬁ
-        val LIGATURE_fl = '\ufb02'         // ﬂ
-        val LIGATURE_ffi = '\ufb03'        // ﬃ
-        val LIGATURE_ffl = '\ufb04'        // ﬄ
-        val LIGATURE_ft = '\ufb05'         // ﬅ
-        val LIGATURE_st = '\ufb06'         // ﬆ
+        val LIGATURE_AE = '\u00c6' // Æ
+        val LIGATURE_ae = '\u00e6' // æ
+        val LIGATURE_OE = '\u0152' // Œ
+        val LIGATURE_oe = '\u0153' // œ
+        val LIGATURE_SS = '\u00df' // ß (Eszett / sharp s)
+        val LIGATURE_ff = '\ufb00' // ﬀ
+        val LIGATURE_fi = '\ufb01' // ﬁ
+        val LIGATURE_fl = '\ufb02' // ﬂ
+        val LIGATURE_ffi = '\ufb03' // ﬃ
+        val LIGATURE_ffl = '\ufb04' // ﬄ
+        val LIGATURE_ft = '\ufb05' // ﬅ
+        val LIGATURE_st = '\ufb06' // ﬆ
 
         // Other problematic characters in TTS
-        val BULLET = '\u2022'              // •
-        val ELLIPSIS = '\u2026'            // …
-        val HYPHENATION = '\u2010'         // ‐ (non-breaking hyphen)
+        val BULLET = '\u2022' // •
+        val ELLIPSIS = '\u2026' // …
+        val HYPHENATION = '\u2010' // ‐ (non-breaking hyphen)
         val NON_BREAKING_HYPHEN = '\u2011' // ‑
-        val MINUS = '\u2212'               // − (minus sign)
-        val TIMES = '\u00d7'               // × (multiplication sign)
-        val DIVISION = '\u00f7'            // ÷ (division sign)
-        val FRACTION_SLASH = '\u2044'      // ⁄ (fraction slash)
-        val PER_MILLE = '\u2030'           // ‰
-        val PRIME_APOSTROPHE = '\u02bc'    // ʼ (modifier letter apostrophe)
+        val MINUS = '\u2212' // − (minus sign)
+        val TIMES = '\u00d7' // × (multiplication sign)
+        val DIVISION = '\u00f7' // ÷ (division sign)
+        val FRACTION_SLASH = '\u2044' // ⁄ (fraction slash)
+        val PER_MILLE = '\u2030' // ‰
+        val PRIME_APOSTROPHE = '\u02bc' // ʼ (modifier letter apostrophe)
 
         // Build the replacement map once as a sorted list of (from, to) pairs.
         val REPLACEMENTS: List<Pair<Char, String>> = listOf(
