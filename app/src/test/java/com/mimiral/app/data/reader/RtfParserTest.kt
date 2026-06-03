@@ -42,12 +42,9 @@ class RtfParserTest {
 
     @Test
     fun `parse RTF with Unicode characters`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252
-" +
-            "\u8364? Euro sign\par
-" +  // Euro sign
-            "\u63? C\par
-}"  // C
+        val rtf = "{\rtf1\ansi\ansicpg1252" +
+            "\u8364? Euro sign\par" +  // Euro sign
+            "\u63? C\par}"  // C
         val file = tempFolder.newFile("unicode.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 
