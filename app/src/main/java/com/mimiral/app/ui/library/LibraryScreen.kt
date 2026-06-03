@@ -287,7 +287,9 @@ fun LibraryScreen(
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                if (uiState.searchQuery.isNotBlank() || uiState.filterOption != FilterOption.ALL) {
+                                if (uiState.searchQuery.isNotBlank() ||
+                                    uiState.filterOption != FilterOption.ALL
+                                ) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = "Try adjusting your filters",
@@ -354,7 +356,9 @@ private fun GridLibraryContent(
             items(recentBooks, key = { "recent_${it.book.id}" }) { bookWithProgress ->
                 GridBookItem(
                     bookWithProgress = bookWithProgress,
-                    onClick = { onBookClick(bookWithProgress.book.id, bookWithProgress.book.format) },
+                    onClick = {
+                        onBookClick(bookWithProgress.book.id, bookWithProgress.book.format)
+                    },
                     onLongClick = { onBookLongPress(bookWithProgress) }
                 )
             }
@@ -413,7 +417,9 @@ private fun ListLibraryContent(
             items(recentBooks, key = { "recent_${it.book.id}" }) { bookWithProgress ->
                 ListBookItem(
                     bookWithProgress = bookWithProgress,
-                    onClick = { onBookClick(bookWithProgress.book.id, bookWithProgress.book.format) },
+                    onClick = {
+                        onBookClick(bookWithProgress.book.id, bookWithProgress.book.format)
+                    },
                     onLongClick = { onBookLongPress(bookWithProgress) }
                 )
             }
@@ -523,7 +529,9 @@ private fun GridBookItem(
                     if (bookWithProgress.isReading) {
                         Spacer(modifier = Modifier.height(8.dp))
                         LinearProgressIndicator(
-                            progress = { (bookWithProgress.progressPercent / 100f).coerceIn(0f, 1f) },
+                            progress = {
+                                (bookWithProgress.progressPercent / 100f).coerceIn(0f, 1f)
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(4.dp)
@@ -643,7 +651,9 @@ private fun ListBookItem(
                     if (bookWithProgress.isReading) {
                         Spacer(modifier = Modifier.height(8.dp))
                         LinearProgressIndicator(
-                            progress = { (bookWithProgress.progressPercent / 100f).coerceIn(0f, 1f) },
+                            progress = {
+                                (bookWithProgress.progressPercent / 100f).coerceIn(0f, 1f)
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(4.dp)
@@ -656,7 +666,10 @@ private fun ListBookItem(
                             text = if (bookWithProgress.isFinished) {
                                 "Finished"
                             } else {
-                                "Page ${bookWithProgress.currentPage + 1} of ${bookWithProgress.totalPages} (${bookWithProgress.progressPercent.toInt()}%)"
+                                val page = bookWithProgress.currentPage + 1
+                                val total = bookWithProgress.totalPages
+                                val pct = bookWithProgress.progressPercent.toInt()
+                                "Page $page of $total ($pct%)"
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
