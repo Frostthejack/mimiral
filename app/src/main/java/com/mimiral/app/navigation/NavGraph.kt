@@ -15,10 +15,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.LibraryScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
+import com.mimiral.app.ui.reader.TxtRtfReaderScreen
 import com.mimiral.app.ui.settings.SettingsScreen
 
 /**
@@ -41,6 +43,7 @@ fun routeForBookFormat(bookId: Int, format: String): String {
     return when (format.uppercase()) {
         "DJVU" -> "djvu_reader/$bookId"
         "EPUB" -> "epub_reader/$bookId"
+        "TXT", "RTF" -> "txt_rtf_reader/$bookId"
         "PDF" -> "pdf_reader/$bookId"
         else -> "pdf_reader/$bookId"
     }
@@ -57,7 +60,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             val route = currentDestination?.route
             if (route == null || (
                 route != Screen.Library.route &&
-                    route != Screen.Discover.route &&
+                    route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
                     route != Screen.Settings.route
                 )
@@ -123,6 +126,17 @@ fun MimiralNavGraph(navController: NavHostController) {
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
                 DjvuReaderScreen(
+                    bookId = bookId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "txt_rtf_reader/{bookId}",
+                arguments = listOf(navArgument("bookId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
+                TxtRtfReaderScreen(
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() }
                 )

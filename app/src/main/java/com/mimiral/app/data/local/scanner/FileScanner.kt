@@ -7,9 +7,6 @@ import android.provider.MediaStore
 import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.entity.BookEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,6 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Represents the current state of a file scan operation.
@@ -90,19 +90,19 @@ class FileScanner @Inject constructor(
 
         /** MIME types corresponding to supported formats for MediaStore queries. */
         private val SUPPORTED_MIME_TYPES = arrayOf(
-            "application/epub+zip", // .epub
-            "application/pdf", // .pdf
+            "application/epub+zip",      // .epub
+            "application/pdf",            // .pdf
             "application/x-mobipocket-ebook", // .mobi
-            "application/vnd.amazon.ebook", // .azw3
-            "application/xml", // .fb2 (often served as XML)
-            "image/vnd.djvu", // .djvu
-            "application/x-cbz", // .cbz
-            "application/x-cbr", // .cbr
-            "text/plain", // .txt
-            "application/rtf", // .rtf
-            "application/msword", // .doc
+            "application/vnd.amazon.ebook",   // .azw3
+            "application/xml",            // .fb2 (often served as XML)
+            "image/vnd.djvu",             // .djvu
+            "application/x-cbz",          // .cbz
+            "application/x-cbr",          // .cbr
+            "text/plain",                 // .txt
+            "application/rtf",            // .rtf
+            "application/msword",         // .doc
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-            "text/markdown" // .md
+            "text/markdown"               // .md
         )
 
         /** MediaStore URI for external volume. */

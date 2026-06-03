@@ -1,7 +1,7 @@
 package com.mimiral.app.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -12,8 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 
 data class BottomNavItem(
     val screen: Screen,
@@ -23,9 +24,9 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem(Screen.Library, "Library", Icons.Filled.MenuBook),
-    BottomNavItem(Screen.Discover, "Discover", Icons.Filled.Explore),
+    BottomNavItem(Screen.AddBooks, "Add", Icons.Filled.Add),
     BottomNavItem(Screen.NowReading, "Now Reading", Icons.Filled.PlayArrow),
-    BottomNavItem(Screen.Settings, "Settings", Icons.Filled.Settings)
+    BottomNavItem(Screen.Settings, "Settings", Icons.Filled.Settings),
 )
 
 @Composable

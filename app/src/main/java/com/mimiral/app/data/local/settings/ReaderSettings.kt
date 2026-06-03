@@ -14,9 +14,7 @@ import com.mimiral.app.ui.reader.TextSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "reader_settings"
-)
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "reader_settings")
 
 data class ReaderSettings(
     val volumeKeyNavigationEnabled: Boolean = true,
