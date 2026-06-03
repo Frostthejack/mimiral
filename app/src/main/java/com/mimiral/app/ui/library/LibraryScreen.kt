@@ -28,15 +28,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SearchOff
-import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,7 +49,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -61,21 +57,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
+import com.mimiral.app.data.local.scanner.ScanState
 import com.mimiral.app.data.local.settings.FilterOption
 import com.mimiral.app.data.local.settings.SortOption
 import com.mimiral.app.data.local.settings.ViewMode
@@ -89,40 +81,6 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val recentBooks by viewModel.recentBooks.collectAsState()
     var sortMenuExpanded by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
-
-    // Show import result messages in snackbar
-    androidx.compose.runtime.LaunchedEffect(uiState.importMessage) {
-        uiState.importMessage?.let { message ->
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar(message)
-            }
-        }
-    }
-
-    // SAF file picker launcher
-    val importFileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            viewModel.importBook(uri)
-        }
-    }
-
-    val supportedMimeTypes = arrayOf(
-        "application/epub+zip",
-        "application/pdf",
-        "application/x-mobipocket-ebook",
-        "application/xml",
-        "image/vnd.djvu",
-        "application/x-cbz",
-        "text/plain",
-        "application/rtf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "text/markdown"
-    )
 
     Scaffold(
         topBar = {
@@ -146,20 +104,7 @@ fun LibraryScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    importFileLauncher.launch(supportedMimeTypes)
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Import book"
-                )
-            }
-        },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        }
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
@@ -169,15 +114,6 @@ fun LibraryScreen(
                 .padding(padding)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Import progress indicator
-                if (uiState.isImporting) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                    )
-                }
-
                 // Search bar
                 OutlinedTextField(
                     value = uiState.searchQuery,
@@ -188,6 +124,68 @@ fun LibraryScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     singleLine = true
                 )
+
+                // Scan status indicator
+                val scanState = uiState.scanState
+                if (scanState is ScanState.Scanning) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Scanning… ${scanState.filesFound} found, ${scanState.newFiles} new",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else if (scanState is ScanState.Completed) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Scan complete: ${scanState.newFiles} new books, ${scanState.duplicatesSkipped} duplicates skipped",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else if (scanState is ScanState.Error) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Scan failed: ${scanState.message}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
 
                 // Sort and Filter row
                 Row(
@@ -298,21 +296,6 @@ fun LibraryScreen(
                                             alpha = 0.7f
                                         )
                                     )
-                                }
-                                if (uiState.searchQuery.isBlank() && uiState.filterOption == FilterOption.ALL) {
-                                    Spacer(modifier = Modifier.height(24.dp))
-                                    FloatingActionButton(
-                                        onClick = {
-                                            importFileLauncher.launch(supportedMimeTypes)
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = "Import book"
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Import your first book")
-                                    }
                                 }
                             }
                         }
@@ -505,7 +488,13 @@ private fun GridBookItem(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
+                        val formatIcon = when (bookWithProgress.book.format) {
+                            "PDF" -> Icons.Default.MenuBook
+                            "DJVU" -> Icons.Default.Description
+                            else -> Icons.Default.Book
+                        }
                         Icon(
+                            imageVector = formatIcon,
                             contentDescription = null,
                             modifier = Modifier.size(40.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -617,7 +606,13 @@ private fun ListBookItem(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
+                        val formatIcon = when (bookWithProgress.book.format) {
+                            "PDF" -> Icons.Default.MenuBook
+                            "DJVU" -> Icons.Default.Description
+                            else -> Icons.Default.Book
+                        }
                         Icon(
+                            imageVector = formatIcon,
                             contentDescription = null,
                             modifier = Modifier.size(28.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant

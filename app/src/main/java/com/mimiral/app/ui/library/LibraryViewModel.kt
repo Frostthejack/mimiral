@@ -1,7 +1,6 @@
 package com.mimiral.app.ui.library
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookEntity
@@ -10,7 +9,9 @@ import com.mimiral.app.data.local.settings.FilterOption
 import com.mimiral.app.data.local.settings.LibrarySettingsRepository
 import com.mimiral.app.data.local.settings.SortOption
 import com.mimiral.app.data.local.settings.ViewMode
+import com.mimiral.app.data.local.scanner.ScanState
 import com.mimiral.app.data.repository.BookRepository
+import com.mimiral.app.data.repository.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,8 +41,7 @@ data class LibraryUiState(
     val recentBooks: List<BookWithProgress> = emptyList(),
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
-    val isImporting: Boolean = false,
-    val importMessage: String? = null,
+    val scanState: ScanState = ScanState.Idle,
     val searchQuery: String = "",
     val sortOption: SortOption = SortOption.RECENT,
     val filterOption: FilterOption = FilterOption.ALL,
@@ -52,7 +52,8 @@ data class LibraryUiState(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     application: Application,
-    private val bookRepository: BookRepository
+    private val bookRepository: BookRepository,
+    private val libraryRepository: LibraryRepository
 ) : AndroidViewModel(application) {
 
     private val settingsRepository = LibrarySettingsRepository(application)
@@ -62,8 +63,7 @@ class LibraryViewModel @Inject constructor(
     private val _filterOption = MutableStateFlow(FilterOption.ALL)
     private val _viewMode = MutableStateFlow(ViewMode.GRID)
     private val _isRefreshing = MutableStateFlow(false)
-    private val _isImporting = MutableStateFlow(false)
-    private val _importMessage = MutableStateFlow<String?>(null)
+    private val _scanState = MutableStateFlow<ScanState>(ScanState.Idle)
 
     init {
         viewModelScope.launch {
@@ -71,6 +71,12 @@ class LibraryViewModel @Inject constructor(
                 _sortOption.value = settings.sortOption
                 _filterOption.value = settings.filterOption
                 _viewMode.value = settings.viewMode
+            }
+        }
+        viewModelScope.launch {
+            libraryRepository.scanState.collect { state ->
+                _scanState.value = state
+                _isRefreshing.value = state is ScanState.Scanning
             }
         }
         loadRecentBooks()
@@ -111,6 +117,7 @@ class LibraryViewModel @Inject constructor(
             recentBooks = emptyList(),
             isLoading = false,
             isRefreshing = _isRefreshing.value,
+            scanState = _scanState.value,
             searchQuery = _searchQuery.value,
             sortOption = _sortOption.value,
             filterOption = filter,
@@ -118,10 +125,8 @@ class LibraryViewModel @Inject constructor(
         )
     }.combine(_isRefreshing) { state, refreshing ->
         state.copy(isRefreshing = refreshing)
-    }.combine(_isImporting) { state, importing ->
-        state.copy(isImporting = importing)
-    }.combine(_importMessage) { state, msg ->
-        state.copy(importMessage = msg)
+    }.combine(_scanState) { state, scanState ->
+        state.copy(scanState = scanState)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -172,19 +177,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun refreshLibrary() {
-        viewModelScope.launch {
-            _isRefreshing.value = true
-            try {
-                // Trigger a re-scan by re-collecting the flow
-                // The Flow from Room will automatically emit new data
-                // when the underlying data changes
-                bookRepository.getBookCount() // Force DB wake
-            } catch (_: Exception) {
-                // Non-critical
-            } finally {
-                _isRefreshing.value = false
-            }
-        }
+        libraryRepository.refreshLibrary()
     }
 
     fun deleteBook(book: BookEntity) {
@@ -193,33 +186,6 @@ class LibraryViewModel @Inject constructor(
                 bookRepository.deleteBook(book)
             } catch (_: Exception) {
                 // Error handling could be added
-            }
-        }
-    }
-
-    /**
-     * Import a book from a SAF content URI.
-     * Called after the user picks a file via the file picker.
-     */
-    fun importBook(uri: Uri) {
-        viewModelScope.launch {
-            _isImporting.value = true
-            _importMessage.value = "Importing book..."
-            try {
-                val bookId = bookRepository.importBookFromUri(uri)
-                _importMessage.value = if (bookId > 0) {
-                    "Book imported successfully"
-                } else {
-                    "Failed to import book (unsupported format or error)"
-                }
-                // Room Flow will auto-emit new data, refreshing the library
-            } catch (e: Exception) {
-                _importMessage.value = "Import failed: ${e.message}"
-            } finally {
-                _isImporting.value = false
-                // Clear the message after a delay
-                kotlinx.coroutines.delay(3000)
-                _importMessage.value = null
             }
         }
     }
