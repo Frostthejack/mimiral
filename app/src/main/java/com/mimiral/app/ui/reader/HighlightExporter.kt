@@ -6,12 +6,12 @@ import androidx.core.content.FileProvider
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.repository.BookRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Exports all highlights and notes for a book to a formatted text file,
@@ -34,7 +34,7 @@ class HighlightExporter(
         val dateFormat = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.US)
         val timestamp = dateFormat.format(Date())
         val safeTitle = book.title.replace(Regex("[^a-zA-Z0-9\\s-]"), "").trim()
-        val filename = "${safeTitle}_highlights_${timestamp}.txt"
+        val filename = "${safeTitle}_highlights_$timestamp.txt"
 
         val exportDir = File(context.cacheDir, "exports")
         if (!exportDir.exists()) exportDir.mkdirs()
@@ -79,7 +79,7 @@ class HighlightExporter(
         val sb = StringBuilder()
 
         // Header
-        sb.appendLine("=" .repeat(60))
+        sb.appendLine("=".repeat(60))
         sb.appendLine("HIGHLIGHTS & NOTES")
         sb.appendLine("=".repeat(60))
         sb.appendLine()
@@ -87,7 +87,9 @@ class HighlightExporter(
         if (!book.author.isNullOrBlank()) {
             sb.appendLine("Author: ${book.author}")
         }
-        sb.appendLine("Exported: ${SimpleDateFormat("MMMM dd, yyyy 'at' h:mm a", Locale.US).format(Date())}")
+        sb.appendLine(
+            "Exported: ${SimpleDateFormat("MMMM dd, yyyy 'at' h:mm a", Locale.US).format(Date())}"
+        )
         sb.appendLine("Total highlights: ${highlights.size}")
         sb.appendLine()
         sb.appendLine("=".repeat(60))

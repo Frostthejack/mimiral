@@ -351,7 +351,8 @@ class TTSManager(
             currentParagraph != null && currentParagraph.startOffset < currentOffset -> {
                 Log.d(
                     TAG,
-                    "Skip paragraph backward to current paragraph start ${currentParagraph.startOffset}"
+                    "Skip paragraph backward to current paragraph " +
+                        "start ${currentParagraph.startOffset}"
                 )
                 onSkip?.forEach { it("paragraph_backward") }
                 playFromOffset(currentParagraph.startOffset)
@@ -360,7 +361,8 @@ class TTSManager(
             prevParagraph != null -> {
                 Log.d(
                     TAG,
-                    "Skip paragraph backward to previous paragraph start ${prevParagraph.startOffset}"
+                    "Skip paragraph backward to previous paragraph " +
+                        "start ${prevParagraph.startOffset}"
                 )
                 onSkip?.forEach { it("paragraph_backward") }
                 playFromOffset(prevParagraph.startOffset)
@@ -512,9 +514,9 @@ class TTSManager(
             val sentence = currentSentences[newIndex]
             Log.d(
                 TAG,
-                "Sentence changed: #$newIndex [${sentence.start}-${sentence.end}] \"${sentence.text.take(
-                    40
-                )}...\""
+                "Sentence changed: #$newIndex " +
+                    "[${sentence.start}-${sentence.end}] " +
+                    "\"${sentence.text.take(40)}...\""
             )
             onSentenceChanged.forEach { cb -> cb(sentence) }
         }

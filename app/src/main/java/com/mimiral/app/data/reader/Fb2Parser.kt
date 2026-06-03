@@ -4,17 +4,17 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
+import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
-import java.io.BufferedInputStream
-import java.io.File
-import java.io.FileInputStream
-import java.io.InputStream
-import java.util.zip.ZipInputStream
 
 /**
  * State of an FB2 document being parsed.
@@ -384,10 +384,17 @@ class Fb2Parser(private val context: Context) {
         }
 
         // Prefer coverpage-referenced image; fall back to first binary
-        coverImageId = localCoverImageId ?: if (imagesMap.isNotEmpty()) imagesMap.keys.first() else null
+        coverImageId = localCoverImageId ?: if (imagesMap.isNotEmpty()) {
+            imagesMap.keys.first()
+        } else {
+            null
+        }
 
         val authorParts = listOf(
-            firstName.trim(), middleName.trim(), lastName.trim(), nickname.trim()
+            firstName.trim(),
+            middleName.trim(),
+            lastName.trim(),
+            nickname.trim()
         ).filter { it.isNotEmpty() }
         val authorName = if (authorParts.isNotEmpty()) authorParts.joinToString(" ") else null
 

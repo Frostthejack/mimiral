@@ -19,7 +19,10 @@ import java.util.regex.Pattern
  *     .addText("Today is January 5, 2026.")
  *     .addText("The price is $42.50.")
  *     .build()
- * // TTS engine receives: <speak>Hello world.<break time='500ms'/>Today is <say-as interpret-as='date' format='mdy'>January 5, 2026</say-as>.<break time='500ms'/>The price is <say-as interpret-as='cardinal'>42.50</say-as> dollars.</speak>
+ * // TTS engine receives: <speak>Hello world.<break time='500ms'/>Today is
+ * // <say-as interpret-as='date' format='mdy'>January 5, 2026</say-as>.
+ * // <break time='500ms'/>The price is
+ * // <say-as interpret-as='cardinal'>42.50</say-as> dollars.</speak>
  * ```
  *
  * @see <a href="https://www.w3.org/TR/speech-synthesis11/">W3C SSML 1.1 Specification</a>
@@ -36,14 +39,18 @@ class SSMLBuilder {
         // --- Date patterns ---
         // Matches "January 5, 2026" or "Jan 5, 2026"
         private val DATE_MONTH_DAY_YEAR = Pattern.compile(
-            "(January|February|March|April|May|June|July|August|September|October|November|December|" +
-                "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\.?\\s+(\\d{1,2}),?\\s+(\\d{4})"
+            "(January|February|March|April|May|June|July|August|" +
+                "September|October|November|December|" +
+                "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)" +
+                "\\.?\\s+(\\d{1,2}),?\\s+(\\d{4})"
         )
 
         // Matches "5 January 2026" or "5 Jan 2026" (non-US format)
         private val DAY_MONTH_YEAR = Pattern.compile(
-            "(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December|" +
-                "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\.?,?\\s+(\\d{4})"
+            "(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|" +
+                "September|October|November|December|" +
+                "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)" +
+                "\\.?\\s+(\\d{4})"
         )
 
         // Matches "2026-01-05" (ISO date)
@@ -235,7 +242,8 @@ class SSMLBuilder {
 
     private fun wrapDates(text: String): String {
         var result = text
-        // Month Day Year: "January 5, 2026" -> <say-as interpret-as="date" format="mdy">January 5, 2026</say-as>
+        // Month Day Year: "January 5, 2026" ->
+        // <say-as interpret-as="date" format="mdy">January 5, 2026</say-as>
         result = DATE_MONTH_DAY_YEAR.matcher(result).replaceAll(
             "<say-as interpret-as='date' format='mdy'>$0</say-as>"
         )

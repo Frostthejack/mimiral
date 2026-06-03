@@ -133,11 +133,19 @@ fun Fb2ReaderScreen(
 
             when {
                 goNext && pagerState.currentPage < pageCount - 1 -> {
-                    coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(
+                            pagerState.currentPage + 1
+                        )
+                    }
                     true
                 }
                 goPrev && pagerState.currentPage > 0 -> {
-                    coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(
+                            pagerState.currentPage - 1
+                        )
+                    }
                     true
                 }
                 else -> true
@@ -208,7 +216,9 @@ fun Fb2ReaderScreen(
                             if (viewModel.hasPreviousChapter()) {
                                 viewModel.previousChapter()
                                 coroutineScope.launch {
-                                    val chapter = uiState.chapters.getOrNull(uiState.currentChapter - 1)
+                                    val chapter = uiState.chapters.getOrNull(
+                                        uiState.currentChapter - 1
+                                    )
                                     if (chapter != null) {
                                         pagerState.animateScrollToPage(chapter.startPage)
                                     }
@@ -216,7 +226,12 @@ fun Fb2ReaderScreen(
                             }
                         },
                         enabled = viewModel.hasPreviousChapter(),
-                        icon = { Icon(Icons.Default.ArrowBackIos, contentDescription = "Previous chapter") },
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowBackIos,
+                                contentDescription = "Previous chapter"
+                            )
+                        },
                         label = { Text("Prev Ch") }
                     )
                     NavigationBarItem(
@@ -231,7 +246,9 @@ fun Fb2ReaderScreen(
                             if (viewModel.hasNextChapter()) {
                                 viewModel.nextChapter()
                                 coroutineScope.launch {
-                                    val chapter = uiState.chapters.getOrNull(uiState.currentChapter + 1)
+                                    val chapter = uiState.chapters.getOrNull(
+                                        uiState.currentChapter + 1
+                                    )
                                     if (chapter != null) {
                                         pagerState.animateScrollToPage(chapter.startPage)
                                     }
@@ -239,7 +256,12 @@ fun Fb2ReaderScreen(
                             }
                         },
                         enabled = viewModel.hasNextChapter(),
-                        icon = { Icon(Icons.Default.ArrowForwardIos, contentDescription = "Next chapter") },
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowForwardIos,
+                                contentDescription = "Next chapter"
+                            )
+                        },
                         label = { Text("Next Ch") }
                     )
                 }
@@ -289,7 +311,9 @@ fun Fb2ReaderScreen(
                             .graphicsLayer {
                                 alpha = if (abs(pageOffset) < 1f) {
                                     1f - (abs(pageOffset) * 0.3f)
-                                } else 0.7f
+                                } else {
+                                    0.7f
+                                }
                                 val scale = 1f - (abs(pageOffset) * 0.03f).coerceIn(0f, 0.1f)
                                 scaleX = scale
                                 scaleY = scale
@@ -303,14 +327,18 @@ fun Fb2ReaderScreen(
                                         offset.x < tapZoneWidth -> {
                                             if (pagerState.currentPage > 0) {
                                                 coroutineScope.launch {
-                                                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                                    pagerState.animateScrollToPage(
+                                                        pagerState.currentPage - 1
+                                                    )
                                                 }
                                             }
                                         }
                                         offset.x > (size.width * 2f / 3f) -> {
                                             if (pagerState.currentPage < pageCount - 1) {
                                                 coroutineScope.launch {
-                                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                                    pagerState.animateScrollToPage(
+                                                        pagerState.currentPage + 1
+                                                    )
                                                 }
                                             }
                                         }
@@ -328,7 +356,9 @@ fun Fb2ReaderScreen(
                             totalPages = pageCount,
                             chapterTitle = if (pageIndex == 0) {
                                 uiState.chapters.getOrNull(uiState.currentChapter)?.title
-                            } else null,
+                            } else {
+                                null
+                            },
                             textSettings = textSettings
                         )
                     }

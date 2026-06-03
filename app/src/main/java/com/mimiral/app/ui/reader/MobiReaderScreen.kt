@@ -1,6 +1,5 @@
 package com.mimiral.app.ui.reader
 
-import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -171,7 +170,12 @@ fun MobiReaderScreen(
                             }
                         },
                         enabled = viewModel.hasPreviousChapter(),
-                        icon = { Icon(Icons.Default.ArrowBackIos, contentDescription = "Previous chapter") },
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowBackIos,
+                                contentDescription = "Previous chapter"
+                            )
+                        },
                         label = { Text("Prev Ch") }
                     )
                     NavigationBarItem(
@@ -189,7 +193,12 @@ fun MobiReaderScreen(
                             }
                         },
                         enabled = viewModel.hasNextChapter(),
-                        icon = { Icon(Icons.Default.ArrowForwardIos, contentDescription = "Next chapter") },
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowForwardIos,
+                                contentDescription = "Next chapter"
+                            )
+                        },
                         label = { Text("Next Ch") }
                     )
                 }
@@ -248,14 +257,18 @@ fun MobiReaderScreen(
                                         offset.x < tapZoneWidth -> {
                                             if (pagerState.currentPage > 0) {
                                                 coroutineScope.launch {
-                                                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                                    pagerState.animateScrollToPage(
+                                                        pagerState.currentPage - 1
+                                                    )
                                                 }
                                             }
                                         }
                                         offset.x > (size.width * 2f / 3f) -> {
                                             if (pagerState.currentPage < pageCount - 1) {
                                                 coroutineScope.launch {
-                                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                                    pagerState.animateScrollToPage(
+                                                        pagerState.currentPage + 1
+                                                    )
                                                 }
                                             }
                                         }

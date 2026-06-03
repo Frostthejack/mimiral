@@ -65,12 +65,22 @@ class RtfParser {
      */
     suspend fun parse(file: File): RtfParseResult = withContext(Dispatchers.IO) {
         try {
-            if (!file.exists()) return@withContext RtfParseResult.Error("File not found: " + file.absolutePath)
-            if (!file.canRead()) return@withContext RtfParseResult.Error("Cannot read file: " + file.absolutePath)
+            if (!file.exists()) {
+                return@withContext RtfParseResult.Error("File not found: " + file.absolutePath)
+            }
+            if (!file.canRead()) {
+                return@withContext RtfParseResult.Error("Cannot read file: " + file.absolutePath)
+            }
 
             val bytes = file.readBytes()
             if (bytes.isEmpty()) {
-                return@withContext RtfParseResult.Success("", file.nameWithoutExtension, file.absolutePath, 0, listOf(0))
+                return@withContext RtfParseResult.Success(
+                    "",
+                    file.nameWithoutExtension,
+                    file.absolutePath,
+                    0,
+                    listOf(0)
+                )
             }
 
             // RTF is typically ANSI-encoded; try to detect encoding from RTF header
@@ -82,7 +92,13 @@ class RtfParser {
             val chapterBreaks = detectChapterBreaks(plainText)
             val title = extractTitle(plainText, file.nameWithoutExtension)
 
-            RtfParseResult.Success(plainText, title, file.absolutePath, plainText.length, chapterBreaks)
+            RtfParseResult.Success(
+                plainText,
+                title,
+                file.absolutePath,
+                plainText.length,
+                chapterBreaks
+            )
         } catch (e: Exception) {
             RtfParseResult.Error("Failed to parse RTF file: " + e.message, e)
         }
@@ -91,11 +107,18 @@ class RtfParser {
     /**
      * Parse RTF from an InputStream.
      */
-    suspend fun parse(inputStream: InputStream, fileName: String): RtfParseResult = withContext(Dispatchers.IO) {
+    suspend fun parse(
+        inputStream: InputStream,
+        fileName: String
+    ): RtfParseResult = withContext(Dispatchers.IO) {
         try {
             val bytes = inputStream.readBytes()
             if (bytes.isEmpty()) {
-                val baseName = if (fileName.contains(".")) fileName.substringBeforeLast(".") else fileName
+                val baseName = if (fileName.contains(".")) {
+                    fileName.substringBeforeLast(".")
+                } else {
+                    fileName
+                }
                 return@withContext RtfParseResult.Success("", baseName, "", 0, listOf(0))
             }
 
@@ -124,7 +147,10 @@ class RtfParser {
      */
     private fun detectRtfEncoding(bytes: ByteArray): Charset {
         // Look for \ansicpgN in the first 256 bytes
-        val headerStr = String(bytes.copyOfRange(0, minOf(bytes.size, 256)), StandardCharsets.US_ASCII)
+        val headerStr = String(
+            bytes.copyOfRange(0, minOf(bytes.size, 256)),
+            StandardCharsets.US_ASCII
+        )
 
         // Check for \ansicpg
         val ansiCpgMatch = Regex("""\ansicpg(\d+)""").find(headerStr)
@@ -247,7 +273,11 @@ class RtfParser {
                             i++ // consume minus or first digit
                             while (i < source.length && source[i].isDigit()) i++
                         }
-                        val param = if (i > paramStart) source.substring(paramStart, i).toIntOrNull() else null
+                        val param = if (i > paramStart) {
+                            source.substring(paramStart, i).toIntOrNull()
+                        } else {
+                            null
+                        }
                         // Check for optional space delimiter
                         if (i < source.length && source[i] == ' ') i++
                         tokens.add(RtfToken.ControlWord(word, param))
@@ -260,7 +290,9 @@ class RtfParser {
                 c != '\r' && c != '\n' -> {
                     // Plain text
                     val start = i
-                    while (i < source.length && source[i] != '{' && source[i] != '}' && source[i] != '\\' && source[i] != '\r' && source[i] != '\n') {
+                    while (i < source.length && source[i] != '{' && source[i] != '}' &&
+                        source[i] != '\\' && source[i] != '\r' && source[i] != '\n'
+                    ) {
                         i++
                     }
                     if (i > start) {
@@ -351,7 +383,7 @@ class RtfParser {
                         "object" -> { skipDepth = groupDepth; inObject = true }
                         "stylesheet" -> skipDepth = groupDepth
                         "info" -> skipDepth = groupDepth
-                        "*\跳过*" -> skipDepth = groupDepth  // Unknown \* groups with skipping
+                        "*\跳过*" -> skipDepth = groupDepth // Unknown \* groups with skipping
                         "*" -> {
                             // Check if next token is a control word we should skip
                             if (i + 1 < tokens.size && tokens[i + 1] is RtfToken.ControlWord) {
@@ -463,7 +495,9 @@ class RtfParser {
                 if (consecutiveBlankLines == 3) breaks.add(charOffset)
             } else {
                 if (consecutiveBlankLines >= 2 && isChapterHeading(trimmed)) {
-                    if (breaks.isNotEmpty() && breaks.last() == charOffset) breaks.removeAt(breaks.size - 1)
+                    if (breaks.isNotEmpty() && breaks.last() == charOffset) {
+                        breaks.removeAt(breaks.size - 1)
+                    }
                     breaks.add(charOffset)
                 }
                 consecutiveBlankLines = 0
@@ -485,8 +519,13 @@ class RtfParser {
     private fun extractTitle(text: String, filenameTitle: String): String {
         if (text.isBlank()) return filenameTitle
         val firstLine = text.trimStart().substringBefore("\n").trim()
-        return if (firstLine.isNotEmpty() && firstLine.length <= 100 && !firstLine.endsWith(".")) firstLine
-        else filenameTitle
+        return if (firstLine.isNotEmpty() && firstLine.length <= 100 &&
+            !firstLine.endsWith(".")
+        ) {
+            firstLine
+        } else {
+            filenameTitle
+        }
     }
 }
 

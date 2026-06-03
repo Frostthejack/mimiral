@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mimiral.app.R
-import java.util.Locale
 
 /**
  * Dialog for selecting a TTS voice from available voices.

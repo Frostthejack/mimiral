@@ -23,7 +23,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -81,7 +80,10 @@ fun MarkdownReaderScreen(
     // Scroll to saved position
     LaunchedEffect(uiState.isLoading, uiState.elements) {
         if (!uiState.isLoading && uiState.elements.isNotEmpty()) {
-            val targetIndex = uiState.currentScrollIndex.coerceIn(0, (uiState.elements.size - 1).coerceAtLeast(0))
+            val targetIndex = uiState.currentScrollIndex.coerceIn(
+                0,
+                (uiState.elements.size - 1).coerceAtLeast(0)
+            )
             if (targetIndex > 0) {
                 listState.scrollToItem(targetIndex)
             }
@@ -125,18 +127,21 @@ fun MarkdownReaderScreen(
                     }
                     IconButton(onClick = { viewModel.toggleBookmark() }) {
                         Icon(
-                            imageVector = if (uiState.isCurrentPageBookmarked)
+                            imageVector = if (uiState.isCurrentPageBookmarked) {
                                 Icons.Default.Bookmark
-                            else
-                                Icons.Default.BookmarkBorder,
-                            contentDescription = if (uiState.isCurrentPageBookmarked)
+                            } else {
+                                Icons.Default.BookmarkBorder
+                            },
+                            contentDescription = if (uiState.isCurrentPageBookmarked) {
                                 "Remove bookmark"
-                            else
-                                "Add bookmark",
-                            tint = if (uiState.isCurrentPageBookmarked)
+                            } else {
+                                "Add bookmark"
+                            },
+                            tint = if (uiState.isCurrentPageBookmarked) {
                                 MaterialTheme.colorScheme.primary
-                            else
+                            } else {
                                 MaterialTheme.colorScheme.onSurface
+                            }
                         )
                     }
                 }
@@ -225,7 +230,10 @@ fun MarkdownReaderScreen(
                 viewModel.navigateToHeading(heading.elementIndex)
                 coroutineScope.launch {
                     listState.animateScrollToItem(
-                        heading.elementIndex.coerceIn(0, (uiState.elements.size - 1).coerceAtLeast(0))
+                        heading.elementIndex.coerceIn(
+                            0,
+                            (uiState.elements.size - 1).coerceAtLeast(0)
+                        )
                     )
                 }
             },
@@ -241,7 +249,10 @@ fun MarkdownReaderScreen(
                 viewModel.navigateToBookmark(bookmark)
                 coroutineScope.launch {
                     listState.animateScrollToItem(
-                        bookmark.pageNumber.coerceIn(0, (uiState.elements.size - 1).coerceAtLeast(0))
+                        bookmark.pageNumber.coerceIn(
+                            0,
+                            (uiState.elements.size - 1).coerceAtLeast(0)
+                        )
                     )
                 }
             },
@@ -515,7 +526,9 @@ private fun buildAnnotatedStringInlined(text: String): AnnotatedString {
             } else if (earliest != null && earliest.third == 0) {
                 when (earliest.second) {
                     "boldItalic" -> {
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)) {
+                        withStyle(
+                            SpanStyle(fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic)
+                        ) {
                             append(earliest.first.groupValues[1])
                         }
                         remaining = remaining.substring(earliest.first.value.length)
@@ -632,10 +645,11 @@ private fun MarkdownTocDialog(
                             text = heading.title,
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isCurrent)
+                                color = if (isCurrent) {
                                     MaterialTheme.colorScheme.primary
-                                else
+                                } else {
                                     MaterialTheme.colorScheme.onSurface
+                                }
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()

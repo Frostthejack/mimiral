@@ -62,7 +62,11 @@ class FootnotePageNumberCleaner {
      */
     fun clean(text: String): CleaningResult {
         if (text.isBlank()) {
-            return CleaningResult(cleanedText = text, footnoteMarkersRemoved = 0, pageNumbersRemoved = 0)
+            return CleaningResult(
+                cleanedText = text,
+                footnoteMarkersRemoved = 0,
+                pageNumbersRemoved = 0
+            )
         }
 
         var currentText = text
@@ -251,7 +255,10 @@ class FootnotePageNumberCleaner {
         currentText = currentText.replace(centeredPattern, "")
 
         // 3. Remove "p.N" or "page N" on their own line
-        val pageLinePattern = Regex("""^\s*(?:p\.\s*\d{1,4}|page\s+\d{1,4})\s*$""", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))
+        val pageLinePattern = Regex(
+            """^\s*(?:p\.\s*\d{1,4}|page\s+\d{1,4})\s*$""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE)
+        )
         count += pageLinePattern.findAll(currentText).count()
         currentText = currentText.replace(pageLinePattern, "")
 
@@ -281,10 +288,10 @@ class FootnotePageNumberCleaner {
      */
     private fun normalizeWhitespace(text: String): String {
         return text
-            .replace(Regex("""[ \t]+"""), " ")           // Collapse horizontal whitespace
-            .replace(Regex("""\n{2,}"""), "\n")         // Max 2 consecutive newlines
-            .replace(Regex(""" \n"""), "\n")              // Remove trailing spaces before newlines
-            .replace(Regex("""\n """), "\n")              // Remove leading spaces after newlines
+            .replace(Regex("""[ \t]+"""), " ") // Collapse horizontal whitespace
+            .replace(Regex("""\n{2,}"""), "\n") // Max 2 consecutive newlines
+            .replace(Regex(""" \n"""), "\n") // Remove trailing spaces before newlines
+            .replace(Regex("""\n """), "\n") // Remove leading spaces after newlines
             .trim()
     }
 

@@ -2,14 +2,14 @@ package com.mimiral.app.data.reader
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Represents a single page in a comic book archive.
@@ -53,7 +53,14 @@ class ComicParser : AutoCloseable {
     companion object {
         /** Supported image extensions inside comic archives. */
         private val IMAGE_EXTENSIONS = setOf(
-            "jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif"
+            "jpg",
+            "jpeg",
+            "png",
+            "gif",
+            "bmp",
+            "webp",
+            "tiff",
+            "tif"
         )
 
         /**
@@ -189,8 +196,12 @@ class ComicParser : AutoCloseable {
             tempDir = dir
 
             val process = ProcessBuilder(
-                "unrar", "e", "-o+", "-inul",
-                file.absolutePath, dir.absolutePath
+                "unrar",
+                "e",
+                "-o+",
+                "-inul",
+                file.absolutePath,
+                dir.absolutePath
             ).redirectErrorStream(true).start()
 
             val exitCode = process.waitFor()
@@ -243,7 +254,10 @@ class ComicParser : AutoCloseable {
         withContext(Dispatchers.IO) {
             try {
                 val page = archive.pages.getOrNull(pageIndex) ?: return@withContext null
-                val outputFile = File(createTempDir("mimiral_page_"), "page_${pageIndex}.${page.format}")
+                val outputFile = File(
+                    createTempDir("mimiral_page_"),
+                    "page_$pageIndex.${page.format}"
+                )
 
                 when (archive.format) {
                     "CBZ" -> extractFromZip(archive.filePath, page.fileName, outputFile)

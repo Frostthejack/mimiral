@@ -69,8 +69,18 @@ class MobiParser {
     private var filePath: String = ""
 
     companion object {
-        private val MOBI_TYPE_BYTES = byteArrayOf('M'.code.toByte(), 'O'.code.toByte(), 'B'.code.toByte(), 'I'.code.toByte())
-        private val EXTH_MAGIC_BYTES = byteArrayOf('E'.code.toByte(), 'X'.code.toByte(), 'T'.code.toByte(), 'H'.code.toByte())
+        private val MOBI_TYPE_BYTES = byteArrayOf(
+            'M'.code.toByte(),
+            'O'.code.toByte(),
+            'B'.code.toByte(),
+            'I'.code.toByte()
+        )
+        private val EXTH_MAGIC_BYTES = byteArrayOf(
+            'E'.code.toByte(),
+            'X'.code.toByte(),
+            'T'.code.toByte(),
+            'H'.code.toByte()
+        )
 
         private const val PDB_HEADER_SIZE = 78
         private const val PDB_RECORD_ENTRY_SIZE = 8
@@ -171,7 +181,7 @@ class MobiParser {
         val numRecords = buffer.short.toInt() and 0xFFFF
 
         val isAzw3 = dbName.contains("AZW", ignoreCase = true) ||
-                String(typeBytes, Charsets.US_ASCII).contains("BOOK", ignoreCase = true)
+            String(typeBytes, Charsets.US_ASCII).contains("BOOK", ignoreCase = true)
 
         val recordOffsets = mutableListOf<Long>()
         for (i in 0 until numRecords) {
@@ -272,7 +282,13 @@ class MobiParser {
 
         // Parse EXTH
         val exthRecords = parseExthHeader(firstRecord)
-        metadata = extractMetadata(firstRecord, encoding, exthRecords, fullNameOffset, fullNameLength)
+        metadata = extractMetadata(
+            firstRecord,
+            encoding,
+            exthRecords,
+            fullNameOffset,
+            fullNameLength
+        )
 
         val isAzw3 = mobiType == 3 || fileVersion >= 8
 
@@ -322,7 +338,8 @@ class MobiParser {
         var pos = offset
         for (i in 0 until count) {
             if (pos + 8 > data.size) break
-            val buf = ByteBuffer.wrap(data, pos, (data.size - pos).coerceAtLeast(0)).order(ByteOrder.BIG_ENDIAN)
+            val buf = ByteBuffer.wrap(data, pos, (data.size - pos).coerceAtLeast(0))
+                .order(ByteOrder.BIG_ENDIAN)
             val type = buf.int
             val length = buf.int
             if (length < 8) break
@@ -362,8 +379,11 @@ class MobiParser {
 
         for (rec in exthRecords) {
             val text = try {
-                if (useUtf8) String(rec.data, Charsets.UTF_8).trimEnd('\u0000')
-                else String(rec.data, Charsets.ISO_8859_1).trimEnd('\u0000')
+                if (useUtf8) {
+                    String(rec.data, Charsets.UTF_8).trimEnd('\u0000')
+                } else {
+                    String(rec.data, Charsets.ISO_8859_1).trimEnd('\u0000')
+                }
             } catch (_: Exception) {
                 continue
             }
@@ -383,7 +403,12 @@ class MobiParser {
                     val name = if (useUtf8) {
                         String(firstRecord, fullNameOffset, end - fullNameOffset, Charsets.UTF_8)
                     } else {
-                        String(firstRecord, fullNameOffset, end - fullNameOffset, Charsets.ISO_8859_1)
+                        String(
+                            firstRecord,
+                            fullNameOffset,
+                            end - fullNameOffset,
+                            Charsets.ISO_8859_1
+                        )
                     }.trimEnd('\u0000', '\n', '\r')
                     if (name.isNotBlank()) title = name
                 } catch (_: Exception) { }
@@ -418,13 +443,19 @@ class MobiParser {
 
             val text = when (header.compression) {
                 1 -> try {
-                    if (useUtf8) String(recordData, Charsets.UTF_8)
-                    else String(recordData, Charsets.ISO_8859_1)
+                    if (useUtf8) {
+                        String(recordData, Charsets.UTF_8)
+                    } else {
+                        String(recordData, Charsets.ISO_8859_1)
+                    }
                 } catch (_: Exception) { "" }
                 2 -> decompressPalmDoc(recordData, useUtf8)
                 else -> try {
-                    if (useUtf8) String(recordData, Charsets.UTF_8)
-                    else String(recordData, Charsets.ISO_8859_1)
+                    if (useUtf8) {
+                        String(recordData, Charsets.UTF_8)
+                    } else {
+                        String(recordData, Charsets.ISO_8859_1)
+                    }
                 } catch (_: Exception) { "" }
             }
 
@@ -463,13 +494,19 @@ class MobiParser {
 
             val text = when (header.compression) {
                 1 -> try {
-                    if (useUtf8) String(recordData, Charsets.UTF_8)
-                    else String(recordData, Charsets.ISO_8859_1)
+                    if (useUtf8) {
+                        String(recordData, Charsets.UTF_8)
+                    } else {
+                        String(recordData, Charsets.ISO_8859_1)
+                    }
                 } catch (_: Exception) { "" }
                 2 -> decompressPalmDoc(recordData, useUtf8)
                 else -> try {
-                    if (useUtf8) String(recordData, Charsets.UTF_8)
-                    else String(recordData, Charsets.ISO_8859_1)
+                    if (useUtf8) {
+                        String(recordData, Charsets.UTF_8)
+                    } else {
+                        String(recordData, Charsets.ISO_8859_1)
+                    }
                 } catch (_: Exception) { "" }
             }
 
@@ -490,11 +527,16 @@ class MobiParser {
             val sb = StringBuilder()
             for (i in startRecord..endRecord) {
                 val recStart = recordOffsets[i].toInt()
-                val recEnd = if (i + 1 < recordOffsets.size) recordOffsets[i + 1].toInt() else data.size
+                val recEnd = if (i + 1 < recordOffsets.size) {
+                    recordOffsets[i + 1].toInt()
+                } else {
+                    data.size
+                }
                 if (recStart >= data.size || recEnd > data.size || recStart >= recEnd) continue
                 val recordData = data.copyOfRange(recStart, recEnd)
                 if (isImageRecord(recordData)) continue
-                sb.append(stripMobiHtml(String(recordData, if (useUtf8) Charsets.UTF_8 else Charsets.ISO_8859_1))).append("\n\n")
+                val charset = if (useUtf8) Charsets.UTF_8 else Charsets.ISO_8859_1
+                sb.append(stripMobiHtml(String(recordData, charset))).append("\n\n")
             }
             createSyntheticChapters(sb.toString().trim())
         } else {
@@ -506,17 +548,38 @@ class MobiParser {
 
     private fun isImageRecord(data: ByteArray): Boolean {
         if (data.size < 4) return false
-        return (data[0] == 0xFF.toByte() && data[1] == 0xD8.toByte() && data[2] == 0xFF.toByte()) ||
-                (data[0] == 0x89.toByte() && data[1] == 0x50.toByte() && data[2] == 0x4E.toByte() && data[3] == 0x47.toByte()) ||
-                (data[0] == 0x47.toByte() && data[1] == 0x49.toByte() && data[2] == 0x46.toByte())
+        return (
+            data[0] == 0xFF.toByte() && data[1] == 0xD8.toByte() &&
+                data[2] == 0xFF.toByte()
+            ) ||
+            (
+                data[0] == 0x89.toByte() && data[1] == 0x50.toByte() &&
+                    data[2] == 0x4E.toByte() && data[3] == 0x47.toByte()
+                ) ||
+            (
+                data[0] == 0x47.toByte() && data[1] == 0x49.toByte() &&
+                    data[2] == 0x46.toByte()
+                )
     }
 
     private fun extractChapterTitle(rawText: String): String? {
         val patterns = listOf(
-            Regex("<h1[^>]*>(.*?)</h1>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
-            Regex("<h2[^>]*>(.*?)</h2>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
-            Regex("<h3[^>]*>(.*?)</h3>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
-            Regex("<title[^>]*>(.*?)</title>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+            Regex(
+                "<h1[^>]*>(.*?)</h1>",
+                setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+            ),
+            Regex(
+                "<h2[^>]*>(.*?)</h2>",
+                setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+            ),
+            Regex(
+                "<h3[^>]*>(.*?)</h3>",
+                setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+            ),
+            Regex(
+                "<title[^>]*>(.*?)</title>",
+                setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+            )
         )
         for (pattern in patterns) {
             val match = pattern.find(rawText) ?: continue
@@ -540,7 +603,10 @@ class MobiParser {
             val chunkEnd = (offset + SYNTHETIC_CHAPTER_SPLIT_SIZE).coerceAtMost(text.length)
             var breakPoint = chunkEnd
             if (chunkEnd < text.length) {
-                val searchRegion = text.substring(chunkEnd, (chunkEnd + 200).coerceAtMost(text.length))
+                val searchRegion = text.substring(
+                    chunkEnd,
+                    (chunkEnd + 200).coerceAtMost(text.length)
+                )
                 val paraBreak = searchRegion.indexOf("\n\n")
                 if (paraBreak in 0..199) {
                     breakPoint = chunkEnd + paraBreak + 2
@@ -593,10 +659,18 @@ class MobiParser {
         var text = html
 
         text = text.replace(
-            Regex("<style[^>]*>.*?</style>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), ""
+            Regex(
+                "<style[^>]*>.*?</style>",
+                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+            ),
+            ""
         )
         text = text.replace(
-            Regex("<script[^>]*>.*?</script>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), ""
+            Regex(
+                "<script[^>]*>.*?</script>",
+                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+            ),
+            ""
         )
         text = text.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
 

@@ -33,17 +33,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.data.reader.Sentence
-import com.mimiral.app.data.reader.toHighlightColor
 import com.mimiral.app.tts.TTSService
 import kotlin.math.abs
 import kotlinx.coroutines.launch
@@ -411,13 +406,20 @@ fun EpubReaderScreen(
                                             .coerceIn(0, currentPageText.length)
 
                                         // Select a word around the tapped position
-                                        val wordStart = currentPageText.lastIndexOf(' ', charOffset
-                                            .coerceAtMost((currentPageText.length - 1).coerceAtLeast(0))
+                                        val wordStart = currentPageText.lastIndexOf(
+                                            ' ',
+                                            charOffset
+                                                .coerceAtMost(
+                                                    (currentPageText.length - 1).coerceAtLeast(0)
+                                                )
                                         ).let { if (it == -1) 0 else it + 1 }
                                         val wordEnd = currentPageText.indexOf(' ', charOffset)
                                             .let { if (it == -1) currentPageText.length else it }
 
-                                        val selectedText = currentPageText.substring(wordStart, wordEnd).trim()
+                                        val selectedText = currentPageText.substring(
+                                            wordStart,
+                                            wordEnd
+                                        ).trim()
                                         if (selectedText.isNotEmpty()) {
                                             onTextLongPress(selectedText, wordStart, wordEnd)
                                         }

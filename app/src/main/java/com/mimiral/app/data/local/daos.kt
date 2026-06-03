@@ -13,7 +13,8 @@ interface BookDao {
     suspend fun getBookById(bookId: Int): BookEntity?
 
     @Query(
-        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%'"
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' " +
+            "OR author LIKE '%' || :query || '%'"
     )
     fun searchBooks(query: String): Flow<List<BookEntity>>
 
@@ -29,29 +30,38 @@ interface BookDao {
     fun getAllBooksSortedByDateAdded(): Flow<List<BookEntity>>
 
     @Query(
-        "SELECT books.* FROM books LEFT JOIN reading_progress ON books.id = reading_progress.book_id ORDER BY reading_progress.last_read_time DESC"
+        "SELECT books.* FROM books " +
+            "LEFT JOIN reading_progress ON books.id = reading_progress.book_id " +
+            "ORDER BY reading_progress.last_read_time DESC"
     )
     fun getAllBooksSortedByRecent(): Flow<List<BookEntity>>
 
     // -- Sorted + searched queries --
 
     @Query(
-        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY title ASC"
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' " +
+            "OR author LIKE '%' || :query || '%' ORDER BY title ASC"
     )
     fun searchBooksSortedByTitle(query: String): Flow<List<BookEntity>>
 
     @Query(
-        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY author ASC"
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' " +
+            "OR author LIKE '%' || :query || '%' ORDER BY author ASC"
     )
     fun searchBooksSortedByAuthor(query: String): Flow<List<BookEntity>>
 
     @Query(
-        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%' ORDER BY date_added DESC"
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' " +
+            "OR author LIKE '%' || :query || '%' ORDER BY date_added DESC"
     )
     fun searchBooksSortedByDateAdded(query: String): Flow<List<BookEntity>>
 
     @Query(
-        "SELECT books.* FROM books LEFT JOIN reading_progress ON books.id = reading_progress.book_id WHERE books.title LIKE '%' || :query || '%' OR books.author LIKE '%' || :query || '%' ORDER BY reading_progress.last_read_time DESC"
+        "SELECT books.* FROM books " +
+            "LEFT JOIN reading_progress ON books.id = reading_progress.book_id " +
+            "WHERE books.title LIKE '%' || :query || '%' " +
+            "OR books.author LIKE '%' || :query || '%' " +
+            "ORDER BY reading_progress.last_read_time DESC"
     )
     fun searchBooksSortedByRecent(query: String): Flow<List<BookEntity>>
 
@@ -107,7 +117,11 @@ interface BookmarkDao {
     suspend fun getUnsyncedBookmarks(): List<BookmarkEntity>
 
     @Query(
-        "SELECT COUNT(*) FROM bookmarks WHERE book_id = :bookId AND chapter_index = :chapterIndex AND page_number = :pageNumber AND (position = :position OR (position IS NULL AND :position IS NULL))"
+        "SELECT COUNT(*) FROM bookmarks " +
+            "WHERE book_id = :bookId " +
+            "AND chapter_index = :chapterIndex " +
+            "AND page_number = :pageNumber " +
+            "AND (position = :position OR (position IS NULL AND :position IS NULL))"
     )
     suspend fun countBookmarksAtPosition(
         bookId: Int,
@@ -117,7 +131,12 @@ interface BookmarkDao {
     ): Int
 
     @Query(
-        "SELECT * FROM bookmarks WHERE book_id = :bookId AND chapter_index = :chapterIndex AND page_number = :pageNumber AND (position = :position OR (position IS NULL AND :position IS NULL)) LIMIT 1"
+        "SELECT * FROM bookmarks " +
+            "WHERE book_id = :bookId " +
+            "AND chapter_index = :chapterIndex " +
+            "AND page_number = :pageNumber " +
+            "AND (position = :position OR (position IS NULL AND :position IS NULL)) " +
+            "LIMIT 1"
     )
     suspend fun getBookmarkAtPosition(
         bookId: Int,
@@ -154,7 +173,9 @@ interface CollectionDao {
     suspend fun deleteCollection(collection: CollectionEntity)
 
     @Query(
-        "SELECT books.* FROM books INNER JOIN book_collections ON books.id = book_collections.book_id WHERE book_collections.collection_id = :collectionId"
+        "SELECT books.* FROM books " +
+            "INNER JOIN book_collections ON books.id = book_collections.book_id " +
+            "WHERE book_collections.collection_id = :collectionId"
     )
     fun getBooksInCollection(collectionId: Int): Flow<List<BookEntity>>
 }

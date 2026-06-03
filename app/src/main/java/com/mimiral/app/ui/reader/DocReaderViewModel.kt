@@ -3,11 +3,12 @@ package com.mimiral.app.ui.reader
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mimiral.app.data.reader.DocChapter
 import com.mimiral.app.data.reader.DocParser
 import com.mimiral.app.data.reader.DocState
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,8 +16,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import javax.inject.Inject
 
 /**
  * UI-level chapter representation with estimated page ranges.
@@ -95,7 +94,11 @@ class DocReaderViewModel @Inject constructor(
                         val chapterInfos = docChapters.mapIndexed { idx, mc ->
                             val charCount = mc.text.length
                             val pages = (charCount / 500).coerceAtLeast(1)
-                            val startPage = docChapters.take(idx).sumOf { (it.text.length / 500).coerceAtLeast(1) }
+                            val startPage = docChapters.take(idx).sumOf {
+                                (it.text.length / 500).coerceAtLeast(
+                                    1
+                                )
+                            }
                             DocChapterInfo(
                                 index = idx,
                                 title = mc.title,

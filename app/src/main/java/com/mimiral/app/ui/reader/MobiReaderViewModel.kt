@@ -3,11 +3,11 @@ package com.mimiral.app.ui.reader
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mimiral.app.data.reader.MobiChapter
 import com.mimiral.app.data.reader.MobiParser
 import com.mimiral.app.data.reader.MobiState
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
 data class MobiChapterInfo(
     val index: Int,

@@ -2,8 +2,6 @@ package com.mimiral.app.data.reader
 
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.pdf.PdfRenderer as AndroidPdfRenderer
-import android.os.ParcelFileDescriptor
 import java.io.File
 import java.io.FileNotFoundException
 import kotlinx.coroutines.Dispatchers
@@ -175,7 +173,9 @@ class DjvuRenderer : AutoCloseable {
     private fun countDjvuPages(bytes: ByteArray): Int {
         var count = 0
         var searchOffset = 0
-        val target = byteArrayOf(0x46, 0x4F, 0x52, 0x4D, 0x00, 0x00, 0x00, 0x00, 0x44, 0x4A, 0x56, 0x55)
+        val target = byteArrayOf(
+            0x46, 0x4F, 0x52, 0x4D, 0x00, 0x00, 0x00, 0x00, 0x44, 0x4A, 0x56, 0x55
+        )
         val altTarget = byteArrayOf(0x44, 0x4A, 0x56, 0x55) // "DJVU"
 
         while (searchOffset + 4 < bytes.size) {
@@ -272,7 +272,7 @@ class DjvuRenderer : AutoCloseable {
         }
 
         val file = openedFilePath?.let { File(it) } ?: return@withContext
-            DjvuPageText("", false, pageIndex, 0, 0)
+        DjvuPageText("", false, pageIndex, 0, 0)
 
         try {
             val bytes = file.readBytes()
@@ -318,7 +318,10 @@ class DjvuRenderer : AutoCloseable {
 
             if (chunkId == "TXTa" || chunkId == "TXTz") {
                 // Found text chunk. Parse the text records.
-                val textData = bytes.copyOfRange(offset + 8, (offset + 8 + chunkSize).coerceAtMost(bytes.size))
+                val textData = bytes.copyOfRange(
+                    offset + 8,
+                    (offset + 8 + chunkSize).coerceAtMost(bytes.size)
+                )
                 val parsed = parseDjvuTextChunk(textData, chunkId == "TXTz", targetPage)
                 if (parsed.isNotEmpty()) {
                     if (textBuilder.isNotEmpty()) textBuilder.append("\n")

@@ -48,7 +48,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -57,7 +56,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -65,7 +63,6 @@ import com.mimiral.app.data.reader.ComicParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 /**
  * Comic book reader screen supporting CBZ/CBR formats.
@@ -708,7 +705,13 @@ private fun BottomReaderControls(
                 Icon(
                     Icons.Default.FitPage,
                     contentDescription = "Next page",
-                    tint = if (currentPage < totalPages - 1) Color.White else Color.White.copy(alpha = 0.3f)
+                    tint = if (currentPage < totalPages - 1) {
+                        Color.White
+                    } else {
+                        Color.White.copy(
+                            alpha = 0.3f
+                        )
+                    }
                 )
             }
         }

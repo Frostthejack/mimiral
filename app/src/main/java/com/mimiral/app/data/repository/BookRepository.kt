@@ -19,14 +19,14 @@ import com.mimiral.app.data.local.scanner.FileScanner
 import com.mimiral.app.data.local.settings.FilterOption
 import com.mimiral.app.data.local.settings.SortOption
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
 
 @Singleton
 class BookRepository @Inject constructor(
@@ -215,7 +215,9 @@ class BookRepository @Inject constructor(
 
     // ---- Helpers ----
 
-    private fun progressMap(progressList: List<ReadingProgressEntity>): Map<Int, ReadingProgressEntity> =
+    private fun progressMap(
+        progressList: List<ReadingProgressEntity>
+    ): Map<Int, ReadingProgressEntity> =
         progressList.associateBy { it.bookId }
 
     // ---- Chapter / FTS5 Full-Text Search ----

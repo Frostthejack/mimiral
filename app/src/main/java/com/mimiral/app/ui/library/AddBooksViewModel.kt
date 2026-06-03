@@ -8,11 +8,11 @@ import com.mimiral.app.data.local.scanner.FileScanner
 import com.mimiral.app.data.local.scanner.ScanState
 import com.mimiral.app.data.repository.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class AddBooksUiState(
     val scanState: ScanState = ScanState.Idle,

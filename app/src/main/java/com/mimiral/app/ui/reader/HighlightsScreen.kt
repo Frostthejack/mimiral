@@ -1,6 +1,5 @@
 package com.mimiral.app.ui.reader
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,7 +8,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Highlight
@@ -79,7 +77,9 @@ class HighlightsViewModel @Inject constructor(
             try {
                 bookRepository.deleteHighlight(highlight)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = "Failed to delete highlight: ${e.message}")
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to delete highlight: ${e.message}"
+                )
             }
         }
     }

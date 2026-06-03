@@ -2,17 +2,17 @@ package com.mimiral.app.data.reader
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import java.io.BufferedInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
+import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
-import java.io.BufferedInputStream
-import java.io.File
-import java.io.FileInputStream
-import java.io.InputStream
-import java.util.zip.ZipInputStream
 
 /**
  * State of a DOC/DOCX document being parsed.
@@ -255,7 +255,8 @@ class DocParser {
                         val name = File(entry.name).name
                         val mimeType = when {
                             name.endsWith(".png", true) -> "image/png"
-                            name.endsWith(".jpg", true) || name.endsWith(".jpeg", true) -> "image/jpeg"
+                            name.endsWith(".jpg", true) ||
+                                name.endsWith(".jpeg", true) -> "image/jpeg"
                             name.endsWith(".gif", true) -> "image/gif"
                             name.endsWith(".bmp", true) -> "image/bmp"
                             name.endsWith(".svg", true) -> "image/svg+xml"
@@ -368,8 +369,8 @@ class DocParser {
                             if (runStr.isNotEmpty()) {
                                 // Apply formatting markers
                                 val formatted = when {
-                                    isBold && isItalic -> "**${runStr}**"
-                                    isBold -> "**${runStr}**"
+                                    isBold && isItalic -> "**$runStr**"
+                                    isBold -> "**$runStr**"
                                     isItalic -> "_${runStr}_"
                                     else -> runStr
                                 }
@@ -488,7 +489,11 @@ class DocParser {
         }
     }
 
-    private fun extractDocxMetadata(parser: XmlPullParser?, file: File?, chaptersList: MutableList<DocChapter>) {
+    private fun extractDocxMetadata(
+        parser: XmlPullParser?,
+        file: File?,
+        chaptersList: MutableList<DocChapter>
+    ) {
         if (file == null) return
         try {
             val fis = FileInputStream(file)
@@ -666,7 +671,9 @@ class DocParser {
             // Read as ANSI/ASCII
             for (byte in data) {
                 val unsigned = byte.toInt() and 0xFF
-                if (unsigned in 0x20..0x7E || unsigned == 0x0A || unsigned == 0x0D || unsigned == 0x09) {
+                if (unsigned in 0x20..0x7E || unsigned == 0x0A ||
+                    unsigned == 0x0D || unsigned == 0x09
+                ) {
                     currentSegment.append(unsigned.toChar())
                 } else {
                     if (currentSegment.length > 3) {
@@ -684,7 +691,9 @@ class DocParser {
         // Filter out binary garbage and join
         return textSegments
             .filter { segment ->
-                val printableRatio = segment.count { it.isLetterOrDigit() || it.isWhitespace() }.toFloat() / segment.length
+                val printableRatio = segment.count {
+                    it.isLetterOrDigit() || it.isWhitespace()
+                }.toFloat() / segment.length
                 printableRatio > 0.6f && segment.length > 3
             }
             .joinToString("\n")

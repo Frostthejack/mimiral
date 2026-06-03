@@ -101,7 +101,12 @@ class TxtRtfReaderViewModel @Inject constructor(
                     "TXT" -> txtParser.parse(file)
                     "RTF" -> rtfParser.parse(file)
                     else -> {
-                        _uiState.update { it.copy(isLoading = false, error = "Unsupported format: " + format) }
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "Unsupported format: " + format
+                            )
+                        }
                         return@launch
                     }
                 }
@@ -129,7 +134,12 @@ class TxtRtfReaderViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Failed to load book: " + e.message) }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Failed to load book: " + e.message
+                    )
+                }
             }
         }
     }
@@ -142,7 +152,14 @@ class TxtRtfReaderViewModel @Inject constructor(
         for (i in chapterBreaks.indices) {
             val start = chapterBreaks[i]
             val end = if (i + 1 < chapterBreaks.size) chapterBreaks[i + 1] else fullText.length
-            val chapterText = if (start < fullText.length) fullText.substring(start, end.coerceAtMost(fullText.length)) else ""
+            val chapterText = if (start < fullText.length) {
+                fullText.substring(
+                    start,
+                    end.coerceAtMost(fullText.length)
+                )
+            } else {
+                ""
+            }
             chapterTexts.add(chapterText)
 
             // Extract chapter title from first line
@@ -258,7 +275,14 @@ class TxtRtfReaderViewModel @Inject constructor(
             )
         }
 
-        saveProgress(bookId, chapterIndex, characterOffset, totalCharacters, pageNumber, lastReadPosition)
+        saveProgress(
+            bookId,
+            chapterIndex,
+            characterOffset,
+            totalCharacters,
+            pageNumber,
+            lastReadPosition
+        )
     }
 
     fun navigateToChapter(chapterIndex: Int) {
@@ -270,7 +294,13 @@ class TxtRtfReaderViewModel @Inject constructor(
                 showToc = false
             )
         }
-        onPageTurn(chapterIndex, 0, fullText.length.toLong(), 0, "chapter:" + chapterIndex + ":page:0")
+        onPageTurn(
+            chapterIndex,
+            0,
+            fullText.length.toLong(),
+            0,
+            "chapter:" + chapterIndex + ":page:0"
+        )
     }
 
     fun nextChapter() {
@@ -304,7 +334,10 @@ class TxtRtfReaderViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val existing = bookRepository.getBookmarkAtPosition(
-                    bookId, currentChapterIndex, currentPageNumber, currentPosition
+                    bookId,
+                    currentChapterIndex,
+                    currentPageNumber,
+                    currentPosition
                 )
                 if (existing != null) {
                     bookRepository.deleteBookmark(existing)
@@ -345,8 +378,13 @@ class TxtRtfReaderViewModel @Inject constructor(
         _uiState.update {
             it.copy(currentChapter = chapterIndex, currentPage = pageNumber, showBookmarks = false)
         }
-        onPageTurn(chapterIndex, pageNumber.toLong() * 500L, fullText.length.toLong(), pageNumber,
-            "chapter:" + chapterIndex + ":page:" + pageNumber)
+        onPageTurn(
+            chapterIndex,
+            pageNumber.toLong() * 500L,
+            fullText.length.toLong(),
+            pageNumber,
+            "chapter:" + chapterIndex + ":page:" + pageNumber
+        )
     }
 
     fun setTotalPages(total: Int) {
@@ -356,26 +394,41 @@ class TxtRtfReaderViewModel @Inject constructor(
     fun saveCurrentProgress() {
         val state = _uiState.value
         if (bookId == -1) return
-        saveProgress(bookId, state.progress.chapterIndex, state.progress.characterOffset,
-            state.progress.totalCharacters, state.progress.pageNumber, state.progress.lastReadPosition)
+        saveProgress(
+            bookId,
+            state.progress.chapterIndex,
+            state.progress.characterOffset,
+            state.progress.totalCharacters,
+            state.progress.pageNumber,
+            state.progress.lastReadPosition
+        )
     }
 
     private fun calculateProgress(characterOffset: Long, totalCharacters: Long): Float {
         return if (totalCharacters > 0) {
             (characterOffset.toFloat() / totalCharacters.toFloat() * 100f).coerceIn(0f, 100f)
-        } else 0f
+        } else {
+            0f
+        }
     }
 
     private fun saveProgress(
-        bookId: Int, chapterIndex: Int, characterOffset: Long,
-        totalCharacters: Long, pageNumber: Int, lastReadPosition: String?
+        bookId: Int,
+        chapterIndex: Int,
+        characterOffset: Long,
+        totalCharacters: Long,
+        pageNumber: Int,
+        lastReadPosition: String?
     ) {
         viewModelScope.launch {
             try {
                 bookRepository.saveProgress(
-                    bookId = bookId, chapterIndex = chapterIndex,
-                    characterOffset = characterOffset, totalCharacters = totalCharacters,
-                    pageNumber = pageNumber, lastReadPosition = lastReadPosition
+                    bookId = bookId,
+                    chapterIndex = chapterIndex,
+                    characterOffset = characterOffset,
+                    totalCharacters = totalCharacters,
+                    pageNumber = pageNumber,
+                    lastReadPosition = lastReadPosition
                 )
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to save progress: " + e.message) }

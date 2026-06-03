@@ -149,7 +149,9 @@ class MarkdownReaderViewModel @Inject constructor(
         val total = _uiState.value.elements.size
         val percent = if (total > 0) {
             ((elementIndex + 1).toFloat() / total.toFloat() * 100f).coerceIn(0f, 100f)
-        } else 0f
+        } else {
+            0f
+        }
         _uiState.update {
             it.copy(currentScrollIndex = elementIndex, progressPercent = percent)
         }

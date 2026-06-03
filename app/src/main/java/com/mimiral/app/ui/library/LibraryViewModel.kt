@@ -5,11 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.scanner.ScanState
 import com.mimiral.app.data.local.settings.FilterOption
 import com.mimiral.app.data.local.settings.LibrarySettingsRepository
 import com.mimiral.app.data.local.settings.SortOption
 import com.mimiral.app.data.local.settings.ViewMode
-import com.mimiral.app.data.local.scanner.ScanState
 import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel

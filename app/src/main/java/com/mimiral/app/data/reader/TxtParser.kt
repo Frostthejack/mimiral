@@ -29,12 +29,23 @@ class TxtParser {
 
     suspend fun parse(file: File): TxtParseResult = withContext(Dispatchers.IO) {
         try {
-            if (!file.exists()) return@withContext TxtParseResult.Error("File not found: " + file.absolutePath)
-            if (!file.canRead()) return@withContext TxtParseResult.Error("Cannot read file: " + file.absolutePath)
+            if (!file.exists()) {
+                return@withContext TxtParseResult.Error("File not found: " + file.absolutePath)
+            }
+            if (!file.canRead()) {
+                return@withContext TxtParseResult.Error("Cannot read file: " + file.absolutePath)
+            }
 
             val bytes = file.readBytes()
             if (bytes.isEmpty()) {
-                return@withContext TxtParseResult.Success("", "UTF-8", listOf(0), file.nameWithoutExtension, file.absolutePath, 0)
+                return@withContext TxtParseResult.Success(
+                    "",
+                    "UTF-8",
+                    listOf(0),
+                    file.nameWithoutExtension,
+                    file.absolutePath,
+                    0
+                )
             }
 
             val encoding = detectEncoding(bytes)
@@ -42,7 +53,14 @@ class TxtParser {
             val chapterBreaks = detectChapterBreaks(text)
             val title = extractTitle(text, file.nameWithoutExtension)
 
-            TxtParseResult.Success(text, encoding, chapterBreaks, title, file.absolutePath, text.length)
+            TxtParseResult.Success(
+                text,
+                encoding,
+                chapterBreaks,
+                title,
+                file.absolutePath,
+                text.length
+            )
         } catch (e: OutOfMemoryError) {
             TxtParseResult.Error("File too large to load into memory", e)
         } catch (e: Exception) {
@@ -50,18 +68,29 @@ class TxtParser {
         }
     }
 
-    suspend fun parse(inputStream: InputStream, fileName: String): TxtParseResult = withContext(Dispatchers.IO) {
+    suspend fun parse(
+        inputStream: InputStream,
+        fileName: String
+    ): TxtParseResult = withContext(Dispatchers.IO) {
         try {
             val bytes = inputStream.readBytes()
             if (bytes.isEmpty()) {
-                val baseName = if (fileName.contains(".")) fileName.substringBeforeLast(".") else fileName
+                val baseName = if (fileName.contains(".")) {
+                    fileName.substringBeforeLast(".")
+                } else {
+                    fileName
+                }
                 return@withContext TxtParseResult.Success("", "UTF-8", listOf(0), baseName, "", 0)
             }
 
             val encoding = detectEncoding(bytes)
             val text = decodeBytes(bytes, encoding)
             val chapterBreaks = detectChapterBreaks(text)
-            val baseName = if (fileName.contains(".")) fileName.substringBeforeLast(".") else fileName
+            val baseName = if (fileName.contains(".")) {
+                fileName.substringBeforeLast(".")
+            } else {
+                fileName
+            }
             val title = extractTitle(text, baseName)
 
             TxtParseResult.Success(text, encoding, chapterBreaks, title, "", text.length)
@@ -86,12 +115,19 @@ class TxtParser {
         if (bytes.size < 2) return null
         if (bytes.size >= 4) {
             if (bytes[0] == 0x00.toByte() && bytes[1] == 0x00.toByte() &&
-                bytes[2] == 0xFE.toByte() && bytes[3] == 0xFF.toByte()) return "UTF-32BE"
+                bytes[2] == 0xFE.toByte() && bytes[3] == 0xFF.toByte()
+            ) {
+                return "UTF-32BE"
+            }
             if (bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte() &&
-                bytes[2] == 0x00.toByte() && bytes[3] == 0x00.toByte()) return "UTF-32LE"
+                bytes[2] == 0x00.toByte() && bytes[3] == 0x00.toByte()
+            ) {
+                return "UTF-32LE"
+            }
         }
         if (bytes.size >= 3 &&
-            bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte()) {
+            bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte()
+        ) {
             return "UTF-8-BOM"
         }
         if (bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) return "UTF-16BE"
@@ -109,18 +145,40 @@ class TxtParser {
             when {
                 b < 0x80 -> { validChars++; i++ }
                 b in 0xC2..0xDF -> {
-                    if (i + 1 < bytes.size && isContinuationByte(bytes[i + 1])) { validChars++; i += 2 } else i++
+                    if (i + 1 < bytes.size && isContinuationByte(bytes[i + 1])) {
+                        validChars++; i += 2
+                    } else {
+                        i++
+                    }
                 }
                 b in 0xE0..0xEF -> {
-                    if (i + 2 < bytes.size && isContinuationByte(bytes[i + 1]) && isContinuationByte(bytes[i + 2])) { validChars++; i += 3 } else i++
+                    if (i + 2 < bytes.size &&
+                        isContinuationByte(bytes[i + 1]) && isContinuationByte(bytes[i + 2])
+                    ) {
+                        validChars++; i += 3
+                    } else {
+                        i++
+                    }
                 }
                 b in 0xF0..0xF4 -> {
-                    if (i + 3 < bytes.size && isContinuationByte(bytes[i + 1]) && isContinuationByte(bytes[i + 2]) && isContinuationByte(bytes[i + 3])) { validChars++; i += 4 } else i++
+                    if (i + 3 < bytes.size &&
+                        isContinuationByte(bytes[i + 1]) &&
+                        isContinuationByte(bytes[i + 2]) &&
+                        isContinuationByte(bytes[i + 3])
+                    ) {
+                        validChars++; i += 4
+                    } else {
+                        i++
+                    }
                 }
                 else -> i++
             }
         }
-        return if (totalChars == 0) true else validChars.toFloat() / totalChars.toFloat() >= UTF8_CONFIDENCE_THRESHOLD
+        return if (totalChars == 0) {
+            true
+        } else {
+            validChars.toFloat() / totalChars.toFloat() >= UTF8_CONFIDENCE_THRESHOLD
+        }
     }
 
     private fun isContinuationByte(b: Byte): Boolean = (b.toInt() and 0xC0) == 0x80
@@ -151,11 +209,23 @@ class TxtParser {
         when (encoding) {
             "UTF-8-BOM" -> { offset = 3; charset = StandardCharsets.UTF_8 }
             "UTF-16LE" -> {
-                offset = if (bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) 2 else 0
+                offset = if (bytes.size >= 2 &&
+                    bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()
+                ) {
+                    2
+                } else {
+                    0
+                }
                 charset = StandardCharsets.UTF_16LE
             }
             "UTF-16BE" -> {
-                offset = if (bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) 2 else 0
+                offset = if (bytes.size >= 2 &&
+                    bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()
+                ) {
+                    2
+                } else {
+                    0
+                }
                 charset = StandardCharsets.UTF_16BE
             }
             "UTF-32LE" -> { offset = 4; charset = Charset.forName("UTF-32LE") }
@@ -163,7 +233,11 @@ class TxtParser {
             "ISO-8859-1" -> { offset = 0; charset = StandardCharsets.ISO_8859_1 }
             else -> { offset = 0; charset = StandardCharsets.UTF_8 }
         }
-        val relevant = if (offset > 0 && offset < bytes.size) bytes.copyOfRange(offset, bytes.size) else bytes
+        val relevant = if (offset > 0 && offset < bytes.size) {
+            bytes.copyOfRange(offset, bytes.size)
+        } else {
+            bytes
+        }
         return String(relevant, charset)
     }
 
@@ -194,7 +268,9 @@ class TxtParser {
                 if (consecutiveBlankLines == 3) breaks.add(charOffset)
             } else {
                 if (consecutiveBlankLines >= 2 && isChapterHeading(trimmed)) {
-                    if (breaks.isNotEmpty() && breaks.last() == charOffset) breaks.removeAt(breaks.size - 1)
+                    if (breaks.isNotEmpty() && breaks.last() == charOffset) {
+                        breaks.removeAt(breaks.size - 1)
+                    }
                     breaks.add(charOffset)
                 }
                 consecutiveBlankLines = 0
@@ -215,7 +291,12 @@ class TxtParser {
     private fun extractTitle(text: String, filenameTitle: String): String {
         if (text.isBlank()) return filenameTitle
         val firstLine = text.trimStart().substringBefore("\n").trim()
-        return if (firstLine.isNotEmpty() && firstLine.length <= 100 && !firstLine.endsWith(".")) firstLine
-        else filenameTitle
+        return if (firstLine.isNotEmpty() && firstLine.length <= 100 &&
+            !firstLine.endsWith(".")
+        ) {
+            firstLine
+        } else {
+            filenameTitle
+        }
     }
 }

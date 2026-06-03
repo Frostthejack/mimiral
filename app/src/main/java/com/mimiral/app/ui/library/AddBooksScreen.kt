@@ -173,7 +173,8 @@ fun AddBooksScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "EPUB, PDF, MOBI, AZW3, FB2, DJVU, CBZ, CBR, TXT, RTF, DOC, DOCX, Markdown",
+                    text = "EPUB, PDF, MOBI, AZW3, FB2, DJVU, CBZ, CBR, TXT, RTF, DOC, DOCX, " +
+                        "Markdown",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -253,7 +254,11 @@ private fun SuccessMessage(count: Int) {
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = if (count > 0) "Imported $count new book${if (count != 1) "s" else ""}!" else "No new books found - all files already in library.",
+                text = if (count > 0) {
+                    "Imported $count new book${if (count != 1) "s" else ""}!"
+                } else {
+                    "No new books found - all files already in library."
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onTertiaryContainer
             )

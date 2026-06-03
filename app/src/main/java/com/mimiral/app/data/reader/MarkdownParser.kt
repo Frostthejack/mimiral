@@ -102,7 +102,14 @@ class MarkdownParser {
             // Unordered list
             if (ulStartRegex.containsMatchIn(line)) {
                 val items = mutableListOf<String>()
-                while (i < lines.size && (ulStartRegex.containsMatchIn(lines[i]) || (lines[i].isBlank().not() && lines[i].startsWith("  ")))) {
+                while (i < lines.size && (
+                    ulStartRegex.containsMatchIn(lines[i]) || (
+                        lines[i].isBlank().not() && lines[i].startsWith(
+                                "  "
+                            )
+                        )
+                    )
+                ) {
                     val itemLine = lines[i]
                     if (ulStartRegex.containsMatchIn(itemLine)) {
                         items.add(itemLine.replace(ulStartRegex, "").trim())
@@ -121,7 +128,14 @@ class MarkdownParser {
             // Ordered list
             if (olStartRegex.containsMatchIn(line)) {
                 val items = mutableListOf<String>()
-                while (i < lines.size && (olStartRegex.containsMatchIn(lines[i]) || (lines[i].isBlank().not() && lines[i].startsWith("  ")))) {
+                while (i < lines.size && (
+                    olStartRegex.containsMatchIn(lines[i]) || (
+                        lines[i].isBlank().not() && lines[i].startsWith(
+                                "  "
+                            )
+                        )
+                    )
+                ) {
                     val itemLine = lines[i]
                     if (olStartRegex.containsMatchIn(itemLine)) {
                         items.add(itemLine.replace(olStartRegex, "").trim())

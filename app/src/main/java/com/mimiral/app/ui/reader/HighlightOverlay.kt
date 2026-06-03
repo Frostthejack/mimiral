@@ -2,20 +2,14 @@ package com.mimiral.app.ui.reader
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import com.mimiral.app.data.reader.Sentence
 
@@ -63,7 +57,9 @@ fun HighlightableText(
                 if (sentenceStart < sentenceEnd) {
                     addStyle(
                         SpanStyle(
-                            background = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                            background = MaterialTheme.colorScheme.secondaryContainer.copy(
+                                alpha = 0.5f
+                            )
                         ),
                         sentenceStart,
                         sentenceEnd
@@ -93,7 +89,10 @@ fun HighlightableText(
                         val charOffset = (offset.x / avgCharWidth).toInt().coerceIn(0, text.length)
 
                         // Select a word around the tapped position
-                        val wordStart = text.lastIndexOf(' ', charOffset.coerceAtMost(text.length - 1))
+                        val wordStart = text.lastIndexOf(
+                            ' ',
+                            charOffset.coerceAtMost(text.length - 1)
+                        )
                             .let { if (it == -1) 0 else it + 1 }
                         val wordEnd = text.indexOf(' ', charOffset)
                             .let { if (it == -1) text.length else it }

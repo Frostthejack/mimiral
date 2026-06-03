@@ -37,9 +37,12 @@ class TTSService : Service() {
 
         // Skip actions
         const val ACTION_SKIP_SENTENCE_FORWARD = "com.mimiral.app.tts.ACTION_SKIP_SENTENCE_FORWARD"
-        const val ACTION_SKIP_SENTENCE_BACKWARD = "com.mimiral.app.tts.ACTION_SKIP_SENTENCE_BACKWARD"
-        const val ACTION_SKIP_PARAGRAPH_FORWARD = "com.mimiral.app.tts.ACTION_SKIP_PARAGRAPH_FORWARD"
-        const val ACTION_SKIP_PARAGRAPH_BACKWARD = "com.mimiral.app.tts.ACTION_SKIP_PARAGRAPH_BACKWARD"
+        const val ACTION_SKIP_SENTENCE_BACKWARD =
+            "com.mimiral.app.tts.ACTION_SKIP_SENTENCE_BACKWARD"
+        const val ACTION_SKIP_PARAGRAPH_FORWARD =
+            "com.mimiral.app.tts.ACTION_SKIP_PARAGRAPH_FORWARD"
+        const val ACTION_SKIP_PARAGRAPH_BACKWARD =
+            "com.mimiral.app.tts.ACTION_SKIP_PARAGRAPH_BACKWARD"
         const val ACTION_SKIP_CHAPTER_FORWARD = "com.mimiral.app.tts.ACTION_SKIP_CHAPTER_FORWARD"
         const val ACTION_SKIP_CHAPTER_BACKWARD = "com.mimiral.app.tts.ACTION_SKIP_CHAPTER_BACKWARD"
 
@@ -94,31 +97,45 @@ class TTSService : Service() {
         }
 
         fun createCancelSleepTimerIntent(context: Context): Intent {
-            return Intent(context, TTSService::class.java).apply { action = ACTION_CANCEL_SLEEP_TIMER }
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_CANCEL_SLEEP_TIMER
+            }
         }
 
         fun createSkipSentenceForwardIntent(context: Context): Intent {
-            return Intent(context, TTSService::class.java).apply { action = ACTION_SKIP_SENTENCE_FORWARD }
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_SKIP_SENTENCE_FORWARD
+            }
         }
 
         fun createSkipSentenceBackwardIntent(context: Context): Intent {
-            return Intent(context, TTSService::class.java).apply { action = ACTION_SKIP_SENTENCE_BACKWARD }
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_SKIP_SENTENCE_BACKWARD
+            }
         }
 
         fun createSkipParagraphForwardIntent(context: Context): Intent {
-            return Intent(context, TTSService::class.java).apply { action = ACTION_SKIP_PARAGRAPH_FORWARD }
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_SKIP_PARAGRAPH_FORWARD
+            }
         }
 
         fun createSkipParagraphBackwardIntent(context: Context): Intent {
-            return Intent(context, TTSService::class.java).apply { action = ACTION_SKIP_PARAGRAPH_BACKWARD }
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_SKIP_PARAGRAPH_BACKWARD
+            }
         }
 
         fun createSkipChapterForwardIntent(context: Context): Intent {
-            return Intent(context, TTSService::class.java).apply { action = ACTION_SKIP_CHAPTER_FORWARD }
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_SKIP_CHAPTER_FORWARD
+            }
         }
 
         fun createSkipChapterBackwardIntent(context: Context): Intent {
-            return Intent(context, TTSService::class.java).apply { action = ACTION_SKIP_CHAPTER_BACKWARD }
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_SKIP_CHAPTER_BACKWARD
+            }
         }
     }
 

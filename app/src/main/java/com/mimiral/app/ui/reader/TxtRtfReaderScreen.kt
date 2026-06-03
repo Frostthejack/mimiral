@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -54,14 +53,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mimiral.app.data.local.settings.ReaderSettings
+import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import com.mimiral.app.data.local.settings.TextSettings
 import kotlin.math.abs
 import kotlinx.coroutines.launch
-
-import com.mimiral.app.data.local.settings.ReaderSettings
-
-import com.mimiral.app.data.local.settings.ReaderSettingsRepository
-
-import com.mimiral.app.data.local.settings.TextSettings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,11 +132,19 @@ fun TxtRtfReaderScreen(
             val goPrev = if (swap) isVolumeDown else isVolumeUp
             when {
                 goNext && pagerState.currentPage < pageCount - 1 -> {
-                    coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(
+                            pagerState.currentPage + 1
+                        )
+                    }
                     true
                 }
                 goPrev && pagerState.currentPage > 0 -> {
-                    coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(
+                            pagerState.currentPage - 1
+                        )
+                    }
                     true
                 }
                 else -> true
@@ -208,13 +212,20 @@ fun TxtRtfReaderScreen(
                             if (viewModel.hasPreviousChapter()) {
                                 viewModel.previousChapter()
                                 coroutineScope.launch {
-                                    val chapter = uiState.chapters.getOrNull(uiState.currentChapter - 1)
+                                    val chapter = uiState.chapters.getOrNull(
+                                        uiState.currentChapter - 1
+                                    )
                                     if (chapter != null) pagerState.animateScrollToPage(0)
                                 }
                             }
                         },
                         enabled = viewModel.hasPreviousChapter(),
-                        icon = { Icon(Icons.Default.ArrowBackIos, contentDescription = "Previous chapter") },
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowBackIos,
+                                contentDescription = "Previous chapter"
+                            )
+                        },
                         label = { Text("Prev Ch") }
                     )
                     NavigationBarItem(
@@ -229,13 +240,20 @@ fun TxtRtfReaderScreen(
                             if (viewModel.hasNextChapter()) {
                                 viewModel.nextChapter()
                                 coroutineScope.launch {
-                                    val chapter = uiState.chapters.getOrNull(uiState.currentChapter + 1)
+                                    val chapter = uiState.chapters.getOrNull(
+                                        uiState.currentChapter + 1
+                                    )
                                     if (chapter != null) pagerState.animateScrollToPage(0)
                                 }
                             }
                         },
                         enabled = viewModel.hasNextChapter(),
-                        icon = { Icon(Icons.Default.ArrowForwardIos, contentDescription = "Next chapter") },
+                        icon = {
+                            Icon(
+                                Icons.Default.ArrowForwardIos,
+                                contentDescription = "Next chapter"
+                            )
+                        },
                         label = { Text("Next Ch") }
                     )
                 }
@@ -251,7 +269,9 @@ fun TxtRtfReaderScreen(
                 .onKeyEvent { keyEvent ->
                     if (keyEvent.type == KeyEventType.KeyDown) {
                         handleVolumeKey(keyEvent.nativeKeyEvent.keyCode)
-                    } else false
+                    } else {
+                        false
+                    }
                 }
         ) {
             if (uiState.isLoading) {
@@ -291,12 +311,20 @@ fun TxtRtfReaderScreen(
                                     when {
                                         offset.x < tapZoneWidth -> {
                                             if (pagerState.currentPage > 0) {
-                                                coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                                                coroutineScope.launch {
+                                                    pagerState.animateScrollToPage(
+                                                        pagerState.currentPage - 1
+                                                    )
+                                                }
                                             }
                                         }
                                         offset.x > (size.width * 2f / 3f) -> {
                                             if (pagerState.currentPage < pageCount - 1) {
-                                                coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                                                coroutineScope.launch {
+                                                    pagerState.animateScrollToPage(
+                                                        pagerState.currentPage + 1
+                                                    )
+                                                }
                                             }
                                         }
                                         else -> { toolbarVisible = !toolbarVisible }
@@ -309,7 +337,13 @@ fun TxtRtfReaderScreen(
                             pageText = pageText,
                             pageNumber = pageIndex + 1,
                             totalPages = pageCount,
-                            chapterTitle = if (pageIndex == 0) uiState.chapters.getOrNull(uiState.currentChapter)?.title else null,
+                            chapterTitle = if (pageIndex == 0) {
+                                uiState.chapters.getOrNull(
+                                    uiState.currentChapter
+                                )?.title
+                            } else {
+                                null
+                            },
                             textSettings = textSettings
                         )
                     }

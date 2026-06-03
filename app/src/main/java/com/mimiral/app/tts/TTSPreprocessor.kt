@@ -141,11 +141,12 @@ class TTSPreprocessor {
     /**
      * Builds a HashMap lookup table from the REPLACEMENTS list.
      */
-    private val replacementMap: HashMap<Char, String> = HashMap<Char, String>(REPLACEMENTS.size).apply {
-        for ((from, to) in REPLACEMENTS) {
-            put(from, to)
+    private val replacementMap: HashMap<Char, String> =
+        HashMap<Char, String>(REPLACEMENTS.size).apply {
+            for ((from, to) in REPLACEMENTS) {
+                put(from, to)
+            }
         }
-    }
 
     /**
      * Common abbreviations that TTS engines may struggle with.

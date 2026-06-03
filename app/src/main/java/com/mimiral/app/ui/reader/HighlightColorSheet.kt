@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -62,9 +61,17 @@ fun HighlightColorSheet(
                             .background(highlightColor.color, CircleShape)
                             .then(
                                 if (isSelected) {
-                                    Modifier.border(3.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                    Modifier.border(
+                                        3.dp,
+                                        MaterialTheme.colorScheme.onSurface,
+                                        CircleShape
+                                    )
                                 } else {
-                                    Modifier.border(1.dp, Color.Gray.copy(alpha = 0.3f), CircleShape)
+                                    Modifier.border(
+                                        1.dp,
+                                        Color.Gray.copy(alpha = 0.3f),
+                                        CircleShape
+                                    )
                                 }
                             ),
                         contentAlignment = Alignment.Center
