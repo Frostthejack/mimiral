@@ -506,11 +506,6 @@ private fun GridBookItem(
                         )
                     } else {
                         Icon(
-                            imageVector = when (bookWithProgress.book.format) {
-                                "PDF" -> Icons.Default.MenuBook
-                                "DJVU" -> Icons.Default.TextFields
-                                else -> Icons.Default.Book
-                            },
                             contentDescription = null,
                             modifier = Modifier.size(40.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -623,11 +618,6 @@ private fun ListBookItem(
                         )
                     } else {
                         Icon(
-                            imageVector = when (bookWithProgress.book.format) {
-                                "PDF" -> Icons.Default.MenuBook
-                                "DJVU" -> Icons.Default.TextFields
-                                else -> Icons.Default.Book
-                            },
                             contentDescription = null,
                             modifier = Modifier.size(28.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
