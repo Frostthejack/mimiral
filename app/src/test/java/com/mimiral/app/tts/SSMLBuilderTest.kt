@@ -1,8 +1,10 @@
 package com.mimiral.app.tts
 
-import org.junit.Test
-import org.junit.Assert.*
 import java.util.Locale
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class SSMLBuilderTest {
 

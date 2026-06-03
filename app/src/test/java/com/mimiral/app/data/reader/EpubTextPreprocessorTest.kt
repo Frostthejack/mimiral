@@ -1,7 +1,9 @@
 package com.mimiral.app.data.reader
 
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.Assert.*
 
 class EpubTextPreprocessorTest {
 
@@ -153,7 +155,9 @@ class EpubTextPreprocessorTest {
 
     @Test
     fun extractText_variousTags_noHtmlInOutput() {
-        val html = "<div><h1>Title</h1><p>Paragraph <strong>with</strong> <em>formatting</em>.</p><ul><li>Item 1</li><li>Item 2</li></ul></div>"
+        val html = "<div><h1>Title</h1><p>Paragraph " +
+            "<strong>with</strong> <em>formatting</em>.</p>" +
+            "<ul><li>Item 1</li><li>Item 2</li></ul></div>"
         val result = preprocessor.extractText(html)
         assertFalse("Should not contain div tag", result.contains("<div>"))
         assertFalse("Should not contain h1 tag", result.contains("<h1>"))
@@ -176,9 +180,18 @@ class EpubTextPreprocessorTest {
         assertEquals("Ch1", result.title)
         assertTrue("Should have sentences", result.sentences.isNotEmpty())
         val sentenceTexts = result.sentences.map { it.text }
-        assertTrue("Should find first sentence", sentenceTexts.any { it.contains("First sentence") })
-        assertTrue("Should find second sentence", sentenceTexts.any { it.contains("Second sentence") })
-        assertTrue("Should find third sentence", sentenceTexts.any { it.contains("Third sentence") })
+        assertTrue(
+            "Should find first sentence",
+            sentenceTexts.any { it.contains("First sentence") }
+        )
+        assertTrue(
+            "Should find second sentence",
+            sentenceTexts.any { it.contains("Second sentence") }
+        )
+        assertTrue(
+            "Should find third sentence",
+            sentenceTexts.any { it.contains("Third sentence") }
+        )
     }
 
     @Test
@@ -209,7 +222,15 @@ class EpubTextPreprocessorTest {
 
     @Test
     fun processChapter_xhtmlContent_extractsText() {
-        val html = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE html>\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head><title>Chapter 1</title></head>\n<body>\n<p>It was the best of times, it was the worst of times.</p>\n<p>It was the age of wisdom, it was the age of foolishness.</p>\n</body>\n</html>"
+        val html = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            "<!DOCTYPE html>\n" +
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +
+            "<head><title>Chapter 1</title></head>\n" +
+            "<body>\n" +
+            "<p>It was the best of times, it was the worst of times.</p>\n" +
+            "<p>It was the age of wisdom, it was the age of foolishness.</p>\n" +
+            "</body>\n" +
+            "</html>"
         val result = preprocessor.processChapter(html, chapterIndex = 0, title = "Chapter 1")
         assertTrue("Should contain text", result.rawText.contains("best of times"))
         assertTrue("Should contain text", result.rawText.contains("age of wisdom"))
@@ -284,11 +305,18 @@ class EpubTextPreprocessorTest {
 
     @Test
     fun processChapter_nestedTags_preservesSentenceBoundaries() {
-        val html = "<div><p>This is <strong>bold</strong> text. And this is <em>italic</em> text.</p></div>"
+        val html = "<div><p>This is <strong>bold</strong> text." +
+            " And this is <em>italic</em> text.</p></div>"
         val result = preprocessor.processChapter(html)
         val sentenceTexts = result.sentences.map { it.text }
-        assertTrue("Should find first sentence", sentenceTexts.any { it.contains("bold text") })
-        assertTrue("Should find second sentence", sentenceTexts.any { it.contains("italic text") })
+        assertTrue(
+            "Should find first sentence",
+            sentenceTexts.any { it.contains("bold text") }
+        )
+        assertTrue(
+            "Should find second sentence",
+            sentenceTexts.any { it.contains("italic text") }
+        )
     }
 
     @Test
@@ -302,7 +330,14 @@ class EpubTextPreprocessorTest {
 
     @Test
     fun verification_epubChaptersConvertToCleanPlainText() {
-        val html = "<html><head><title>Test</title></head>\n<body><h1>Chapter 1</h1><p>This is the first paragraph of the chapter.</p>\n<p>This is the second paragraph. It has multiple sentences. Like this one.</p>\n<script>var analytics = {};</script>\n<style>body { font-family: serif; }</style>\n</body></html>"
+        val html = "<html><head><title>Test</title></head>\n" +
+            "<body><h1>Chapter 1</h1>" +
+            "<p>This is the first paragraph of the chapter.</p>\n" +
+            "<p>This is the second paragraph." +
+            " It has multiple sentences. Like this one.</p>\n" +
+            "<script>var analytics = {};</script>\n" +
+            "<style>body { font-family: serif; }</style>\n" +
+            "</body></html>"
         val result = preprocessor.processChapter(html, chapterIndex = 0, title = "Chapter 1")
         assertTrue("Should have extracted text", result.rawText.isNotEmpty())
         assertFalse("Should not have html tag", result.rawText.contains("<html"))
@@ -324,10 +359,17 @@ class EpubTextPreprocessorTest {
 
     @Test
     fun verification_noHtmlTagsInOutput() {
-        val html = "<div><h2>Title</h2><p>Text with <a href=\"#\">link</a> and <span>highlight</span>.</p><table><tr><td>Cell</td></tr></table></div>"
+        val html = "<div><h2>Title</h2>" +
+            "<p>Text with <a href=\"#\">link</a>" +
+            " and <span>highlight</span>.</p>" +
+            "<table><tr><td>Cell</td></tr></table></div>"
         val result = preprocessor.extractText(html)
         val htmlTagPattern = Regex("<[^>]+>")
         val tags = htmlTagPattern.findAll(result).toList()
-        assertTrue("Output should have no HTML tags, but found: " + tags.map { it.value }.toString(), tags.isEmpty())
+        assertTrue(
+            "Output should have no HTML tags, but found: " +
+                tags.map { it.value }.toString(),
+            tags.isEmpty()
+        )
     }
 }
