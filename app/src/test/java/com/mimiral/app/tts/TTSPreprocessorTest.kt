@@ -1,7 +1,9 @@
 package com.mimiral.app.tts
 
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.Assert.*
 
 class TTSPreprocessorTest {
 
@@ -213,7 +215,10 @@ class TTSPreprocessorTest {
     @Test
     fun preprocess_division_replacedWithWord() {
         val result = preprocessor.preprocess("10 \u00f7 2 = 5")
-        assertTrue("Division sign should be replaced with 'divided by'", result.contains("divided by"))
+        assertTrue(
+            "Division sign should be replaced with 'divided by'",
+            result.contains("divided by")
+        )
     }
 
     // --- ReplaceCharacters method ---
