@@ -198,14 +198,19 @@ fun HighlightNoteDialog(
  */
 @Composable
 private fun highlightColorToMaterialColor(color: String): androidx.compose.ui.graphics.Color {
-    return when (color.uppercase()) {
-        "YELLOW" -> androidx.compose.ui.graphics.Color(0xFFFFF176)
-        "GREEN" -> androidx.compose.ui.graphics.Color(0xFF81C784)
-        "BLUE" -> androidx.compose.ui.graphics.Color(0xFF64B5F6)
-        "RED" -> androidx.compose.ui.graphics.Color(0xFFE57373)
-        "PURPLE" -> androidx.compose.ui.graphics.Color(0xFFBA68C8)
-        "ORANGE" -> androidx.compose.ui.graphics.Color(0xFFFFB74D)
-        "PINK" -> androidx.compose.ui.graphics.Color(0xFFF06292)
-        else -> androidx.compose.ui.graphics.Color(0xFFFFF176)
+    return try {
+        if (color.startsWith("#")) {
+            androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(color))
+        } else when (color.uppercase()) {
+            "YELLOW" -> androidx.compose.ui.graphics.Color(0xFFFFF176)
+            "GREEN" -> androidx.compose.ui.graphics.Color(0xFF81C784)
+            "BLUE" -> androidx.compose.ui.graphics.Color(0xFF64B5F6)
+            "PINK" -> androidx.compose.ui.graphics.Color(0xFFF06292)
+            "ORANGE" -> androidx.compose.ui.graphics.Color(0xFFFFB74D)
+            "PURPLE" -> androidx.compose.ui.graphics.Color(0xFFBA68C8)
+            else -> androidx.compose.ui.graphics.Color(0xFFFFF176)
+        }
+    } catch (_: Exception) {
+        androidx.compose.ui.graphics.Color(0xFFFFF176)
     }
 }
