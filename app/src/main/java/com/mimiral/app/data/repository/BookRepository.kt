@@ -1,4 +1,8 @@
 package com.mimiral.app.data.repository
+
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.BookmarkDao
 import com.mimiral.app.data.local.dao.ChapterDao
@@ -11,21 +15,29 @@ import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.scanner.FileScanner
 import com.mimiral.app.data.local.settings.FilterOption
 import com.mimiral.app.data.local.settings.SortOption
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 @Singleton
 class BookRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val bookDao: BookDao,
     private val readingProgressDao: ReadingProgressDao,
     private val bookmarkDao: BookmarkDao,
     private val pdfSettingsDao: PdfSettingsDao,
     private val chapterDao: ChapterDao,
-    private val highlightDao: HighlightDao
+    private val highlightDao: HighlightDao,
+    private val fileScanner: FileScanner
 ) {
     fun getAllBooks(): Flow<List<BookEntity>> = bookDao.getAllBooks()
 
@@ -319,5 +331,47 @@ class BookRepository @Inject constructor(
 
     suspend fun updateHighlightNote(highlightId: Int, note: String?) {
         highlightDao.updateNote(highlightId, note)
+    }
+
+    // ---- SAF / content URI import ----
+
+    /**
+     * Import a single book from a SAF content URI.
+     * Copies the file to a temporary location, scans it, and inserts into the database.
+     * Returns the book ID, or -1 if import failed.
+     */
+    suspend fun importBookFromUri(uri: Uri): Long = withContext(Dispatchers.IO) {
+        try {
+            val contentResolver = context.contentResolver
+
+            // Query the display name from the content URI
+            var fileName = "unknown"
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (nameIdx >= 0) fileName = cursor.getString(nameIdx) ?: "unknown"
+                }
+            }
+
+            // Determine format from file extension
+            val extension = fileName.substringAfterLast('.', "").lowercase()
+            if (extension !in fileScanner.supportedExtensions()) return@withContext -1L
+
+            // Copy content to a temporary file
+            val tempFile = File(context.cacheDir, "import_${System.currentTimeMillis()}_$fileName")
+            contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(tempFile).use { output ->
+                    input.copyTo(output)
+                }
+            } ?: return@withContext -1L
+
+            // Scan the temp file and insert into DB
+            val book = fileScanner.scanFile(tempFile.absolutePath)
+            tempFile.delete() // Clean up temp file
+
+            book?.id?.toLong() ?: -1L
+        } catch (_: Exception) {
+            -1L
+        }
     }
 }
