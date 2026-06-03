@@ -4,7 +4,6 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -43,8 +42,8 @@ class RtfParserTest {
     @Test
     fun `parse RTF with Unicode characters`() = runBlocking {
         val rtf = "{\rtf1\ansi\ansicpg1252" +
-            "\u8364? Euro sign\par" +  // Euro sign
-            "\u63? C\par}"  // C
+            "\u8364? Euro sign\par" + // Euro sign
+            "\u63? C\par}" // C
         val file = tempFolder.newFile("unicode.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 
@@ -57,14 +56,10 @@ class RtfParserTest {
 
     @Test
     fun `parse RTF with multiple paragraphs`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252
-" +
-            "\par First paragraph.\par
-" +
-            "\par Second paragraph.\par
-" +
-            "\par Third paragraph.\par
-}"
+        val rtf = "{\rtf1\ansi\ansicpg1252" +
+            "\par First paragraph.\par" +
+            "\par Second paragraph.\par" +
+            "\par Third paragraph.\par}"
         val file = tempFolder.newFile("multi_para.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 
@@ -78,10 +73,8 @@ class RtfParserTest {
 
     @Test
     fun `parse RTF with tab characters`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252
-" +
-            "Before\tab After\par
-}"
+        val rtf = "{\rtf1\ansi\ansicpg1252" +
+            "Before\tab After\par}"
         val file = tempFolder.newFile("tabs.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 
@@ -94,12 +87,9 @@ class RtfParserTest {
 
     @Test
     fun `parse RTF with special dashes`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252
-" +
-            "Word\endash another\par
-" +
-            "Word\emdash another\par
-}"
+        val rtf = "{\rtf1\ansi\ansicpg1252" +
+            "Word\endash another\par" +
+            "Word\emdash another\par}"
         val file = tempFolder.newFile("dashes.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 
@@ -135,11 +125,9 @@ class RtfParserTest {
 
     @Test
     fun `title extracted from RTF content`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252
-" +
-            "My Great Novel\par
-Chapter one begins here.\par
-}"
+        val rtf = "{\rtf1\ansi\ansicpg1252" +
+            "My Great Novel\par" +
+            "Chapter one begins here.\par}"
         val file = tempFolder.newFile("titled_novel.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 
@@ -152,9 +140,8 @@ Chapter one begins here.\par
 
     @Test
     fun `parse from input stream`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252
-Stream content here.\par
-}"
+        val rtf = "{\rtf1\ansi\ansicpg1252" +
+            "Stream content here.\par}"
         val bytes = rtf.toByteArray(StandardCharsets.US_ASCII)
         val inputStream = bytes.inputStream()
 
@@ -167,16 +154,13 @@ Stream content here.\par
 
     @Test
     fun `chapter breaks detected in RTF content`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252
-" +
-            "Intro text.\par
-\par
-\par
-\par
-" +
-            "CHAPTER TWO\par
-Content.\par
-}"
+        val rtf = "{\rtf1\ansi\ansicpg1252" +
+            "Intro text.\par" +
+            "\par" +
+            "\par" +
+            "\par" +
+            "CHAPTER TWO\par" +
+            "Content.\par}"
         val file = tempFolder.newFile("rtf_chapters.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 
@@ -189,12 +173,9 @@ Content.\par
 
     @Test
     fun `font table is skipped in RTF`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252
-" +
-            "{\fonttbl{\f0\froman\fcharset0 Times New Roman;}}
-" +
-            "\f0\fs24 Visible text here.\par
-}"
+        val rtf = "{\rtf1\ansi\ansicpg1252" +
+            "{\fonttbl{\f0\froman\fcharset0 Times New Roman;}}" +
+            "\f0\fs24 Visible text here.\par}"
         val file = tempFolder.newFile("fonttable.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 
@@ -208,12 +189,9 @@ Content.\par
 
     @Test
     fun `color table is skipped in RTF`() = runBlocking {
-        val rtf = "{\rtf1\ansi\ansicpg1252
-" +
-            "{\colortbl;\red255\green0\blue0;\red0\green255\blue0;}
-" +
-            "Colored text here.\par
-}"
+        val rtf = "{\rtf1\ansi\ansicpg1252" +
+            "{\colortbl;\red255\green0\blue0;\red0\green255\blue0;}" +
+            "Colored text here.\par}"
         val file = tempFolder.newFile("colortbl.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
 
