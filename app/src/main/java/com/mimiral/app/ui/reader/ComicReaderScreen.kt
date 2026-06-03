@@ -318,7 +318,13 @@ private fun ComicPageViewer(
         val containerWidthPx = constraints.maxWidth.toFloat()
         val containerHeightPx = constraints.maxHeight.toFloat()
 
-        val effectiveZoom = if (fitMode == "fit_width" || fitMode == "fit_height") 1f else gestureZoom
+        val effectiveZoom = if (fitMode == "fit_width" ||
+            fitMode == "fit_height"
+        ) {
+            1f
+        } else {
+            gestureZoom
+        }
 
         Column(
             modifier = Modifier
@@ -378,7 +384,9 @@ private fun ComicPageViewer(
                             if (!isDragging && changes.size == 1) {
                                 val pointer = changes[0]
                                 val delta = pointer.position - pointer.previousPosition
-                                if (kotlin.math.abs(delta.x) > 10f || kotlin.math.abs(delta.y) > 10f) {
+                                if (kotlin.math.abs(delta.x) > 10f ||
+                                    kotlin.math.abs(delta.y) > 10f
+                                ) {
                                     isDragging = true
                                     panX += delta.x
                                     panY += delta.y

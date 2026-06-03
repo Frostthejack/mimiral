@@ -294,7 +294,8 @@ fun DocReaderScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No content to display.\nThe document may be empty or in an unsupported format.",
+                        text = "No content to display.\n" +
+                            "The document may be empty or in an unsupported format.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )

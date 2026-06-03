@@ -7,13 +7,24 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -392,7 +403,11 @@ private fun DjvuTopBar(
             if (hasTextContent) {
                 IconButton(onClick = onTextToggleClick) {
                     Icon(
-                        imageVector = if (showTextPanel) Icons.Default.Image else Icons.Default.TextFields,
+                        imageVector = if (showTextPanel) {
+                            Icons.Default.Image
+                        } else {
+                            Icons.Default.TextFields
+                        },
                         contentDescription = if (showTextPanel) "Show page image" else "Show text",
                         tint = if (showTextPanel) MaterialTheme.colorScheme.primary else Color.White
                     )
@@ -403,7 +418,11 @@ private fun DjvuTopBar(
             }
             IconButton(onClick = onBookmarkClick) {
                 Icon(
-                    imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    imageVector = if (isBookmarked) {
+                        Icons.Default.Bookmark
+                    } else {
+                        Icons.Default.BookmarkBorder
+                    },
                     contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark"
                 )
             }

@@ -3,7 +3,8 @@ package com.mimiral.app.ui.reader
 import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -14,15 +15,25 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.*
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.nativeKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -63,9 +74,12 @@ fun Fb2ReaderScreen(
 
         Welcome to Mimiral FB2 Reader.
 
-        This is the beginning of your FictionBook 2 document. The text is paginated using Android's StaticLayout engine, which calculates line breaks and page boundaries based on the screen dimensions, font size, line spacing, and margins.
+        This is the beginning of your FictionBook 2 document. The text is paginated using
+        Android's StaticLayout engine, which calculates line breaks and page boundaries
+        based on the screen dimensions, font size, line spacing, and margins.
 
-        Tap the left or right side of the screen to turn pages, or swipe between pages. Volume keys can also be used if that setting is enabled.
+        Tap the left or right side of the screen to turn pages,
+            or swipe between pages. Volume keys can also be used if that setting is enabled.
 
         FictionBook 2 (FB2) is an XML-based ebook format. This parser supports:
         - Plain .fb2 files (XML)
@@ -154,7 +168,8 @@ fun Fb2ReaderScreen(
     }
 
     val isBookmarked = uiState.isCurrentPageBookmarked
-    val currentChapterTitle = uiState.chapters.getOrNull(uiState.currentChapter)?.title ?: "FB2 Reader"
+    val currentChapterTitle = uiState.chapters.getOrNull(uiState.currentChapter)?.title
+        ?: "FB2 Reader"
 
     val onTextSettingsChanged: (TextSettings) -> Unit = remember(settingsRepository) {
         { newSettings ->
@@ -195,9 +210,21 @@ fun Fb2ReaderScreen(
                         }
                         IconButton(onClick = { viewModel.toggleBookmark() }) {
                             Icon(
-                                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
-                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                imageVector = if (isBookmarked) {
+                                    Icons.Default.Bookmark
+                                } else {
+                                    Icons.Default.BookmarkBorder
+                                },
+                                contentDescription = if (isBookmarked) {
+                                    "Remove bookmark"
+                                } else {
+                                    "Add bookmark"
+                                },
+                                tint = if (isBookmarked) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
                             )
                         }
                         IconButton(onClick = { showTextSettings = true }) {
@@ -439,7 +466,8 @@ fun Fb2ReaderScreen(
 private fun buildFb2ProgressText(uiState: Fb2ReaderUiState): String {
     val progress = uiState.progress
     return if (progress.totalCharacters > 0) {
-        "Page ${uiState.currentPage + 1} of ${uiState.totalPages} - ${progress.progressPercent.toInt()}%"
+        "Page ${uiState.currentPage + 1} of ${uiState.totalPages}" +
+            " - ${progress.progressPercent.toInt()}%"
     } else {
         "Page ${uiState.currentPage + 1} of ${uiState.totalPages}"
     }

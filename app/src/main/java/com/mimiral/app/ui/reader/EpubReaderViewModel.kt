@@ -324,7 +324,8 @@ class EpubReaderViewModel @Inject constructor(
                 if (existing != null) {
                     bookRepository.deleteBookmark(existing)
                 } else {
-                    val chapterTitle = state.chapters.getOrNull(currentChapterIndex)?.title ?: "Chapter ${currentChapterIndex + 1}"
+                    val chapterTitle = state.chapters.getOrNull(currentChapterIndex)?.title
+                        ?: "Chapter ${currentChapterIndex + 1}"
                     bookRepository.addBookmark(
                         bookId = bookId,
                         chapterIndex = currentChapterIndex,

@@ -82,7 +82,13 @@ fun TxtRtfReaderScreen(
     // Paginate current chapter text
     val chapterText = viewModel.getChapterText(uiState.currentChapter)
     var paginationResult by remember { mutableStateOf<PaginationResult?>(null) }
-    LaunchedEffect(chapterText, textSettings, screenWidthPx, screenHeightPx, uiState.currentChapter) {
+    LaunchedEffect(
+        chapterText,
+        textSettings,
+        screenWidthPx,
+        screenHeightPx,
+        uiState.currentChapter
+    ) {
         paginationResult = paginationEngine.paginate(
             text = chapterText,
             config = textSettings.toRenderConfig(),
@@ -165,7 +171,8 @@ fun TxtRtfReaderScreen(
                     title = {
                         Column {
                             Text(
-                                text = uiState.chapters.getOrNull(uiState.currentChapter)?.title ?: uiState.title,
+                                text = uiState.chapters.getOrNull(uiState.currentChapter)?.title
+                                    ?: uiState.title,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.titleMedium
@@ -191,9 +198,21 @@ fun TxtRtfReaderScreen(
                         }
                         IconButton(onClick = { viewModel.toggleBookmark() }) {
                             Icon(
-                                imageVector = if (uiState.isCurrentPageBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                contentDescription = if (uiState.isCurrentPageBookmarked) "Remove bookmark" else "Add bookmark",
-                                tint = if (uiState.isCurrentPageBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                imageVector = if (uiState.isCurrentPageBookmarked) {
+                                    Icons.Default.Bookmark
+                                } else {
+                                    Icons.Default.BookmarkBorder
+                                },
+                                contentDescription = if (uiState.isCurrentPageBookmarked) {
+                                    "Remove bookmark"
+                                } else {
+                                    "Add bookmark"
+                                },
+                                tint = if (uiState.isCurrentPageBookmarked) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
                             )
                         }
                         IconButton(onClick = { showTextSettings = true }) {
@@ -293,12 +312,17 @@ fun TxtRtfReaderScreen(
                     beyondViewportPageCount = 1,
                     key = { index -> index }
                 ) { pageIndex ->
-                    val pageOffset = (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction
+                    val pageOffset = (pagerState.currentPage - pageIndex) +
+                        pagerState.currentPageOffsetFraction
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer {
-                                alpha = if (abs(pageOffset) < 1f) 1f - (abs(pageOffset) * 0.3f) else 0.7f
+                                alpha = if (abs(pageOffset) < 1f) {
+                                    1f - (abs(pageOffset) * 0.3f)
+                                } else {
+                                    0.7f
+                                }
                                 val scale = 1f - (abs(pageOffset) * 0.03f).coerceIn(0f, 0.1f)
                                 scaleX = scale
                                 scaleY = scale

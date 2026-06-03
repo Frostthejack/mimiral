@@ -140,7 +140,8 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Scanning… ${scanState.filesFound} found, ${scanState.newFiles} new",
+                            text = "Scanning… ${scanState.filesFound} found, " +
+                                "${scanState.newFiles} new",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -160,7 +161,8 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Scan complete: ${scanState.newFiles} new books, ${scanState.duplicatesSkipped} duplicates skipped",
+                            text = "Scan complete: ${scanState.newFiles} new books, " +
+                                "${scanState.duplicatesSkipped} duplicates skipped",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
