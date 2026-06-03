@@ -87,8 +87,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     }
                 )
             }
-            composable(Screen.Discover.route) {
-                PlaceholderScreen("Discover")
+            composable(Screen.AddBooks.route) {
+                AddBooksScreen()
             }
             composable(Screen.NowReading.route) {
                 PlaceholderScreen("Now Reading")
