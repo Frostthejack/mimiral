@@ -34,6 +34,9 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,6 +52,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -57,15 +61,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
 import com.mimiral.app.data.local.settings.FilterOption
 import com.mimiral.app.data.local.settings.SortOption
@@ -80,6 +89,40 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val recentBooks by viewModel.recentBooks.collectAsState()
     var sortMenuExpanded by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Show import result messages in snackbar
+    androidx.compose.runtime.LaunchedEffect(uiState.importMessage) {
+        uiState.importMessage?.let { message ->
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(message)
+            }
+        }
+    }
+
+    // SAF file picker launcher
+    val importFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importBook(uri)
+        }
+    }
+
+    val supportedMimeTypes = arrayOf(
+        "application/epub+zip",
+        "application/pdf",
+        "application/x-mobipocket-ebook",
+        "application/xml",
+        "image/vnd.djvu",
+        "application/x-cbz",
+        "text/plain",
+        "application/rtf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/markdown"
+    )
 
     Scaffold(
         topBar = {
@@ -104,6 +147,19 @@ fun LibraryScreen(
                 }
             )
         }
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    importFileLauncher.launch(supportedMimeTypes)
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Import book"
+                )
+            }
+        },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { padding ->
         PullToRefreshBox(
             isRefreshing = uiState.isRefreshing,
@@ -113,6 +169,15 @@ fun LibraryScreen(
                 .padding(padding)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
+                // Import progress indicator
+                if (uiState.isImporting) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    )
+                }
+
                 // Search bar
                 OutlinedTextField(
                     value = uiState.searchQuery,
@@ -233,6 +298,21 @@ fun LibraryScreen(
                                             alpha = 0.7f
                                         )
                                     )
+                                }
+                                if (uiState.searchQuery.isBlank() && uiState.filterOption == FilterOption.ALL) {
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                    FloatingActionButton(
+                                        onClick = {
+                                            importFileLauncher.launch(supportedMimeTypes)
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Import book"
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Import your first book")
+                                    }
                                 }
                             }
                         }
