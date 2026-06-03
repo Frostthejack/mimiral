@@ -363,7 +363,11 @@ class RtfParser {
                         "ansicpg" -> { /* already handled in encoding detection */ }
 
                         // Ignored formatting
-                        "b", "i", "u", "ul", "ulnone", "ulw", "uldb", "fs", "f", "cf", "cb", "highlight", "ulwave", "ulth", "strike", "deleted", "nosupersub", "super", "sub", "caps", "outl", "shad", "scaps", "anish", "mac", "pc", "pca", "deff", "lang", "nouicompat", "translat" -> { /* formatting, ignore */ }
+                        "b", "i", "u", "ul", "ulnone", "ulw", "uldb", "fs", "f", "cf",
+                        "cb", "highlight", "ulwave", "ulth", "strike", "deleted",
+                        "nosupersub", "super", "sub", "caps", "outl", "shad", "scaps",
+                        "anish", "mac", "pc", "pca", "deff", "lang", "nouicompat",
+                        "translat" -> { /* formatting, ignore */ }
 
                         else -> {
                             // If next token is a text token starting with space,
