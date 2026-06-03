@@ -137,6 +137,9 @@ interface HighlightDao {
 
     @Delete
     suspend fun deleteHighlight(highlight: HighlightEntity)
+
+    @Query("UPDATE highlights SET note = :note WHERE id = :highlightId")
+    suspend fun updateNote(highlightId: Int, note: String?)
 }
 
 @Dao

@@ -316,4 +316,8 @@ class BookRepository @Inject constructor(
 
     suspend fun deleteHighlight(highlight: HighlightEntity) =
         highlightDao.deleteHighlight(highlight)
+
+    suspend fun updateHighlightNote(highlightId: Int, note: String?) {
+        highlightDao.updateNote(highlightId, note)
+    }
 }
