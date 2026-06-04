@@ -263,9 +263,11 @@ class RtfParser {
                     if (i >= source.length) break
                     val next = source[i]
                     if (next.isLetter()) {
-                        // Control word: \word[optDigit]
+                        // Control word: \\word[optDigit]
+                        // Only consume lowercase letters; uppercase letters
+                        // indicate the start of text content (e.g. \parThis -> "par" + "This")
                         val start = i
-                        while (i < source.length && source[i].isLetter()) i++
+                        while (i < source.length && source[i].isLetter() && source[i].isLowerCase()) i++
                         val word = source.substring(start, i)
                         // Check for numeric parameter
                         val paramStart = i

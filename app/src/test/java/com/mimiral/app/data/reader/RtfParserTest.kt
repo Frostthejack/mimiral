@@ -83,7 +83,7 @@ class RtfParserTest {
 
         assertTrue(result is RtfParseResult.Success)
         val success = result as RtfParseResult.Success
-        assertTrue("Should contain tab separator", success.text.contains("\\t"))
+        assertTrue("Should contain tab separator", success.text.contains("\t"))
     }
 
     @Test
