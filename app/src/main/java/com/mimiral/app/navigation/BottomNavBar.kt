@@ -23,7 +23,7 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem(Screen.Library, "Library", Icons.Filled.MenuBook),
-    BottomNavItem(Screen.Discover, "Discover", Icons.Filled.Cloud),
+    BottomNavItem(Screen.OpdsBrowser, "OPDS", Icons.Filled.Cloud),
     BottomNavItem(Screen.NowReading, "Now Reading", Icons.Filled.PlayArrow),
     BottomNavItem(Screen.Settings, "Settings", Icons.Filled.Settings)
 )

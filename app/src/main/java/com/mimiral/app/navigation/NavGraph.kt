@@ -18,6 +18,7 @@ import androidx.navigation.navArgument
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.LibraryScreen
+import com.mimiral.app.ui.opds.OpdsCatalogBrowserScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
@@ -64,7 +65,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     route != Screen.Discover.route &&
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
-                    route != Screen.Settings.route
+                    route != Screen.Settings.route &&
+                    route != Screen.OpdsBrowser.route
                 )
             ) {
                 // Don't show bottom bar
@@ -100,6 +102,9 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
             composable(Screen.Settings.route) {
                 SettingsScreen()
+            }
+            composable(Screen.OpdsBrowser.route) {
+                OpdsCatalogBrowserScreen()
             }
 
             // Reader routes
