@@ -16,12 +16,18 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,10 +39,26 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.AutoMode
+import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -362,7 +384,7 @@ fun PdfReaderScreen(
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            BottomReaderControls(
+            PdfBottomReaderControls(
                 currentPage = uiState.currentPage,
                 totalPages = uiState.totalPages,
                 progressPercent = uiState.progressPercent,
@@ -374,7 +396,7 @@ fun PdfReaderScreen(
 
         // Minimal page indicator when controls are hidden
         if (!uiState.isControlsVisible && uiState.totalPages > 0) {
-            PageIndicator(
+            PdfPageIndicator(
                 currentPage = uiState.currentPage,
                 totalPages = uiState.totalPages,
                 modifier = Modifier
@@ -698,7 +720,7 @@ private fun TopReaderBar(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun BottomReaderControls(
+private fun PdfBottomReaderControls(
     currentPage: Int,
     totalPages: Int,
     progressPercent: Float,
@@ -789,7 +811,7 @@ private fun BottomReaderControls(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun PageIndicator(
+private fun PdfPageIndicator(
     currentPage: Int,
     totalPages: Int,
     modifier: Modifier = Modifier

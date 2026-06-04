@@ -64,6 +64,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.NavigationBar
@@ -77,7 +78,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.mimiral.app.ui.reader.TextSettings
-import com.mimiral.app.ui.reader.toRenderConfig
 import com.mimiral.app.ui.reader.PaginationEngine
 import com.mimiral.app.ui.reader.PaginationResult
 
@@ -410,7 +410,8 @@ fun EpubReaderScreen(
                 .focusRequester(focusRequester)
                 .focusTarget()
                 .onKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown) {
+                    if (keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP ||
+                        keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
                         val nativeKeyCode = keyEvent.nativeKeyEvent.keyCode
                         handleVolumeKey(nativeKeyCode)
                     } else {
@@ -684,7 +685,7 @@ private fun EpubPageContent(
             text = pageText,
             highlights = highlights,
             textSettings = textSettings,
-            ttsSentence = currentTtsSentence,
+            ttsSentence = ttsSentence,
             onLongPress = onLongPress,
             modifier = Modifier.fillMaxWidth()
         )

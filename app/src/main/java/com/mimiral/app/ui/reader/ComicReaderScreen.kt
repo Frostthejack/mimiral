@@ -52,6 +52,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -363,7 +366,7 @@ private fun ComicPageViewer(
                                     panY += panChange.y
 
                                     onZoomChanged(zoom, panX, panY)
-                                    changes.forEach { if (it.positionChanged()) it.consume() }
+                                    changes.forEach { it.consume() }
                                 }
                             }
 

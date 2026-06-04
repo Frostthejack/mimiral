@@ -43,9 +43,14 @@ import kotlinx.coroutines.withContext
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.foundation.Image
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.DisposableEffect
@@ -58,8 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import java.io.File
 import kotlin.math.roundToInt
-import com.mimiral.app.ui.reader.BottomReaderControls
-import com.mimiral.app.ui.reader.PageIndicator
 
 /**
  * DJVU Reader screen with page-by-page bitmap rendering, text layer display,
@@ -123,9 +126,9 @@ fun DjvuReaderScreen(
                 viewModel.setPageLoading(true)
                 withContext(Dispatchers.IO) {
                     val screenWidth = 1080 // Default; actual width determined at render time
-                    val bitmap = djvuRenderer.renderPage(uiState.currentPage, screenWidth)
+                    val bitmap = djvuRenderer.renderPageByWidth(uiState.currentPage, screenWidth)
                     if (bitmap != null) {
-                        pageBitmaps = pageBitmaps + (uiState.currentPage to bitmap)
+                        pageBitmaps = pageBitmaps + (uiState.currentPage to (bitmap as Bitmap))
                     }
                 }
                 viewModel.setPageLoading(false)
@@ -380,6 +383,7 @@ private fun DjvuTextPanel(
  * Top bar for DJVU reader with text toggle support.
  */
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun DjvuTopBar(
     title: String,
     currentPage: Int,
