@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.LibraryScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
@@ -28,10 +29,6 @@ import com.mimiral.app.ui.settings.SettingsScreen
  * Defaults to PDF reader for unknown formats.
  */
 private fun routeForBook(bookId: Int): String {
-    // Note: This is a synchronous routing decision.
-    // The format is determined by the caller (LibraryScreen) which has
-    // access to BookEntity.format via BookWithProgress.
-    // For dynamic routing, use routeForBookFormat() instead.
     return "pdf_reader/$bookId"
 }
 
@@ -56,12 +53,12 @@ fun MimiralNavGraph(navController: NavHostController) {
 
     Scaffold(
         bottomBar = {
-            // Hide bottom bar on reader screens
             val route = currentDestination?.route
             if (route == null || (
                 route != Screen.Library.route &&
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
+                    route != Screen.Discover.route &&
                     route != Screen.Settings.route
                 )
             ) {
@@ -93,6 +90,9 @@ fun MimiralNavGraph(navController: NavHostController) {
             composable(Screen.NowReading.route) {
                 PlaceholderScreen("Now Reading")
             }
+            composable(Screen.Discover.route) {
+                DiscoverScreen()
+            }
             composable(Screen.Settings.route) {
                 SettingsScreen()
             }
@@ -102,7 +102,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                 route = "pdf_reader/{bookId}",
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
                 PdfReaderScreen(
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() }
@@ -113,7 +114,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                 route = "epub_reader/{bookId}",
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
                 EpubReaderScreen(
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() }
@@ -124,7 +126,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                 route = "djvu_reader/{bookId}",
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
                 DjvuReaderScreen(
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() }
@@ -135,7 +138,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                 route = "txt_rtf_reader/{bookId}",
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
                 TxtRtfReaderScreen(
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() }
