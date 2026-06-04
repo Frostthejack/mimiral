@@ -410,10 +410,11 @@ fun EpubReaderScreen(
                 .focusRequester(focusRequester)
                 .focusTarget()
                 .onKeyEvent { keyEvent ->
-                    if (keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP ||
-                        keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
-                        val nativeKeyCode = keyEvent.nativeKeyEvent.keyCode
-                        handleVolumeKey(nativeKeyCode)
+                    val keyCode = keyEvent.nativeKeyEvent.keyCode
+                    if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP ||
+                        keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN
+                    ) {
+                        handleVolumeKey(keyCode)
                     } else {
                         false
                     }
