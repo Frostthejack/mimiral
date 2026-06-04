@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,14 +53,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
-import com.mimiral.app.data.reader.EpubChapter
 import com.mimiral.app.ui.reader.TextSettings
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.unit.sp
+import com.mimiral.app.data.reader.TocEntry
+import com.mimiral.app.ui.reader.EpubChapter
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -290,11 +290,7 @@ fun TxtRtfReaderScreen(
                 .focusRequester(focusRequester)
                 .focusTarget()
                 .onKeyEvent { keyEvent ->
-                    if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
-                        handleVolumeKey(keyEvent.nativeKeyEvent.keyCode)
-                    } else {
-                        false
-                    }
+                    handleVolumeKey(keyEvent.nativeKeyEvent.keyCode)
                 }
         ) {
             if (uiState.isLoading) {
@@ -414,7 +410,7 @@ fun TxtRtfReaderScreen(
 
     if (uiState.showToc) {
         TableOfContentsDialog(
-            chapters = uiState.chapters.map { chapter: TxtRtfChapter -> EpubChapter(index = chapter.index, title = chapter.title, href = "") },
+            chapters = uiState.chapters.map { EpubChapter(index = it.index, title = it.title, startPage = 0, endPage = 0) },
             currentChapterIndex = uiState.currentChapter,
             onNavigateToChapter = { chapterIndex ->
                 viewModel.navigateToChapter(chapterIndex)

@@ -46,6 +46,14 @@ class TTSService : Service() {
         const val ACTION_SKIP_CHAPTER_FORWARD = "com.mimiral.app.tts.ACTION_SKIP_CHAPTER_FORWARD"
         const val ACTION_SKIP_CHAPTER_BACKWARD = "com.mimiral.app.tts.ACTION_SKIP_CHAPTER_BACKWARD"
 
+        // Speed / Pitch / Voice
+        const val ACTION_SET_SPEED = "com.mimiral.app.tts.ACTION_SET_SPEED"
+        const val ACTION_SET_PITCH = "com.mimiral.app.tts.ACTION_SET_PITCH"
+        const val ACTION_SET_VOICE = "com.mimiral.app.tts.ACTION_SET_VOICE"
+        const val EXTRA_SPEED = "extra_speed"
+        const val EXTRA_PITCH = "extra_pitch"
+        const val EXTRA_VOICE_NAME = "extra_voice_name"
+
         const val EXTRA_TEXT = "extra_text"
         const val EXTRA_LOCALE = "extra_locale"
         const val EXTRA_SLEEP_MINUTES = "extra_sleep_minutes"
@@ -91,22 +99,22 @@ class TTSService : Service() {
 
         fun createSetSpeedIntent(context: Context, speed: Float): Intent {
             return Intent(context, TTSService::class.java).apply {
-                action = ACTION_PLAY
-                putExtra("extra_speed", speed)
+                action = ACTION_SET_SPEED
+                putExtra(EXTRA_SPEED, speed)
             }
         }
 
         fun createSetPitchIntent(context: Context, pitch: Float): Intent {
             return Intent(context, TTSService::class.java).apply {
-                action = ACTION_PLAY
-                putExtra("extra_pitch", pitch)
+                action = ACTION_SET_PITCH
+                putExtra(EXTRA_PITCH, pitch)
             }
         }
 
         fun createSetVoiceIntent(context: Context, voiceName: String): Intent {
             return Intent(context, TTSService::class.java).apply {
-                action = ACTION_PLAY
-                putExtra("extra_voice", voiceName)
+                action = ACTION_SET_VOICE
+                putExtra(EXTRA_VOICE_NAME, voiceName)
             }
         }
 
@@ -235,6 +243,21 @@ class TTSService : Service() {
             ACTION_SKIP_PARAGRAPH_BACKWARD -> handleSkipParagraphBackward()
             ACTION_SKIP_CHAPTER_FORWARD -> handleSkipChapterForward()
             ACTION_SKIP_CHAPTER_BACKWARD -> handleSkipChapterBackward()
+            ACTION_SET_SPEED -> {
+                val speed = intent.getFloatExtra(EXTRA_SPEED, 1.0f)
+                ttsManager?.setSpeechRate(speed)
+            }
+            ACTION_SET_PITCH -> {
+                val pitch = intent.getFloatExtra(EXTRA_PITCH, 1.0f)
+                ttsManager?.setPitch(pitch)
+            }
+            ACTION_SET_VOICE -> {
+                val voiceName = intent.getStringExtra(EXTRA_VOICE_NAME) ?: ""
+                if (voiceName.isNotBlank()) {
+                    val voice = ttsManager?.getAvailableVoices()?.find { it.name == voiceName }
+                    if (voice != null) ttsManager?.setVoice(voice)
+                }
+            }
             else -> {
                 if (ttsManager?.state == TTSState.PLAYING) {
                     showNotification()
