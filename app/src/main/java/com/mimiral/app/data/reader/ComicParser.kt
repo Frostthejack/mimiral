@@ -10,6 +10,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 /**
  * Represents a single page in a comic book archive.
@@ -45,7 +46,7 @@ data class ComicArchive(
  * Images are sorted by filename to determine reading order.
  * Cover image is always the first page.
  */
-class ComicParser : AutoCloseable {
+class ComicParser @Inject constructor() : AutoCloseable {
 
     /** Temp directory for CBR extraction (cleaned up on close). */
     private var tempDir: File? = null
