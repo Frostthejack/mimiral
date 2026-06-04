@@ -1,25 +1,25 @@
 package com.mimiral.app.data.repository
 
+import android.content.Context
 import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.remote.opds.OpdsFeed
-import com.mimiral.app.data.remote.opds.OpdsFeedParser
+import com.mimiral.app.data.remote.opds.OpdsParser
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
-import android.content.Context
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 @Singleton
 class OpdsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val opdsCatalogDao: OpdsCatalogDao
+    private val opdsCatalogDao: OpdsCatalogDao,
+    private val opdsParser: OpdsParser
 ) {
 
     fun getActiveCatalogs(): Flow<List<OpdsCatalogEntity>> =
@@ -46,11 +46,18 @@ class OpdsRepository @Inject constructor(
             connection.connectTimeout = 15000
             connection.readTimeout = 15000
             connection.requestMethod = "GET"
-            connection.setRequestProperty("Accept", "application/atom+xml")
+            connection.setRequestProperty(
+                "Accept",
+                "application/atom+xml,application/xml,text/xml,*/*"
+            )
+            connection.setRequestProperty("User-Agent", "Mimiral/0.1.0")
 
             if (!username.isNullOrBlank() && !password.isNullOrBlank()) {
                 val credentials = "$username:$password"
-                val encoded = Base64.getEncoder().encodeToString(credentials.toByteArray())
+                val encoded = android.util.Base64.encodeToString(
+                    credentials.toByteArray(),
+                    android.util.Base64.NO_WRAP
+                )
                 connection.setRequestProperty("Authorization", "Basic $encoded")
             }
 
@@ -61,10 +68,12 @@ class OpdsRepository @Inject constructor(
                 )
             }
 
-            val xml = BufferedInputStream(connection.inputStream).bufferedReader().use { it.readText() }
+            val xml = BufferedInputStream(connection.inputStream)
+                .bufferedReader()
+                .use { it.readText() }
             connection.disconnect()
 
-            val feed = OpdsFeedParser.parse(xml)
+            val feed = opdsParser.parseFeedString(xml, baseHref = feedUrl)
             Result.success(feed)
         } catch (e: Exception) {
             Result.failure(e)
@@ -87,10 +96,14 @@ class OpdsRepository @Inject constructor(
             connection.connectTimeout = 30000
             connection.readTimeout = 60000
             connection.requestMethod = "GET"
+            connection.setRequestProperty("User-Agent", "Mimiral/0.1.0")
 
             if (!username.isNullOrBlank() && !password.isNullOrBlank()) {
                 val credentials = "$username:$password"
-                val encoded = Base64.getEncoder().encodeToString(credentials.toByteArray())
+                val encoded = android.util.Base64.encodeToString(
+                    credentials.toByteArray(),
+                    android.util.Base64.NO_WRAP
+                )
                 connection.setRequestProperty("Authorization", "Basic $encoded")
             }
 

@@ -130,6 +130,16 @@ data class OpdsLink(
     val isNavigation: Boolean
         get() = type?.contains("application/atom+xml") == true ||
             type?.contains("application/opds+json") == true
+
+    val formatLabel: String
+        get() = when {
+            type == null -> "Download"
+            type.contains("epub", ignoreCase = true) -> "EPUB"
+            type.contains("pdf", ignoreCase = true) -> "PDF"
+            type.contains("mobi", ignoreCase = true) -> "MOBI"
+            type.contains("application/atom", ignoreCase = true) -> "Feed"
+            else -> type.substringAfterLast("/").uppercase()
+        }
 }
 
 /**

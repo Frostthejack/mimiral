@@ -32,12 +32,14 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -157,8 +159,11 @@ fun OpdsCatalogBrowserScreen(
                     FeedView(
                         feed = uiState.currentFeed!!,
                         isDownloading = uiState.isDownloading,
+                        isLoadingNextPage = uiState.isLoadingNextPage,
+                        hasNextPage = uiState.hasNextPage,
                         onEntryClick = { viewModel.navigateToEntry(it) },
-                        onDownloadClick = { viewModel.downloadEntry(it) }
+                        onDownloadClick = { viewModel.downloadEntry(it) },
+                        onLoadNextPage = { viewModel.loadNextPage() }
                     )
                 }
             }
@@ -380,11 +385,14 @@ private fun CatalogListItem(
 private fun FeedView(
     feed: com.mimiral.app.data.remote.opds.OpdsFeed,
     isDownloading: Boolean,
+    isLoadingNextPage: Boolean,
+    hasNextPage: Boolean,
     onEntryClick: (OpdsEntry) -> Unit,
-    onDownloadClick: (OpdsEntry) -> Unit
+    onDownloadClick: (OpdsEntry) -> Unit,
+    onLoadNextPage: () -> Unit
 ) {
-    val navEntries = feed.entries.filter { it.isNavigationEntry }
-    val bookEntries = feed.entries.filter { !it.isNavigationEntry }
+    val navEntries = feed.entries.filter { !it.isAcquisition }
+    val bookEntries = feed.entries.filter { it.isAcquisition }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -398,24 +406,6 @@ private fun FeedView(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-        }
-
-        // Navigation groups
-        feed.navigationGroups.forEach { group ->
-            item {
-                Text(
-                    text = group.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-            items(group.entries) { entry ->
-                NavigationEntryItem(
-                    entry = entry,
-                    onClick = { onEntryClick(entry) }
                 )
             }
         }
@@ -442,7 +432,7 @@ private fun FeedView(
 
         // Book entries
         if (bookEntries.isNotEmpty()) {
-            if (navEntries.isNotEmpty() || feed.navigationGroups.isNotEmpty()) {
+            if (navEntries.isNotEmpty()) {
                 item {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -465,8 +455,39 @@ private fun FeedView(
             }
         }
 
+        // Load more button (pagination)
+        if (hasNextPage) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isLoadingNextPage) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        OutlinedButton(
+                            onClick = onLoadNextPage
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Load More")
+                        }
+                    }
+                }
+            }
+        }
+
         // Empty feed
-        if (feed.entries.isEmpty() && feed.navigationGroups.isEmpty()) {
+        if (feed.entries.isEmpty()) {
             item {
                 Column(
                     modifier = Modifier
@@ -606,11 +627,11 @@ private fun BookEntryItem(
                 }
 
                 // Download buttons
-                if (entry.downloadLinks.isNotEmpty()) {
+                if (entry.acquisitionLinks.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        entry.downloadLinks.take(3).forEach { link ->
-                            val formatLabel = link.formatName ?: "Download"
+                        entry.acquisitionLinks.take(3).forEach { link ->
+                            val formatLabel = link.formatLabel
                             TextButton(
                                 onClick = onDownload,
                                 enabled = !isDownloading
@@ -626,6 +647,33 @@ private fun BookEntryItem(
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
+                        }
+                    }
+                }
+
+                // Gutenberg metadata: language and subjects
+                if (entry.dcLanguage != null || entry.dcSubjects.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (entry.dcLanguage != null) {
+                            Text(
+                                text = entry.dcLanguage.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        if (entry.dcSubjects.isNotEmpty()) {
+                            Text(
+                                text = entry.dcSubjects.take(3)
+                                    .joinToString(", "),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
