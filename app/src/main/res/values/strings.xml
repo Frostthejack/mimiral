@@ -29,6 +29,14 @@
     <string name="tts_pause">Pause</string>
     <string name="tts_stop">Stop</string>
 
+    <!-- TTS settings -->
+    <string name="tts_voice_default">Default</string>
+    <string name="tts_voice_picker_title">Select Voice</string>
+    <string name="tts_speed">Speed</string>
+    <string name="tts_speed_format">%.1fx</string>
+    <string name="tts_pitch">Pitch</string>
+    <string name="tts_pitch_format">%.1fx</string>
+
     <!-- Highlight -->
     <string name="highlight_color_picker_title">Highlight Color</string>
     <string name="highlight_cancel">Cancel</string>

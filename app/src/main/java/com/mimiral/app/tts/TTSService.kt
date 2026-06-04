@@ -89,6 +89,27 @@ class TTSService : Service() {
             return Intent(context, TTSService::class.java).apply { action = ACTION_TOGGLE }
         }
 
+        fun createSetSpeedIntent(context: Context, speed: Float): Intent {
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_PLAY
+                putExtra("extra_speed", speed)
+            }
+        }
+
+        fun createSetPitchIntent(context: Context, pitch: Float): Intent {
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_PLAY
+                putExtra("extra_pitch", pitch)
+            }
+        }
+
+        fun createSetVoiceIntent(context: Context, voiceName: String): Intent {
+            return Intent(context, TTSService::class.java).apply {
+                action = ACTION_PLAY
+                putExtra("extra_voice", voiceName)
+            }
+        }
+
         fun createSleepTimerIntent(context: Context, minutes: Int): Intent {
             return Intent(context, TTSService::class.java).apply {
                 action = ACTION_START_SLEEP_TIMER

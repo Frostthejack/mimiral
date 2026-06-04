@@ -55,7 +55,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
-import com.mimiral.app.data.local.settings.TextSettings
+import com.mimiral.app.data.reader.EpubChapter
+import com.mimiral.app.ui.reader.TextSettings
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -286,7 +290,7 @@ fun TxtRtfReaderScreen(
                 .focusRequester(focusRequester)
                 .focusTarget()
                 .onKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyDown) {
+                    if (keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
                         handleVolumeKey(keyEvent.nativeKeyEvent.keyCode)
                     } else {
                         false
@@ -410,7 +414,7 @@ fun TxtRtfReaderScreen(
 
     if (uiState.showToc) {
         TableOfContentsDialog(
-            chapters = uiState.chapters.map { TocEntry(title = it.title, href = "", depth = 0) },
+            chapters = uiState.chapters.map { EpubChapter(index = it.index, title = it.title, href = "") },
             currentChapterIndex = uiState.currentChapter,
             onNavigateToChapter = { chapterIndex ->
                 viewModel.navigateToChapter(chapterIndex)
@@ -456,10 +460,10 @@ private fun TxtRtfPageContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(
-                start = textSettings.marginLeft,
-                end = textSettings.marginRight,
-                top = textSettings.marginTop,
-                bottom = textSettings.marginBottom
+                start = textSettings.marginLeft.dp,
+                end = textSettings.marginRight.dp,
+                top = textSettings.marginTop.dp,
+                bottom = textSettings.marginBottom.dp
             )
             .verticalScroll(scrollState)
     ) {

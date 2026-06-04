@@ -73,7 +73,7 @@ class TxtRtfReaderViewModel @Inject constructor(
     // Full parsed text and chapter breaks
     private var fullText: String = ""
     private var chapterBreaks: List<Int> = listOf(0)
-    private var chapterTexts: List<String> = emptyList()
+    private var chapterTexts: MutableList<String> = mutableListOf()
 
     init {
         loadBook()
