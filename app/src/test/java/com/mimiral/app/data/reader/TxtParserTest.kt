@@ -125,7 +125,7 @@ class TxtParserTest {
     @Test
     fun `chapter breaks detected with form feed`() = runBlocking {
         val file = tempFolder.newFile("chapters_ff.txt")
-        val text = "Chapter 1 content here.\n\f\nChapter 2 content here."
+        val text = "Chapter 1 content here.\n\u000C\nChapter 2 content here."
         file.writeText(text)
 
         val result = parser.parse(file)
