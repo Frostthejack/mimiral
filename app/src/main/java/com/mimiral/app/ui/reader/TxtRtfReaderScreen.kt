@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
-import com.mimiral.app.data.reader.EpubChapter
+import com.mimiral.app.ui.reader.EpubChapter
 import com.mimiral.app.ui.reader.TextSettings
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.rememberCoroutineScope
@@ -414,7 +414,7 @@ fun TxtRtfReaderScreen(
 
     if (uiState.showToc) {
         TableOfContentsDialog(
-            chapters = uiState.chapters.map { chapter: TxtRtfChapter -> EpubChapter(index = chapter.index, title = chapter.title, href = "") },
+            chapters = uiState.chapters.map { chapter -> EpubChapter(index = chapter.index, title = chapter.title, startPage = chapter.startPage, endPage = chapter.endPage) },
             currentChapterIndex = uiState.currentChapter,
             onNavigateToChapter = { chapterIndex ->
                 viewModel.navigateToChapter(chapterIndex)
