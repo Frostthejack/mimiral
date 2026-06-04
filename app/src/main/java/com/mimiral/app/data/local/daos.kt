@@ -1,7 +1,19 @@
 package com.mimiral.app.data.local.dao
 
-import androidx.room.*
-import com.mimiral.app.data.local.entity.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import com.mimiral.app.data.local.entity.BookEntity
+import com.mimiral.app.data.local.entity.BookmarkEntity
+import com.mimiral.app.data.local.entity.CollectionEntity
+import com.mimiral.app.data.local.entity.HighlightEntity
+import com.mimiral.app.data.local.entity.OpdsCatalogEntity
+import com.mimiral.app.data.local.entity.PdfSettingsEntity
+import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.entity.ServerEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao

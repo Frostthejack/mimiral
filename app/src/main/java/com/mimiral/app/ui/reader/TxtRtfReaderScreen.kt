@@ -37,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +45,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
@@ -52,14 +52,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.data.reader.EpubChapter
-import com.mimiral.app.ui.reader.TextSettings
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -414,7 +411,13 @@ fun TxtRtfReaderScreen(
 
     if (uiState.showToc) {
         TableOfContentsDialog(
-            chapters = uiState.chapters.map { EpubChapter(index = it.index, title = it.title, href = "") },
+            chapters = uiState.chapters.map {
+                EpubChapter(
+                    index = it.index,
+                    title = it.title,
+                    href = ""
+                )
+            },
             currentChapterIndex = uiState.currentChapter,
             onNavigateToChapter = { chapterIndex ->
                 viewModel.navigateToChapter(chapterIndex)
