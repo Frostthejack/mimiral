@@ -142,13 +142,16 @@ abstract class MimiralDatabase : RoomDatabase() {
 
         /**
          * Migration from v3 to v4:
-         * - Add kavita_synced column to reading_progress table
+         * - Add `token` and `auth_type` columns to opds_catalogs table
          */
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
-                    "ALTER TABLE `reading_progress` " +
-                        "ADD COLUMN `kavita_synced` INTEGER NOT NULL DEFAULT 0"
+                    "ALTER TABLE `opds_catalogs` ADD COLUMN `token` TEXT"
+                )
+                db.execSQL(
+                    "ALTER TABLE `opds_catalogs` " +
+                        "ADD COLUMN `auth_type` TEXT NOT NULL DEFAULT 'NONE'"
                 )
             }
         }

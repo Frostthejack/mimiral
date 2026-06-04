@@ -15,10 +15,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
-import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.LibraryScreen
-import com.mimiral.app.ui.opds.OpdsCatalogBrowserScreen
+import com.mimiral.app.ui.opds.OpdsCatalogScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
@@ -62,11 +61,10 @@ fun MimiralNavGraph(navController: NavHostController) {
             val route = currentDestination?.route
             if (route == null || (
                 route != Screen.Library.route &&
-                    route != Screen.Discover.route &&
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
                     route != Screen.Settings.route &&
-                    route != Screen.OpdsBrowser.route
+                    route != Screen.OpdsCatalogs.route
                 )
             ) {
                 // Don't show bottom bar
@@ -94,17 +92,18 @@ fun MimiralNavGraph(navController: NavHostController) {
             composable(Screen.AddBooks.route) {
                 AddBooksScreen()
             }
-            composable(Screen.Discover.route) {
-                DiscoverScreen()
-            }
             composable(Screen.NowReading.route) {
                 PlaceholderScreen("Now Reading")
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onNavigateToCatalogs = {
+                        navController.navigate(Screen.OpdsCatalogs.route)
+                    }
+                )
             }
-            composable(Screen.OpdsBrowser.route) {
-                OpdsCatalogBrowserScreen()
+            composable(Screen.OpdsCatalogs.route) {
+                OpdsCatalogScreen()
             }
 
             // Reader routes

@@ -122,6 +122,8 @@ data class OpdsCatalogEntity(
     val url: String,
     val username: String? = null,
     val password: String? = null,
+    val token: String? = null,
+    @ColumnInfo(name = "auth_type") val authType: String = "NONE",
     @ColumnInfo(name = "is_active") val isActive: Boolean = true
 )
 
