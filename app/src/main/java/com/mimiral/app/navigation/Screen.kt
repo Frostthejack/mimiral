@@ -2,6 +2,7 @@ package com.mimiral.app.navigation
 
 sealed class Screen(val route: String) {
     object Library : Screen("library")
+    object FreeSources : Screen("free_sources")
     object AddBooks : Screen("add_books")
     object NowReading : Screen("now_reading")
     object Settings : Screen("settings")

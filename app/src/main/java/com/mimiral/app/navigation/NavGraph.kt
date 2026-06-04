@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.mimiral.app.ui.freesources.FreeSourcesScreen
 import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.LibraryScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
@@ -28,10 +29,6 @@ import com.mimiral.app.ui.settings.SettingsScreen
  * Defaults to PDF reader for unknown formats.
  */
 private fun routeForBook(bookId: Int): String {
-    // Note: This is a synchronous routing decision.
-    // The format is determined by the caller (LibraryScreen) which has
-    // access to BookEntity.format via BookWithProgress.
-    // For dynamic routing, use routeForBookFormat() instead.
     return "pdf_reader/$bookId"
 }
 
@@ -56,10 +53,10 @@ fun MimiralNavGraph(navController: NavHostController) {
 
     Scaffold(
         bottomBar = {
-            // Hide bottom bar on reader screens
             val route = currentDestination?.route
             if (route == null || (
                 route != Screen.Library.route &&
+                    route != Screen.FreeSources.route &&
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
                     route != Screen.Settings.route
@@ -89,6 +86,9 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
             composable(Screen.AddBooks.route) {
                 AddBooksScreen()
+            }
+            composable(Screen.FreeSources.route) {
+                FreeSourcesScreen()
             }
             composable(Screen.NowReading.route) {
                 PlaceholderScreen("Now Reading")
