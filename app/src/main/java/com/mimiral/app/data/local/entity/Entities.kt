@@ -38,7 +38,8 @@ data class ReadingProgressEntity(
     @ColumnInfo(name = "progress_percent") val progressPercent: Float = 0f,
     @ColumnInfo(name = "last_read_position") val lastReadPosition: String? = null,
     @ColumnInfo(name = "last_read_time") val lastReadTime: Long = System.currentTimeMillis(),
-    @ColumnInfo(name = "total_time_read") val totalTimeRead: Long = 0
+    @ColumnInfo(name = "total_time_read") val totalTimeRead: Long = 0,
+    @ColumnInfo(name = "kavita_synced") val kavitaSynced: Boolean = false
 )
 
 @Entity(tableName = "bookmarks")

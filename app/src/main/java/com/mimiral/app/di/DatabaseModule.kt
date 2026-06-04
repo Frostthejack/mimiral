@@ -24,7 +24,8 @@ object DatabaseModule {
         )
             .addMigrations(
                 MimiralDatabase.MIGRATION_1_2,
-                MimiralDatabase.MIGRATION_2_3
+                MimiralDatabase.MIGRATION_2_3,
+                MimiralDatabase.MIGRATION_3_4
             )
             .build()
     }

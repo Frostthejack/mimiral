@@ -42,12 +42,16 @@ data class PdfReaderUiState(
     val cropMargins: MarginCrop = MarginCrop.NONE,
     val showCropSettings: Boolean = false,
     val autoDetecting: Boolean = false,
-    val suggestedCrop: MarginCrop? = null
+    val suggestedCrop: MarginCrop? = null,
+    /** Sync status indicator for Kavita progress sync */
+    val syncStatus: com.mimiral.app.data.remote.SyncStatus =
+        com.mimiral.app.data.remote.SyncStatus.IDLE
 )
 
 @HiltViewModel
 class PdfReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
+    private val kavitaSyncRepository: com.mimiral.app.data.remote.KavitaSyncRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -84,6 +88,7 @@ class PdfReaderViewModel @Inject constructor(
                         cropMargins = cropMargins
                     )
                     loadBookmarks()
+                    autoSyncOnOpen()
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -149,6 +154,7 @@ class PdfReaderViewModel @Inject constructor(
             )
         }
         saveProgress(clamped, total)
+        pushProgressToKavita(clamped)
         clearSelection()
     }
 
@@ -434,5 +440,180 @@ class PdfReaderViewModel @Inject constructor(
                 // Silently fail -- progress save should not disrupt reading
             }
         }
+    }
+
+    // ---- Kavita Sync methods ----
+
+    private fun autoSyncOnOpen() {
+        if (bookId == 0) return
+        viewModelScope.launch {
+            try {
+                _uiState.update {
+                    it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
+                }
+                when (val result = kavitaSyncRepository.pullProgress(bookId)) {
+                    is com.mimiral.app.data.remote.SyncResult.Success -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.SYNCED
+                            )
+                        }
+                    }
+                    is com.mimiral.app.data.remote.SyncResult.NoKavitaBook,
+                    is com.mimiral.app.data.remote.SyncResult.NoServer -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.IDLE
+                            )
+                        }
+                    }
+                    is com.mimiral.app.data.remote.SyncResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.ERROR
+                            )
+                        }
+                    }
+                    is com.mimiral.app.data.remote.SyncResult.Conflict -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.SYNCED
+                            )
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(
+                        syncStatus = com.mimiral.app.data.remote.SyncStatus.ERROR
+                    )
+                }
+            }
+        }
+    }
+
+    private fun pushProgressToKavita(pageNumber: Int) {
+        if (bookId == 0) return
+        viewModelScope.launch {
+            try {
+                _uiState.update {
+                    it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
+                }
+                when (
+                    val result = kavitaSyncRepository.pushProgress(
+                        bookId = bookId,
+                        pageNumber = pageNumber,
+                        chapterIndex = 0
+                    )
+                ) {
+                    is com.mimiral.app.data.remote.SyncResult.Success -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.SYNCED
+                            )
+                        }
+                    }
+                    is com.mimiral.app.data.remote.SyncResult.NoKavitaBook,
+                    is com.mimiral.app.data.remote.SyncResult.NoServer -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.IDLE
+                            )
+                        }
+                    }
+                    is com.mimiral.app.data.remote.SyncResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.ERROR
+                            )
+                        }
+                    }
+                    is com.mimiral.app.data.remote.SyncResult.Conflict -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.SYNCED
+                            )
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(
+                        syncStatus = com.mimiral.app.data.remote.SyncStatus.ERROR
+                    )
+                }
+            }
+        }
+    }
+
+    fun manualSync() {
+        if (bookId == 0) return
+        viewModelScope.launch {
+            try {
+                _uiState.update {
+                    it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
+                }
+                when (
+                    val result = kavitaSyncRepository.syncProgress(
+                        bookId = bookId,
+                        localPageNumber = _uiState.value.currentPage,
+                        localChapterIndex = 0,
+                        localTimestamp = System.currentTimeMillis()
+                    )
+                ) {
+                    is com.mimiral.app.data.remote.SyncResult.Success -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.SYNCED
+                            )
+                        }
+                    }
+                    is com.mimiral.app.data.remote.SyncResult.NoKavitaBook,
+                    is com.mimiral.app.data.remote.SyncResult.NoServer -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.IDLE
+                            )
+                        }
+                    }
+                    is com.mimiral.app.data.remote.SyncResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.ERROR
+                            )
+                        }
+                    }
+                    is com.mimiral.app.data.remote.SyncResult.Conflict -> {
+                        _uiState.update {
+                            it.copy(
+                                syncStatus =
+                                com.mimiral.app.data.remote.SyncStatus.SYNCED
+                            )
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(
+                        syncStatus = com.mimiral.app.data.remote.SyncStatus.ERROR
+                    )
+                }
+            }
+        }
+    }
+
+    fun autoSyncOnClose() {
+        pushProgressToKavita(_uiState.value.currentPage)
     }
 }
