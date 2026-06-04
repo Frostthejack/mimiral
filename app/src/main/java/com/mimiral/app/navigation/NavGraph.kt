@@ -64,7 +64,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
                     route != Screen.Settings.route &&
-                    route != Screen.OpdsCatalogs.route
+                    route != Screen.OpdsCatalog.route
                 )
             ) {
                 // Don't show bottom bar
@@ -96,14 +96,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                 PlaceholderScreen("Now Reading")
             }
             composable(Screen.Settings.route) {
-                SettingsScreen(
-                    onNavigateToCatalogs = {
-                        navController.navigate(Screen.OpdsCatalogs.route)
-                    }
-                )
-            }
-            composable(Screen.OpdsCatalogs.route) {
-                OpdsCatalogScreen()
+                SettingsScreen()
             }
 
             // Reader routes
@@ -147,6 +140,12 @@ fun MimiralNavGraph(navController: NavHostController) {
                 val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
                 TxtRtfReaderScreen(
                     bookId = bookId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.OpdsCatalog.route) {
+                OpdsCatalogScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
