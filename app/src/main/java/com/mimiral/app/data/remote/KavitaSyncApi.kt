@@ -30,4 +30,20 @@ interface KavitaSyncApi {
         @Query("seriesId") seriesId: Int,
         @Query("libraryId") libraryId: Int
     ): Response<KavitaProgressData>
+
+    /**
+     * Authenticate with username and password to receive a JWT token.
+     * POST /api/Auth/login
+     */
+    @POST("api/Auth/login")
+    suspend fun login(
+        @Body request: KavitaLoginRequest
+    ): Response<KavitaLoginResponse>
+
+    /**
+     * Get server info and validate connectivity.
+     * GET /api/Server/info
+     */
+    @GET("api/Server/info")
+    suspend fun getServerInfo(): Response<KavitaServerInfo>
 }

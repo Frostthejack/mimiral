@@ -55,3 +55,42 @@ enum class SyncStatus {
     SYNCED,
     ERROR
 }
+
+/**
+ * Server info response from GET /api/Server/info.
+ * Used for connection validation and status display.
+ */
+data class KavitaServerInfo(
+    @SerializedName("installId") val installId: String? = null,
+    @SerializedName("version") val version: String? = null,
+    @SerializedName("totalLibraries") val totalLibraries: Int = 0,
+    @SerializedName("isDocker") val isDocker: Boolean = false
+)
+
+/**
+ * Login request body for Kavita JWT authentication.
+ * POST /api/Auth/login
+ */
+data class KavitaLoginRequest(
+    @SerializedName("username") val username: String,
+    @SerializedName("password") val password: String
+)
+
+/**
+ * Login response containing the JWT token.
+ */
+data class KavitaLoginResponse(
+    @SerializedName("token") val token: String = "",
+    @SerializedName("refreshToken") val refreshToken: String? = null,
+    @SerializedName("username") val username: String? = null
+)
+
+/**
+ * Represents the connection status for UI display.
+ */
+enum class ConnectionStatus {
+    DISCONNECTED,
+    CONNECTING,
+    CONNECTED,
+    ERROR
+}
