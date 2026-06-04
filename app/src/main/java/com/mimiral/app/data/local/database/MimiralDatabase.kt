@@ -43,7 +43,7 @@ import com.mimiral.app.data.local.entity.TagEntity
         ChapterEntity::class,
         ChapterFtsEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -136,6 +136,22 @@ abstract class MimiralDatabase : RoomDatabase() {
                         "VALUES (new.`id`, new.`book_id`, new.`chapter_index`, " +
                         "new.`title`, new.`content`); " +
                         "END"
+                )
+            }
+        }
+
+        /**
+         * Migration from v3 to v4:
+         * - Add `token` and `auth_type` columns to opds_catalogs table
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `opds_catalogs` ADD COLUMN `token` TEXT"
+                )
+                db.execSQL(
+                    "ALTER TABLE `opds_catalogs` " +
+                        "ADD COLUMN `auth_type` TEXT NOT NULL DEFAULT 'NONE'"
                 )
             }
         }

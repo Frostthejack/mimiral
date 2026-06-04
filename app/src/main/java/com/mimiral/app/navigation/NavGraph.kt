@@ -17,6 +17,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.LibraryScreen
+import com.mimiral.app.ui.opds.OpdsCatalogScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
@@ -62,7 +63,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                 route != Screen.Library.route &&
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
-                    route != Screen.Settings.route
+                    route != Screen.Settings.route &&
+                    route != Screen.OpdsCatalogs.route
                 )
             ) {
                 // Don't show bottom bar
@@ -94,7 +96,14 @@ fun MimiralNavGraph(navController: NavHostController) {
                 PlaceholderScreen("Now Reading")
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onNavigateToCatalogs = {
+                        navController.navigate(Screen.OpdsCatalogs.route)
+                    }
+                )
+            }
+            composable(Screen.OpdsCatalogs.route) {
+                OpdsCatalogScreen()
             }
 
             // Reader routes

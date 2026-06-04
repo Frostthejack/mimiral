@@ -17,4 +17,5 @@ sealed class Screen(val route: String) {
     object TxtRtfReader : Screen("txt_rtf_reader/{bookId}") {
         fun createRoute(bookId: Int): String = "txt_rtf_reader/$bookId"
     }
+    object OpdsCatalogs : Screen("opds_catalogs")
 }
