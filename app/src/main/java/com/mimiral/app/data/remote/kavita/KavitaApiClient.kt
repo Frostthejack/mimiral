@@ -3,13 +3,13 @@ package com.mimiral.app.data.remote.kavita
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 /**
  * HTTP client for Kavita REST API.
