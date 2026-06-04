@@ -5,15 +5,15 @@ import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 /**
  * Base instrumented test class for Mimiral.
@@ -55,7 +55,11 @@ open class MimiralInstrumentedTest {
     @Test
     open fun appLaunchesWithoutCrash() {
         val packageName = appContext.packageName
-        assertEquals("Expected package com.mimiral.app but was $packageName", "com.mimiral.app", packageName)
+        assertEquals(
+            "Expected package com.mimiral.app but was $packageName",
+            "com.mimiral.app",
+            packageName
+        )
         Log.d(TAG, "App launched successfully – package=$packageName")
     }
 

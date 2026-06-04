@@ -33,7 +33,11 @@ fun HighlightableText(
 ) {
     // Build AnnotatedString with highlight spans and TTS sentence highlight applied
     val ttsHighlightColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-    val annotatedText: androidx.compose.ui.text.AnnotatedString = remember(text, highlights, ttsSentence) {
+    val annotatedText: androidx.compose.ui.text.AnnotatedString = remember(
+        text,
+        highlights,
+        ttsSentence
+    ) {
         buildAnnotatedString {
             append(text)
 
