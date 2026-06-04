@@ -18,4 +18,9 @@ sealed class Screen(val route: String) {
     object TxtRtfReader : Screen("txt_rtf_reader/{bookId}") {
         fun createRoute(bookId: Int): String = "txt_rtf_reader/$bookId"
     }
+
+    // Kavita series/volume browsing
+    object KavitaSeries : Screen("kavita_series/{seriesId}") {
+        fun createRoute(seriesId: Int): String = "kavita_series/$seriesId"
+    }
 }

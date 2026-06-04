@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.mimiral.app.ui.discover.DiscoverScreen
+import com.mimiral.app.ui.discover.KavitaSeriesScreen
 import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.LibraryScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
@@ -144,6 +145,18 @@ fun MimiralNavGraph(navController: NavHostController) {
                 TxtRtfReaderScreen(
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // Kavita series/volume browsing
+            composable(
+                route = Screen.KavitaSeries.route,
+                arguments = listOf(navArgument("seriesId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val seriesId = backStackEntry.arguments?.getInt("seriesId") ?: return@composable
+                KavitaSeriesScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onChapterClick = { _, _, _ -> /* TODO: Navigate to Kavita reader */ }
                 )
             }
         }
