@@ -34,7 +34,9 @@ fun BottomNavBar(
 ) {
     NavigationBar {
         bottomNavItems.forEach { item ->
-            val selected = currentDestination?.hierarchy?.any { it.route == item.screen.route } == true
+            val selected = currentDestination?.hierarchy?.any {
+                it.route == item.screen.route
+            } == true
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = item.label) },
                 label = { Text(item.label) },
