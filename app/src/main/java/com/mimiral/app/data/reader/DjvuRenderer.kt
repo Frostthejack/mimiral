@@ -240,7 +240,7 @@ class DjvuRenderer : AutoCloseable {
     /**
      * Render a page to a bitmap at the specified width, preserving aspect ratio.
      */
-    fun renderPage(pageIndex: Int, targetWidth: Int): Bitmap? {
+    fun renderPageByWidth(pageIndex: Int, targetWidth: Int): Bitmap? {
         if (!_isOpen || pageIndex < 0 || pageIndex >= _pageCount) return null
         val dims = getPageSize(pageIndex) ?: return null
         val aspectRatio = dims.second.toFloat() / dims.first.toFloat()
@@ -251,7 +251,7 @@ class DjvuRenderer : AutoCloseable {
     /**
      * Render a page to a bitmap at the specified DPI.
      */
-    fun renderPage(pageIndex: Int, dpi: Int = 160): Bitmap? {
+    fun renderPageAtDpi(pageIndex: Int, dpi: Int = 160): Bitmap? {
         val dims = getPageSize(pageIndex) ?: return null
         val width = (dims.first * dpi / 72f).toInt().coerceAtLeast(1)
         val height = (dims.second * dpi / 72f).toInt().coerceAtLeast(1)
@@ -271,8 +271,8 @@ class DjvuRenderer : AutoCloseable {
             return@withContext DjvuPageText("", false, pageIndex, 0, 0)
         }
 
-        val file = openedFilePath?.let { File(it) } ?: return@withContext
-        DjvuPageText("", false, pageIndex, 0, 0)
+        val file = openedFilePath?.let { File(it) }
+            ?: return@withContext DjvuPageText("", false, pageIndex, 0, 0)
 
         try {
             val bytes = file.readBytes()

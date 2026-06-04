@@ -127,7 +127,7 @@ class RtfParser {
             val parsed = extractText(rawText)
             val plainText = parsed.text
             val chapterBreaks = detectChapterBreaks(plainText)
-            val title = extractTitle(plainText, baseName)
+            val title = extractTitle(plainText, fileName)
 
             RtfParseResult.Success(plainText, title, "", plainText.length, chapterBreaks)
         } catch (e: Exception) {
@@ -296,7 +296,7 @@ class RtfParser {
                         i++
                     }
                     if (i > start) {
-                        tokens.add(RtfToken.Text(source.substring(start, i)))
+                        tokens.add(RtfToken.RtfText(source.substring(start, i)))
                     }
                 }
                 else -> i++ // Skip CR/LF
@@ -308,7 +308,7 @@ class RtfParser {
     /**
      * Parse RTF tokens and extract text.
      */
-    private fun parseTokens(tokens: List<RtfToken>, source: String): Text {
+    private fun parseTokens(tokens: List<RtfToken>, source: String): RtfText {
         val sb = StringBuilder()
         var i = 0
         var groupDepth = 0
@@ -383,7 +383,7 @@ class RtfParser {
                         "object" -> { skipDepth = groupDepth; inObject = true }
                         "stylesheet" -> skipDepth = groupDepth
                         "info" -> skipDepth = groupDepth
-                        "*\跳过*" -> skipDepth = groupDepth // Unknown \* groups with skipping
+                        "*\\*" -> skipDepth = groupDepth // Unknown \* groups with skipping
                         "*" -> {
                             // Check if next token is a control word we should skip
                             if (i + 1 < tokens.size && tokens[i + 1] is RtfToken.ControlWord) {
@@ -413,7 +413,7 @@ class RtfParser {
                         while (skipCount > 0 && i < tokens.size) {
                             val next = tokens[i]
                             when (next) {
-                                is RtfToken.Text -> i++
+                                is RtfToken.RtfText -> i++
                                 is RtfToken.ControlSymbol -> i++
                                 else -> skipCount = 0
                             }
@@ -435,7 +435,7 @@ class RtfParser {
                     }
                     i++
                 }
-                is RtfToken.Text -> {
+                is RtfToken.RtfText -> {
                     if (skipDepth < 0 || groupDepth < skipDepth) {
                         sb.append(token.text)
                     }

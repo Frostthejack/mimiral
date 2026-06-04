@@ -13,13 +13,44 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -140,7 +171,10 @@ fun PdfReaderScreen(
 
     // Auto-detect margins on first load (for scanned PDFs)
     LaunchedEffect(pdfRenderer, uiState.cropMargins) {
-        if (pdfRenderer != null && pdfRenderer.isOpen && uiState.cropMargins == MarginCrop.NONE && uiState.suggestedCrop == null) {
+        if (pdfRenderer != null && pdfRenderer.isOpen &&
+            uiState.cropMargins == MarginCrop.NONE &&
+            uiState.suggestedCrop == null
+        ) {
             viewModel.setAutoDetecting(true)
             try {
                 val detected = withContext(Dispatchers.Default) {
@@ -418,8 +452,14 @@ private fun PdfPageView(
                                                     isActive = true,
                                                     pageIndex = currentPage,
                                                     selectedText = "",
-                                                    startHandlePosition = PointF(offset.x, offset.y),
-                                                    endHandlePosition = PointF(offset.x, offset.y)
+                                                    startHandlePosition = PointF(
+                                                        offset.x,
+                                                        offset.y
+                                                    ),
+                                                    endHandlePosition = PointF(
+                                                        offset.x,
+                                                        offset.y
+                                                    )
                                                 )
                                             )
                                             onShowSelectionMenu()
@@ -640,7 +680,11 @@ private fun TopReaderBar(
 
             IconButton(onClick = onBookmarkClick) {
                 Icon(
-                    imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    imageVector = if (isBookmarked) {
+                        Icons.Default.Bookmark
+                    } else {
+                        Icons.Default.BookmarkBorder
+                    },
                     contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
                     tint = if (isBookmarked) Color(0xFFFFD700) else Color.White
                 )
@@ -940,14 +984,18 @@ private fun CropSettingsPanel(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Reset crop")
+                Text(
+                    text = "Reset crop",
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             // Info text
             Text(
-                text = "Crop removes white borders from PDF pages for better reading on small screens. 0% = no cropping.",
+                text = "Crop removes white borders from PDF pages " +
+                    "for better reading on small screens. 0% = no cropping.",
                 color = Color.White.copy(alpha = 0.5f),
                 fontSize = 11.sp,
                 lineHeight = 16.sp

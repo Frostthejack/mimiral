@@ -1,10 +1,31 @@
 package com.mimiral.app.data.local.database
 
-import androidx.room.*
+import androidx.room.Database
+import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.mimiral.app.data.local.dao.*
-import com.mimiral.app.data.local.entity.*
+import com.mimiral.app.data.local.dao.BookDao
+import com.mimiral.app.data.local.dao.BookmarkDao
+import com.mimiral.app.data.local.dao.ChapterDao
+import com.mimiral.app.data.local.dao.CollectionDao
+import com.mimiral.app.data.local.dao.HighlightDao
+import com.mimiral.app.data.local.dao.OpdsCatalogDao
+import com.mimiral.app.data.local.dao.PdfSettingsDao
+import com.mimiral.app.data.local.dao.ReadingProgressDao
+import com.mimiral.app.data.local.dao.ServerDao
+import com.mimiral.app.data.local.entity.BookCollectionCrossRef
+import com.mimiral.app.data.local.entity.BookEntity
+import com.mimiral.app.data.local.entity.BookTagCrossRef
+import com.mimiral.app.data.local.entity.BookmarkEntity
+import com.mimiral.app.data.local.entity.ChapterEntity
+import com.mimiral.app.data.local.entity.ChapterFtsEntity
+import com.mimiral.app.data.local.entity.CollectionEntity
+import com.mimiral.app.data.local.entity.HighlightEntity
+import com.mimiral.app.data.local.entity.OpdsCatalogEntity
+import com.mimiral.app.data.local.entity.PdfSettingsEntity
+import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.entity.ServerEntity
+import com.mimiral.app.data.local.entity.TagEntity
 
 @Database(
     entities = [
@@ -82,27 +103,38 @@ abstract class MimiralDatabase : RoomDatabase() {
 
                 // Trigger: after insert on chapters, update FTS index
                 db.execSQL(
-                    "CREATE TRIGGER IF NOT EXISTS `chapters_ai` AFTER INSERT ON `chapters` BEGIN " +
-                        "INSERT INTO `chapters_fts`(`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
-                        "VALUES (new.`id`, new.`book_id`, new.`chapter_index`, new.`title`, new.`content`); " +
+                    "CREATE TRIGGER IF NOT EXISTS `chapters_ai` " +
+                        "AFTER INSERT ON `chapters` BEGIN " +
+                        "INSERT INTO `chapters_fts`(" +
+                        "`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
+                        "VALUES (new.`id`, new.`book_id`, new.`chapter_index`, " +
+                        "new.`title`, new.`content`); " +
                         "END"
                 )
 
                 // Trigger: after delete on chapters, remove from FTS index
                 db.execSQL(
-                    "CREATE TRIGGER IF NOT EXISTS `chapters_ad` AFTER DELETE ON `chapters` BEGIN " +
-                        "INSERT INTO `chapters_fts`(`chapters_fts`, `rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
-                        "VALUES('delete', old.`id`, old.`book_id`, old.`chapter_index`, old.`title`, old.`content`); " +
+                    "CREATE TRIGGER IF NOT EXISTS `chapters_ad` " +
+                        "AFTER DELETE ON `chapters` BEGIN " +
+                        "INSERT INTO `chapters_fts`(`chapters_fts`, " +
+                        "`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
+                        "VALUES('delete', old.`id`, old.`book_id`, " +
+                        "old.`chapter_index`, old.`title`, old.`content`); " +
                         "END"
                 )
 
                 // Trigger: after update on chapters, update FTS index
                 db.execSQL(
-                    "CREATE TRIGGER IF NOT EXISTS `chapters_au` AFTER UPDATE ON `chapters` BEGIN " +
-                        "INSERT INTO `chapters_fts`(`chapters_fts`, `rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
-                        "VALUES('delete', old.`id`, old.`book_id`, old.`chapter_index`, old.`title`, old.`content`); " +
-                        "INSERT INTO `chapters_fts`(`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
-                        "VALUES (new.`id`, new.`book_id`, new.`chapter_index`, new.`title`, new.`content`); " +
+                    "CREATE TRIGGER IF NOT EXISTS `chapters_au` " +
+                        "AFTER UPDATE ON `chapters` BEGIN " +
+                        "INSERT INTO `chapters_fts`(`chapters_fts`, " +
+                        "`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
+                        "VALUES('delete', old.`id`, old.`book_id`, " +
+                        "old.`chapter_index`, old.`title`, old.`content`); " +
+                        "INSERT INTO `chapters_fts`(" +
+                        "`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
+                        "VALUES (new.`id`, new.`book_id`, new.`chapter_index`, " +
+                        "new.`title`, new.`content`); " +
                         "END"
                 )
             }

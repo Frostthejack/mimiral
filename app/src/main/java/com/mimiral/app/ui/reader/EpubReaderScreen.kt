@@ -58,6 +58,28 @@ import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.tts.TTSService
 import kotlin.math.abs
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Switch
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import com.mimiral.app.ui.reader.TextSettings
+import com.mimiral.app.ui.reader.toRenderConfig
+import com.mimiral.app.ui.reader.PaginationEngine
+import com.mimiral.app.ui.reader.PaginationResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -40,6 +40,26 @@ import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.reader.DjvuRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.ContentScale
+import java.io.File
+import kotlin.math.roundToInt
+import com.mimiral.app.ui.reader.BottomReaderControls
+import com.mimiral.app.ui.reader.PageIndicator
 
 /**
  * DJVU Reader screen with page-by-page bitmap rendering, text layer display,

@@ -25,10 +25,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.FitPage
-import androidx.compose.material.icons.filled.FitWidth
-import androidx.compose.material.icons.filled.Pages
-import androidx.compose.material.icons.filled.SinglePage
+import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.CropLandscape
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -185,7 +185,7 @@ fun ComicReaderScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
-                        Icons.Default.FitPage,
+                        Icons.Default.Crop,
                         contentDescription = null,
                         tint = Color.Red,
                         modifier = Modifier.size(48.dp)
@@ -566,7 +566,7 @@ private fun ComicTopBar(
         ) {
             IconButton(onClick = onBackClick) {
                 Icon(
-                    Icons.Default.FitPage, // Reusing icon; actual back arrow
+                    Icons.Default.Crop, // Reusing icon; actual back arrow
                     contentDescription = "Back",
                     tint = Color.White
                 )
@@ -589,7 +589,7 @@ private fun ComicTopBar(
 
             IconButton(onClick = onToggleSpread) {
                 Icon(
-                    if (isTwoPageSpread) Icons.Default.Pages else Icons.Default.SinglePage,
+                    if (isTwoPageSpread) Icons.Default.MenuBook else Icons.Default.Description,
                     contentDescription = if (isTwoPageSpread) "Single page" else "Two-page spread",
                     tint = if (isTwoPageSpread) MaterialTheme.colorScheme.primary else Color.White
                 )
@@ -597,7 +597,7 @@ private fun ComicTopBar(
 
             IconButton(onClick = onFitModeToggle) {
                 Icon(
-                    if (isFitHeight) Icons.Default.FitPage else Icons.Default.FitWidth,
+                    if (isFitHeight) Icons.Default.Crop else Icons.Default.CropLandscape,
                     contentDescription = "Toggle fit mode",
                     tint = Color.White
                 )
@@ -627,7 +627,7 @@ private fun ComicTopBar(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun PageIndicator(
+fun PageIndicator(
     currentPage: Int,
     totalPages: Int,
     modifier: Modifier = Modifier
@@ -653,7 +653,7 @@ private fun PageIndicator(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun BottomReaderControls(
+fun BottomReaderControls(
     currentPage: Int,
     totalPages: Int,
     progressPercent: Float,
@@ -687,7 +687,7 @@ private fun BottomReaderControls(
                 enabled = currentPage > 0
             ) {
                 Icon(
-                    Icons.Default.FitPage,
+                    Icons.Default.Crop,
                     contentDescription = "Previous page",
                     tint = if (currentPage > 0) Color.White else Color.White.copy(alpha = 0.3f)
                 )
@@ -711,7 +711,7 @@ private fun BottomReaderControls(
                 enabled = currentPage < totalPages - 1
             ) {
                 Icon(
-                    Icons.Default.FitPage,
+                    Icons.Default.Crop,
                     contentDescription = "Next page",
                     tint = if (currentPage < totalPages - 1) {
                         Color.White
@@ -728,18 +728,3 @@ private fun BottomReaderControls(
 
 // Re-export placeholder for compilation - the actual BottomReaderControls
 // is defined privately in PdfReaderScreen. This is our own private copy.
-@Composable
-private fun BookmarkListDialog(
-    bookmarks: List<com.mimiral.app.data.local.entity.BookmarkEntity>,
-    onNavigateToBookmark: (com.mimiral.app.data.local.entity.BookmarkEntity) -> Unit,
-    onDeleteBookmark: (com.mimiral.app.data.local.entity.BookmarkEntity) -> Unit,
-    onDismiss: () -> Unit
-) {
-    // Delegate to the existing implementation in BookmarkListDialog.kt
-    com.mimiral.app.ui.reader.BookmarkListDialog(
-        bookmarks = bookmarks,
-        onNavigateToBookmark = onNavigateToBookmark,
-        onDeleteBookmark = onDeleteBookmark,
-        onDismiss = onDismiss
-    )
-}
