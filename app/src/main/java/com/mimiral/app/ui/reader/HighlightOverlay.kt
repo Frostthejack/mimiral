@@ -5,6 +5,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -28,7 +32,8 @@ fun HighlightableText(
     modifier: Modifier = Modifier
 ) {
     // Build AnnotatedString with highlight spans and TTS sentence highlight applied
-    val annotatedText = remember(text, highlights, ttsSentence) {
+    val ttsHighlightColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+    val annotatedText: androidx.compose.ui.text.AnnotatedString = remember(text, highlights, ttsSentence) {
         buildAnnotatedString {
             append(text)
 
@@ -56,11 +61,7 @@ fun HighlightableText(
                 val sentenceEnd = ttsSentence.end.coerceIn(0, text.length)
                 if (sentenceStart < sentenceEnd) {
                     addStyle(
-                        SpanStyle(
-                            background = MaterialTheme.colorScheme.secondaryContainer.copy(
-                                alpha = 0.5f
-                            )
-                        ),
+                        SpanStyle(background = ttsHighlightColor),
                         sentenceStart,
                         sentenceEnd
                     )
