@@ -1,31 +1,44 @@
 package com.mimiral.app.data.remote.opds
 
+import android.util.Log
 import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 
 /**
- * Repository for managing OPDS catalogs and fetching/parsing OPDS feeds.
+ * Repository for OPDS catalog operations.
  *
- * Uses OkHttp (already in the dependency tree) for HTTP requests.
+ * Combines the OPDS HTTP client and parser to provide:
+ * - Fetching and parsing OPDS feeds from remote catalogs
+ * - Managing saved OPDS catalogs (CRUD)
+ * - Browsing catalog entries and downloading books
  */
 @Singleton
 class OpdsRepository @Inject constructor(
-    private val opdsCatalogDao: OpdsCatalogDao,
-    private val httpClient: OpdsHttpClient
+    private val client: OpdsClient,
+    private val parser: OpdsParser,
+    private val catalogDao: OpdsCatalogDao
 ) {
+    companion object {
+        private const val TAG = "OpdsRepository"
+    }
 
     /**
-     * Returns all active OPDS catalogs from the local database.
+     * Get all saved OPDS catalogs as a Flow.
      */
-    fun getActiveCatalogs(): Flow<List<OpdsCatalogEntity>> =
-        opdsCatalogDao.getActiveCatalogs()
+    fun getSavedCatalogs(): Flow<List<OpdsCatalogEntity>> =
+        catalogDao.getActiveCatalogs()
 
     /**
-     * Adds a new OPDS catalog.
+     * Add a new OPDS catalog.
+     *
+     * @param name Display name for the catalog
+     * @param url The OPDS feed URL
+     * @param username Optional username for HTTP Basic auth
+     * @param password Optional password for HTTP Basic auth
+     * @return The ID of the newly inserted catalog, or -1 on failure
      */
     suspend fun addCatalog(
         name: String,
@@ -40,45 +53,125 @@ class OpdsRepository @Inject constructor(
             password = password,
             isActive = true
         )
-        return opdsCatalogDao.insertCatalog(entity)
+        return catalogDao.insertCatalog(entity)
     }
 
     /**
-     * Removes an OPDS catalog.
+     * Remove an OPDS catalog.
      */
     suspend fun removeCatalog(catalog: OpdsCatalogEntity) {
-        opdsCatalogDao.deleteCatalog(catalog)
+        catalogDao.deleteCatalog(catalog)
     }
 
     /**
-     * Fetches and parses the main feed for a catalog.
+     * Fetch and parse an OPDS feed from a saved catalog.
+     *
+     * @param catalog The saved catalog entity
+     * @return [OpdsResult] containing the parsed [OpdsFeed]
      */
-    suspend fun fetchCatalogFeed(catalog: OpdsCatalogEntity): Result<OpdsFeed> {
-        return httpClient.fetchFeed(catalog.url, catalog.username, catalog.password)
+    suspend fun browseCatalog(
+        catalog: OpdsCatalogEntity
+    ): OpdsResult<OpdsFeed> {
+        Log.d(TAG, "Browsing catalog: ${catalog.name} at ${catalog.url}")
+        return client.fetchAndParseFeed(
+            url = catalog.url,
+            username = catalog.username,
+            password = catalog.password,
+            parser = parser
+        )
     }
 
     /**
-     * Fetches and parses an OPDS feed from a URL.
+     * Fetch and parse an OPDS feed from a URL.
+     *
+     * @param url The OPDS feed URL
+     * @param username Optional username for HTTP Basic auth
+     * @param password Optional password for HTTP Basic auth
+     * @return [OpdsResult] containing the parsed [OpdsFeed]
      */
-    suspend fun fetchFeed(
+    suspend fun browseFeed(
         url: String,
         username: String? = null,
         password: String? = null
-    ): Result<OpdsFeed> {
-        return httpClient.fetchFeed(url, username, password)
+    ): OpdsResult<OpdsFeed> {
+        Log.d(TAG, "Browsing OPDS feed: $url")
+        return client.fetchAndParseFeed(
+            url = url,
+            username = username,
+            password = password,
+            parser = parser
+        )
     }
 
     /**
-     * Fetches the OpenSearch description document from a catalog's search URL.
+     * Navigate to a sub-catalog or next page via a navigation link.
+     *
+     * @param link The navigation link from a feed or entry
+     * @param username Optional username for HTTP Basic auth
+     * @param password Optional password for HTTP Basic auth
+     * @return [OpdsResult] containing the parsed [OpdsFeed]
      */
-    suspend fun fetchOpenSearchDescription(
-        catalog: OpdsCatalogEntity
-    ): Result<OpenSearchDescription> {
-        val feedResult = fetchCatalogFeed(catalog)
-        return feedResult.map { feed ->
-            val searchUrl = feed.searchUrl
-                ?: throw IllegalStateException("Catalog does not support OpenSearch")
-            httpClient.fetchOpenSearchDescription(searchUrl, catalog.username, catalog.password)
+    suspend fun navigateToLink(
+        link: OpdsLink,
+        username: String? = null,
+        password: String? = null
+    ): OpdsResult<OpdsFeed> {
+        Log.d(TAG, "Navigating to: ${link.href}")
+        return browseFeed(link.href, username, password)
+    }
+
+    /**
+     * Download a book from an OPDS acquisition link.
+     *
+     * @param link The acquisition link from an entry
+     * @param username Optional username for HTTP Basic auth
+     * @param password Optional password for HTTP Basic auth
+     * @return [OpdsResult] containing the raw book bytes
+     */
+    suspend fun downloadBook(
+        link: OpdsLink,
+        username: String? = null,
+        password: String? = null
+    ): OpdsResult<ByteArray> {
+        Log.d(TAG, "Downloading book from: ${link.href}")
+        return client.downloadBook(link.href, username, password)
+    }
+
+    /**
+     * Search within an OPDS catalog using the OpenSearch URL template.
+     *
+     * @param catalog The OPDS catalog
+     * @param query The search query
+     * @return [OpdsResult] containing the parsed search results [OpdsFeed]
+     */
+    suspend fun searchCatalog(
+        catalog: OpdsCatalogEntity,
+        query: String
+    ): OpdsResult<OpdsFeed> {
+        // First browse the catalog to find the OpenSearch URL template
+        val feedResult = browseCatalog(catalog)
+        if (feedResult is OpdsResult.Error) return feedResult
+
+        val feed = (feedResult as OpdsResult.Success).data
+        val searchLink = feed.links.firstOrNull {
+            it.rel == "search" && it.type?.contains("opensearchdescription") == true ||
+                it.rel == "search"
         }
+
+        if (searchLink == null) {
+            return OpdsResult.Error("No search endpoint found in catalog")
+        }
+
+        // Extract the actual search URL from the link
+        // OPDS search links may use OpenSearch URL templates with {searchTerms}
+        val searchUrl = searchLink.href.replace("{searchTerms}", query)
+            .replace("{count}", "20")
+            .replace("{startIndex}", "0")
+            .replace("{startPage}", "0")
+            .replace("{language}", "*")
+            .replace("{inputEncoding}", "UTF-8")
+            .replace("{outputEncoding}", "UTF-8")
+
+        return browseFeed(searchUrl, catalog.username, catalog.password)
     }
 }

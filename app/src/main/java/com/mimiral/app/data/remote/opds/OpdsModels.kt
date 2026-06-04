@@ -1,171 +1,153 @@
 package com.mimiral.app.data.remote.opds
 
 /**
- * Represents a parsed OPDS feed (Atom-based catalog).
+ * OPDS 1.2 Atom feed representation.
+ * Top-level catalog feed containing entries and navigation links.
  */
 data class OpdsFeed(
-    val id: String = "",
-    val title: String = "",
-    val subtitle: String = "",
-    val updated: String = "",
+    val id: String,
+    val title: String,
+    val subtitle: String? = null,
+    val updated: String? = null,
     val icon: String? = null,
-    val author: OpdsAuthor? = null,
     val entries: List<OpdsEntry> = emptyList(),
     val links: List<OpdsLink> = emptyList(),
-    val searchUrl: String? = null,
-    val totalResults: Int? = null,
-    val itemsPerPage: Int? = null,
-    val startIndex: Int? = null
+    val navigationLinks: List<OpdsLink> = emptyList()
 )
 
 /**
- * Represents a single entry in an OPDS feed (a book or navigation link).
+ * A single entry in an OPDS catalog feed.
+ * Represents either a book (acquisition entry) or a sub-catalog (navigation entry).
  */
 data class OpdsEntry(
-    val id: String = "",
-    val title: String = "",
-    val summary: String = "",
-    val content: String = "",
-    val updated: String = "",
-    val published: String = "",
+    val id: String,
+    val title: String,
+    val summary: String? = null,
+    val content: String? = null,
+    val updated: String? = null,
+    val published: String? = null,
     val authors: List<OpdsAuthor> = emptyList(),
+    val categories: List<OpdsCategory> = emptyList(),
     val links: List<OpdsLink> = emptyList(),
-    val categories: List<String> = emptyList(),
-    val language: String? = null,
-    val issued: String? = null,
-    val publisher: String? = null
+    val dcSubjects: List<String> = emptyList(),
+    val dcPublisher: String? = null,
+    val dcIssued: String? = null,
+    val dcLanguage: String? = null,
+    val dctermsExtent: String? = null
 ) {
     /**
-     * Returns acquisition links (links to download the actual book file).
+     * Returns true if this entry has acquisition links (i.e., it's a downloadable book).
+     */
+    val isAcquisition: Boolean
+        get() = links.any { it.isAcquisition }
+
+    /**
+     * Returns the thumbnail image URL if available.
+     */
+    val thumbnailUrl: String?
+        get() = links.firstOrNull { it.isThumbnail }?.href
+
+    /**
+     * Returns the cover image URL if available.
+     */
+    val coverUrl: String?
+        get() = links.firstOrNull { it.isCover }?.href
+
+    /**
+     * Returns all acquisition (download) links grouped by MIME type.
      */
     val acquisitionLinks: List<OpdsLink>
         get() = links.filter { it.isAcquisition }
 
     /**
-     * Returns the thumbnail image link.
+     * Returns the first acquisition link with the best available format.
+     * Preference order: EPUB, PDF, other supported formats.
      */
-    val thumbnailLink: OpdsLink?
-        get() = links.find { it.isThumbnail }
-            ?: links.find { it.rel.contains("thumbnail", ignoreCase = true) }
-
-    /**
-     * Returns the cover image link.
-     */
-    val coverLink: OpdsLink?
-        get() = links.find { it.isCover }
-            ?: links.find { it.rel.contains("cover", ignoreCase = true) }
-
-    /**
-     * Returns the file extension from the first acquisition link, or null.
-     */
-    val fileExtension: String?
-        get() = acquisitionLinks.firstOrNull()?.let { link ->
-            val href = link.href.substringBefore("?")
-            val ext = href.substringAfterLast('.', "").lowercase()
-            if (ext in SUPPORTED_EXTENSIONS) ext else null
+    val preferredAcquisitionLink: OpdsLink?
+        get() {
+            val acquisitions = acquisitionLinks
+            if (acquisitions.isEmpty()) return null
+            // Prefer EPUB, then PDF, then first available
+            return acquisitions.firstOrNull {
+                it.type?.contains("epub", ignoreCase = true) == true
+            } ?: acquisitions.firstOrNull {
+                it.type?.contains("pdf", ignoreCase = true) == true
+            } ?: acquisitions.first()
         }
-
-    companion object {
-        private val SUPPORTED_EXTENSIONS = setOf(
-            "epub", "pdf", "mobi", "azw3", "fb2", "djvu",
-            "cbz", "cbr", "txt", "rtf", "doc", "docx", "md"
-        )
-    }
 }
 
 /**
- * Represents a link in an OPDS feed entry.
- */
-data class OpdsLink(
-    val href: String = "",
-    val rel: String = "",
-    val type: String = "",
-    val title: String? = null,
-    val hreflang: String? = null,
-    val length: String? = null
-) {
-    val isAcquisition: Boolean
-        get() = rel == "http://opds-spec.org/acquisition" ||
-            rel == "http://opds-spec.org/acquisition/open-access" ||
-            rel.startsWith("http://opds-spec.org/acquisition/")
-
-    val isThumbnail: Boolean
-        get() = rel == "http://opds-spec.org/image/thumbnail" ||
-            rel == "thumbnail"
-
-    val isCover: Boolean
-        get() = rel == "http://opds-spec.org/image" ||
-            rel == "cover"
-
-    val isNavigation: Boolean
-        get() = rel == "subsection" || type == "application/atom+xml"
-
-    val isSearch: Boolean
-        get() = type == "application/opensearchdescription+xml"
-
-    val isOpdsFeed: Boolean
-        get() = type == "application/atom+xml;profile=opds-catalog" ||
-            type == "application/atom+xml"
-}
-
-/**
- * Represents an author in an OPDS feed.
+ * Author information for an OPDS entry.
  */
 data class OpdsAuthor(
-    val name: String = "",
+    val name: String,
     val uri: String? = null
 )
 
 /**
- * Represents an OpenSearch 1.1 description document.
+ * Link element in OPDS/Atom feed.
+ * Follows OPDS 1.2 link relation conventions.
  */
-data class OpenSearchDescription(
-    val shortName: String = "",
-    val description: String = "",
-    val tags: String = "",
-    val contact: String? = null,
-    val urls: List<OpenSearchUrl> = emptyList(),
-    val queries: List<OpenSearchQuery> = emptyList(),
-    val developer: String? = null,
-    val attribution: String = "",
-    val syndicationRight: String = "open",
-    val adultContent: Boolean = false,
-    val language: String = "*",
-    val outputEncoding: String = "UTF-8",
-    val inputEncoding: String = "UTF-8"
+data class OpdsLink(
+    val href: String,
+    val rel: String? = null,
+    val type: String? = null,
+    val title: String? = null,
+    val properties: Map<String, String> = emptyMap()
 ) {
-    /**
-     * Returns the search URL template for the given type, or null if not found.
-     */
-    fun getSearchUrl(type: String = "application/atom+xml"): String? {
-        return urls.find { it.type == type }?.template
-            ?: urls.firstOrNull()?.template
+    /** Link relation constants from OPDS spec and Atom. */
+    companion object {
+        const val REL_SELF = "self"
+        const val REL_START = "start"
+        const val REL_UP = "up"
+        const val REL_NEXT = "next"
+        const val REL_PREVIOUS = "previous"
+        const val REL_FIRST = "first"
+        const val REL_LAST = "last"
+        const val REL_SUBSECTION = "subsection"
+        const val REL_RELATED = "related"
+        const val REL_THUMBNAIL = "http://opds-spec.org/image/thumbnail"
+        const val REL_COVER = "http://opds-spec.org/image"
+        const val REL_ACQUISITION_PREFIX = "http://opds-spec.org/acquisition"
+        const val REL_OPEN_ACCESS = "http://opds-spec.org/acquisition/open-access"
+        const val REL_BORROW = "http://opds-spec.org/acquisition/borrow"
+        const val REL_BUY = "http://opds-spec.org/acquisition/buy"
+        const val REL_SAMPLE = "http://opds-spec.org/acquisition/sample"
     }
+
+    val isThumbnail: Boolean
+        get() = rel == REL_THUMBNAIL
+
+    val isCover: Boolean
+        get() = rel == REL_COVER
+
+    val isAcquisition: Boolean
+        get() = rel != null && rel.startsWith(REL_ACQUISITION_PREFIX)
+
+    val isOpenAccess: Boolean
+        get() = rel == REL_OPEN_ACCESS
+
+    val isNavigation: Boolean
+        get() = type?.contains("application/atom+xml") == true ||
+            type?.contains("application/opds+json") == true
 }
 
 /**
- * Represents a URL in an OpenSearch description.
+ * Dublin Core / DCMI metadata category.
  */
-data class OpenSearchUrl(
-    val type: String = "",
-    val template: String = "",
-    val rel: String = "results",
-    val indexOffset: Int = 1,
-    val pageOffset: Int = 1
+data class OpdsCategory(
+    val term: String,
+    val scheme: String? = null,
+    val label: String? = null
 )
 
 /**
- * Represents a query in an OpenSearch description.
+ * OPDS feed level constants.
  */
-data class OpenSearchQuery(
-    val role: String = "",
-    val title: String? = null,
-    val totalResults: Int? = null,
-    val searchTerms: String? = null,
-    val count: Int? = null,
-    val startIndex: Int? = null,
-    val startPage: Int? = null,
-    val language: String? = null,
-    val inputEncoding: String? = null,
-    val outputEncoding: String? = null
-)
+object OpdsConstants {
+    const val ATOM_NAMESPACE = "http://www.w3.org/2005/Atom"
+    const val DC_NAMESPACE = "http://purl.org/dc/elements/1.1/"
+    const val DCTERMS_NAMESPACE = "http://purl.org/dc/terms/"
+    const val OP_DS_NAMESPACE = "http://opds-spec.org/2010/catalog"
+    const val THUMB_NS = "http://opds-spec.org/image/thumbnail"
+}
