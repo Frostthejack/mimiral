@@ -414,7 +414,7 @@ fun TxtRtfReaderScreen(
 
     if (uiState.showToc) {
         TableOfContentsDialog(
-            chapters = uiState.chapters.map { EpubChapter(index = it.index, title = it.title, href = "") },
+            chapters = uiState.chapters.map { chapter: TxtRtfChapter -> EpubChapter(index = chapter.index, title = chapter.title, href = "") },
             currentChapterIndex = uiState.currentChapter,
             onNavigateToChapter = { chapterIndex ->
                 viewModel.navigateToChapter(chapterIndex)
