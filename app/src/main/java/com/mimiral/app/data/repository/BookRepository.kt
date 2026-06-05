@@ -34,6 +34,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 
@@ -529,77 +530,65 @@ class BookRepository @Inject constructor(
         endTime: Long,
         pagesRead: Int
     ) {
-        val durationSeconds = (endTime - startTime) / 1000
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val date = dateFormat.format(Date(startTime))
+        val durationMs = endTime - startTime
+        val sessionDate = java.time.LocalDate.now().toEpochDay()
         val session = ReadingSessionEntity(
             bookId = bookId,
-            startTime = startTime,
-            endTime = endTime,
-            durationSeconds = durationSeconds,
-            pagesRead = pagesRead,
-            date = date
+            sessionDate = sessionDate,
+            durationMs = durationMs,
+            pagesRead = pagesRead
         )
         readingSessionDao.insertSession(session)
     }
 
     suspend fun getPagesReadToday(): Int {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val today = dateFormat.format(Date())
-        return readingSessionDao.getTotalPagesReadBetween(today, today) ?: 0
+        val todayEpochDay = java.time.LocalDate.now().toEpochDay()
+        return readingSessionDao.getTotalPagesForDay(todayEpochDay)
     }
 
     suspend fun getPagesReadThisWeek(): Int {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val cal = java.util.Calendar.getInstance()
-        cal.add(java.util.Calendar.DAY_OF_YEAR, -7)
-        val weekAgo = dateFormat.format(cal.time)
-        val today = dateFormat.format(Date())
-        return readingSessionDao.getTotalPagesReadBetween(weekAgo, today) ?: 0
+        val today = java.time.LocalDate.now()
+        val weekStart = today.minusDays(6).toEpochDay()
+        val todayEpochDay = today.toEpochDay()
+        return readingSessionDao.getSessionsInRange(weekStart, todayEpochDay)
+            .first().sumOf { it.pagesRead }
     }
 
     suspend fun getPagesReadThisMonth(): Int {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val cal = java.util.Calendar.getInstance()
-        cal.add(java.util.Calendar.DAY_OF_YEAR, -30)
-        val monthAgo = dateFormat.format(cal.time)
-        val today = dateFormat.format(Date())
-        return readingSessionDao.getTotalPagesReadBetween(monthAgo, today) ?: 0
+        val today = java.time.LocalDate.now()
+        val monthStart = today.withDayOfMonth(1).toEpochDay()
+        val todayEpochDay = today.toEpochDay()
+        return readingSessionDao.getSessionsInRange(monthStart, todayEpochDay)
+            .first().sumOf { it.pagesRead }
     }
 
     suspend fun getTotalReadingTimeToday(): Long {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val today = dateFormat.format(Date())
-        return readingSessionDao.getTotalReadingTimeBetween(today, today) ?: 0L
+        val todayEpochDay = java.time.LocalDate.now().toEpochDay()
+        return readingSessionDao.getTotalDurationForDay(todayEpochDay)
     }
 
     suspend fun getSessionCountToday(): Int {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val today = dateFormat.format(Date())
-        return readingSessionDao.getSessionCountForDate(today)
+        val todayEpochDay = java.time.LocalDate.now().toEpochDay()
+        return readingSessionDao.getSessionsInRange(todayEpochDay, todayEpochDay)
+            .first().size
     }
 
     data class DailyPageStatRaw(
-        val startTime: Long,
+        val epochDay: Long,
         val totalPages: Int
     )
 
     suspend fun getDailyPagesForLastDays(days: Int): List<DailyPageStatRaw> {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val cal = java.util.Calendar.getInstance()
-        cal.add(java.util.Calendar.DAY_OF_YEAR, -days)
-        val startDate = dateFormat.format(cal.time)
-        val today = dateFormat.format(Date())
-        val sessions = readingSessionDao.getAllSessionsList()
-        // Filter and aggregate by date
-        val filtered = sessions.filter { session ->
-            session.date in startDate..today && session.date <= today
-        }
-        return filtered.groupBy { it.date }.map { (_, sessionList) ->
+        val today = java.time.LocalDate.now()
+        val startEpochDay = today.minusDays(days.toLong()).toEpochDay()
+        val todayEpochDay = today.toEpochDay()
+        val sessions = readingSessionDao.getSessionsInRange(startEpochDay, todayEpochDay)
+            .first()
+        return sessions.groupBy { it.sessionDate }.map { (day, sessionList) ->
             DailyPageStatRaw(
-                startTime = sessionList.first().startTime,
+                epochDay = day,
                 totalPages = sessionList.sumOf { it.pagesRead }
             )
-        }.sortedBy { it.startTime }
+        }.sortedBy { it.epochDay }
     }
 }

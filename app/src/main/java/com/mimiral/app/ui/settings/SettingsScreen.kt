@@ -512,9 +512,9 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         SyncIntervalDropdown(
-                            selectedMinutes = syncSettings.syncIntervalMinutes,
+                            selectedMinutes = syncSettings.syncInterval.minutes,
                             onIntervalSelected = { minutes ->
-                                scope.launch { syncSettingsRepo.setSyncInterval(minutes) }
+                                scope.launch { syncSettingsRepo.setSyncInterval(SyncInterval.fromMinutes(minutes)) }
                             }
                         )
                     }

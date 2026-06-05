@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 @Singleton
 class ReadingStatsRepository @Inject constructor(
@@ -28,15 +29,13 @@ class ReadingStatsRepository @Inject constructor(
         endTime: Long,
         pagesRead: Int
     ) {
-        val duration = (endTime - startTime) / 1000
-        val date = LocalDate.now().format(dateFormatter)
+        val durationMs = endTime - startTime
+        val sessionDate = LocalDate.now().toEpochDay()
         val session = ReadingSessionEntity(
             bookId = bookId,
-            startTime = startTime,
-            endTime = endTime,
-            durationSeconds = duration,
-            pagesRead = pagesRead,
-            date = date
+            sessionDate = sessionDate,
+            durationMs = durationMs,
+            pagesRead = pagesRead
         )
         readingSessionDao.insertSession(session)
     }
@@ -45,22 +44,28 @@ class ReadingStatsRepository @Inject constructor(
         readingSessionDao.getAllSessions()
 
     suspend fun getAllSessionsList(): List<ReadingSessionEntity> =
-        readingSessionDao.getAllSessionsList()
+        readingSessionDao.getAllSessions().first()
 
     fun getSessionsForBook(bookId: Int): Flow<List<ReadingSessionEntity>> =
         readingSessionDao.getSessionsForBook(bookId)
 
-    fun getSessionsForDate(date: String): Flow<List<ReadingSessionEntity>> =
-        readingSessionDao.getSessionsForDate(date)
-
     fun getSessionsBetweenDates(
         startDate: String,
         endDate: String
-    ): Flow<List<ReadingSessionEntity>> =
-        readingSessionDao.getSessionsBetweenDates(startDate, endDate)
+    ): Flow<List<ReadingSessionEntity>> {
+        val startEpochDay = LocalDate.parse(startDate, DateTimeFormatter.ISO_LOCAL_DATE).toEpochDay()
+        val endEpochDay = LocalDate.parse(endDate, DateTimeFormatter.ISO_LOCAL_DATE).toEpochDay()
+        return readingSessionDao.getSessionsInRange(startEpochDay, endEpochDay)
+    }
 
-    fun getAllReadingDates(): Flow<List<String>> =
-        readingSessionDao.getAllReadingDates()
+    suspend fun getAllReadingDates(): List<String> =
+        readingSessionDao.getAllSessions().first().let { sessions ->
+            val dates = sessions.map { it.sessionDate }.distinct().sortedDescending()
+            val formatter = DateTimeFormatter.ISO_LOCAL_DATE
+            dates.map { epochDay ->
+                LocalDate.ofEpochDay(epochDay).format(formatter)
+            }
+        }
 
     fun getRecentSessions(): Flow<List<ReadingSessionEntity>> =
         readingSessionDao.getAllSessions()
@@ -79,22 +84,22 @@ class ReadingStatsRepository @Inject constructor(
      * Returns 0 if no reading sessions exist or today has no activity yet.
      */
     suspend fun getReadingStreak(): Int {
-        val dates = readingSessionDao.getDistinctDatesDesc()
+        val dates = readingSessionDao.getDistinctReadingDates()
         if (dates.isEmpty()) return 0
 
-        val today = LocalDate.now()
-        val yesterday = today.minusDays(1)
+        val today = LocalDate.now().toEpochDay()
+        val yesterday = today - 1
 
         // Check if today or yesterday has activity
-        val latestDate = LocalDate.parse(dates.first(), dateFormatter)
+        val latestDate = dates.first()
         if (latestDate != today && latestDate != yesterday) return 0
 
         var streak = 1
         var currentDate = latestDate
 
         for (i in 1 until dates.size) {
-            val prevDate = LocalDate.parse(dates[i], dateFormatter)
-            if (currentDate.minusDays(1) == prevDate) {
+            val prevDate = dates[i]
+            if (currentDate - 1 == prevDate) {
                 streak++
                 currentDate = prevDate
             } else {
@@ -109,17 +114,17 @@ class ReadingStatsRepository @Inject constructor(
      * Calculate the longest reading streak (maximum consecutive days with reading activity).
      */
     suspend fun getLongestStreak(): Int {
-        val dates = readingSessionDao.getDistinctDatesDesc()
+        val dates = readingSessionDao.getDistinctReadingDates()
         if (dates.isEmpty()) return 0
         if (dates.size == 1) return 1
 
         var longestStreak = 1
         var currentStreak = 1
-        var latestDate = LocalDate.parse(dates.first(), dateFormatter)
+        var latestDate = dates.first()
 
         for (i in 1 until dates.size) {
-            val prevDate = LocalDate.parse(dates[i], dateFormatter)
-            if (latestDate.minusDays(1) == prevDate) {
+            val prevDate = dates[i]
+            if (latestDate - 1 == prevDate) {
                 currentStreak++
                 longestStreak = maxOf(longestStreak, currentStreak)
             } else {

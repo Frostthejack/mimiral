@@ -56,9 +56,11 @@ class ReadingStatsViewModel @Inject constructor(
                 // Load last 7 days for the chart
                 val dailyData = bookRepository.getDailyPagesForLastDays(7)
                 val dailyStats = dailyData.map { daily ->
+                    val epochDay = daily.epochDay
+                    val date = java.time.LocalDate.ofEpochDay(epochDay)
                     DailyPageStat(
-                        dateMillis = daily.startTime,
-                        dateLabel = dateFormatter.format(Date(daily.startTime)),
+                        dateMillis = epochDay * 86400000L,
+                        dateLabel = dateFormatter.format(Date(epochDay * 86400000L)),
                         pagesRead = daily.totalPages
                     )
                 }

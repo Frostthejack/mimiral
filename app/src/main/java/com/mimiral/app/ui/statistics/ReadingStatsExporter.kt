@@ -89,21 +89,20 @@ class ReadingStatsExporter(
         sb.appendLine("# Exported: $exportDate")
         sb.appendLine("# Total sessions: ${sessions.size}")
         sb.appendLine("# Total pages read: ${sessions.sumOf { it.pagesRead }}")
-        sb.appendLine("# Total reading time (seconds): ${sessions.sumOf { it.durationSeconds }}")
+        sb.appendLine("# Total reading time (ms): ${sessions.sumOf { it.durationMs }}")
         sb.appendLine("# Books completed: $totalBooksRead")
         sb.appendLine("# Current streak (days): $currentStreak")
         sb.appendLine()
 
         // ── CSV header ───────────────────────────────────
-        sb.appendLine("date,book_id,start_time,end_time,duration_seconds,pages_read")
+        sb.appendLine("session_date,book_id,duration_ms,pages_read")
 
         // ── CSV data rows ───────────────────────────────
-        // Sort by start_time ascending for chronological order
-        val sortedSessions = sessions.sortedBy { it.startTime }
+        // Sort by sessionDate ascending for chronological order
+        val sortedSessions = sessions.sortedBy { it.sessionDate }
         for (session in sortedSessions) {
-            val csvRow = "${session.date},${session.bookId}," +
-                "${session.startTime},${session.endTime}," +
-                "${session.durationSeconds},${session.pagesRead}"
+            val csvRow = "${session.sessionDate},${session.bookId}," +
+                "${session.durationMs},${session.pagesRead}"
             sb.appendLine(csvRow)
         }
 

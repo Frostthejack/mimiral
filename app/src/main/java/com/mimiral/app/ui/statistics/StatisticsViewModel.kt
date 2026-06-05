@@ -62,32 +62,33 @@ class StatisticsViewModel @Inject constructor(
     private fun loadStatistics() {
         viewModelScope.launch {
             try {
-                val today = ReadingStatsRepository.todayString()
+                val todayEpochDay = LocalDate.now().toEpochDay()
+                val todayString = ReadingStatsRepository.todayString()
                 val weekStart = ReadingStatsRepository.thisWeekStart()
                 val monthStart = ReadingStatsRepository.thisMonthStart()
 
                 // Collect sessions for different time ranges
                 combine(
                     readingStatsRepository.getAllSessions(),
-                    readingStatsRepository.getSessionsBetweenDates(weekStart, today),
-                    readingStatsRepository.getSessionsBetweenDates(monthStart, today)
+                    readingStatsRepository.getSessionsBetweenDates(weekStart, todayString),
+                    readingStatsRepository.getSessionsBetweenDates(monthStart, todayString)
                 ) { allSessions, weekSessions, monthSessions ->
                     // Today's stats
-                    val todaySessions = allSessions.filter { it.date == today }
+                    val todaySessions = allSessions.filter { it.sessionDate == todayEpochDay }
                     val todayPages = todaySessions.sumOf { it.pagesRead }
-                    val todaySeconds = todaySessions.sumOf { it.durationSeconds }
+                    val todayMs = todaySessions.sumOf { it.durationMs }
 
                     // Week stats
                     val weekPages = weekSessions.sumOf { it.pagesRead }
-                    val weekSeconds = weekSessions.sumOf { it.durationSeconds }
+                    val weekMs = weekSessions.sumOf { it.durationMs }
 
                     // Month stats
                     val monthPages = monthSessions.sumOf { it.pagesRead }
-                    val monthSeconds = monthSessions.sumOf { it.durationSeconds }
+                    val monthMs = monthSessions.sumOf { it.durationMs }
 
                     // Total stats
                     val totalPages = allSessions.sumOf { it.pagesRead }
-                    val totalSeconds = allSessions.sumOf { it.durationSeconds }
+                    val totalMs = allSessions.sumOf { it.durationMs }
 
                     // Books completed (progress >= 99%)
                     var booksCompleted = 0
@@ -97,11 +98,11 @@ class StatisticsViewModel @Inject constructor(
 
                     // Daily stats for the last 30 days
                     val last30Days = (0..29).map { daysAgo ->
-                        val date = LocalDate.now().minusDays(daysAgo.toLong()).format(dateFormatter)
-                        val daySessions = allSessions.filter { it.date == date }
+                        val date = LocalDate.now().minusDays(daysAgo.toLong())
+                        val daySessions = allSessions.filter { it.sessionDate == date.toEpochDay() }
                         DailyStat(
-                            date = date,
-                            totalSeconds = daySessions.sumOf { it.durationSeconds },
+                            date = date.format(dateFormatter),
+                            totalSeconds = daySessions.sumOf { it.durationMs },
                             totalPages = daySessions.sumOf { it.pagesRead },
                             sessionCount = daySessions.size
                         )
@@ -111,13 +112,13 @@ class StatisticsViewModel @Inject constructor(
                         isLoading = false,
                         totalBooksRead = booksCompleted,
                         totalPagesRead = totalPages,
-                        totalReadingTimeSeconds = totalSeconds,
+                        totalReadingTimeSeconds = totalMs,
                         todayPages = todayPages,
-                        todayMinutes = todaySeconds / 60,
+                        todayMinutes = todayMs / 60000,
                         weekPages = weekPages,
-                        weekMinutes = weekSeconds / 60,
+                        weekMinutes = weekMs / 60000,
                         monthPages = monthPages,
-                        monthMinutes = monthSeconds / 60,
+                        monthMinutes = monthMs / 60000,
                         dailyStats = last30Days,
                         recentSessions = allSessions.take(10)
                     )
