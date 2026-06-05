@@ -1,6 +1,6 @@
 package com.mimiral.app.di
 
-import com.mimiral.app.data.remote.opds.OpdsClient
+import com.mimiral.app.data.opds.OpdsClient
 import com.mimiral.app.data.remote.opds.OpdsParser
 import dagger.Module
 import dagger.Provides
