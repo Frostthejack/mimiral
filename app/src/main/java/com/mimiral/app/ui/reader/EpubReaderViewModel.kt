@@ -92,11 +92,35 @@ class EpubReaderViewModel @Inject constructor(
     private var currentPageNumber = 0
     private var currentPosition: String? = null
 
+    // Session tracking
+    private var sessionStartTime: Long = System.currentTimeMillis()
+    private var sessionStartPage: Int = 0
+    private var sessionPagesTurned: Int = 0
+
     init {
         restoreProgress()
         loadToc()
         loadHighlights()
         autoSyncOnOpen()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Record reading session when ViewModel is cleared (user leaves reader)
+        if (bookId != -1 && sessionPagesTurned > 0) {
+            viewModelScope.launch {
+                try {
+                    bookRepository.recordReadingSession(
+                        bookId = bookId,
+                        startTime = sessionStartTime,
+                        endTime = System.currentTimeMillis(),
+                        pagesRead = sessionPagesTurned
+                    )
+                } catch (_: Exception) {
+                    // Non-critical: session recording failure should not crash
+                }
+            }
+        }
     }
 
     /**
@@ -130,6 +154,7 @@ class EpubReaderViewModel @Inject constructor(
                 if (savedProgress != null) {
                     currentChapterIndex = savedProgress.chapterIndex
                     currentPageNumber = savedProgress.pageNumber
+                    sessionStartPage = savedProgress.pageNumber
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -223,6 +248,12 @@ class EpubReaderViewModel @Inject constructor(
         currentChapterIndex = chapterIndex
         currentPageNumber = pageNumber
         currentPosition = lastReadPosition
+
+        // Track pages turned for session stats
+        val pagesDelta = kotlin.math.abs(pageNumber - sessionStartPage)
+        if (pagesDelta > sessionPagesTurned) {
+            sessionPagesTurned = pagesDelta
+        }
 
         _uiState.update {
             val progressPercent = calculateProgress(characterOffset, totalCharacters)

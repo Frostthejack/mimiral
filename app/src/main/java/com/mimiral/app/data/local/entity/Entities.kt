@@ -171,6 +171,16 @@ data class ChapterEntity(
     val content: String = ""
 )
 
+@Entity(tableName = "reading_sessions")
+data class ReadingSessionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(name = "book_id") val bookId: Int,
+    @ColumnInfo(name = "start_time") val startTime: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "end_time") val endTime: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "pages_read") val pagesRead: Int = 0,
+    @ColumnInfo(name = "duration_seconds") val durationSeconds: Long = 0
+)
+
 /**
  * FTS5 external content virtual table for chapter search.
  * Uses Room's @Fts4 with external content pointing to the chapters table.
