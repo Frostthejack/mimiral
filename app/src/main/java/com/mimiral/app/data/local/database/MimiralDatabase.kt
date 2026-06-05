@@ -43,7 +43,7 @@ import com.mimiral.app.data.local.entity.TagEntity
         ChapterEntity::class,
         ChapterFtsEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -161,6 +161,73 @@ abstract class MimiralDatabase : RoomDatabase() {
                 db.execSQL(
                     "ALTER TABLE `bookmarks` " +
                         "ADD COLUMN `modified_time` INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        /**
+         * Migration from v4 to v5:
+         * - Add kavita_series_id, kavita_library_id columns to books
+         * - Add kavita_synced column to reading_progress
+         * - Create servers table (Kavita/Calibre/Komga server configs)
+         * - Create opds_catalogs table (OPDS feed subscriptions)
+         * - Create pdf_settings table (per-book PDF crop settings)
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add Kavita sync columns to books table
+                db.execSQL(
+                    "ALTER TABLE `books` " +
+                        "ADD COLUMN `kavita_series_id` INTEGER"
+                )
+                db.execSQL(
+                    "ALTER TABLE `books` " +
+                        "ADD COLUMN `kavita_library_id` INTEGER"
+                )
+
+                // Add Kavita sync column to reading_progress table
+                db.execSQL(
+                    "ALTER TABLE `reading_progress` " +
+                        "ADD COLUMN `kavita_synced` INTEGER NOT NULL DEFAULT 0"
+                )
+
+                // Create servers table
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `servers` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`type` TEXT NOT NULL, " +
+                        "`url` TEXT NOT NULL, " +
+                        "`username` TEXT, " +
+                        "`password` TEXT, " +
+                        "`api_key` TEXT, " +
+                        "`jwt_token` TEXT, " +
+                        "`is_active` INTEGER NOT NULL, " +
+                        "`last_sync_time` INTEGER)"
+                )
+
+                // Create opds_catalogs table
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `opds_catalogs` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`url` TEXT NOT NULL, " +
+                        "`username` TEXT, " +
+                        "`password` TEXT, " +
+                        "`token` TEXT, " +
+                        "`auth_type` TEXT NOT NULL, " +
+                        "`is_active` INTEGER NOT NULL)"
+                )
+
+                // Create pdf_settings table
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `pdf_settings` (" +
+                        "`book_id` INTEGER PRIMARY KEY NOT NULL, " +
+                        "`crop_left` INTEGER NOT NULL, " +
+                        "`crop_top` INTEGER NOT NULL, " +
+                        "`crop_right` INTEGER NOT NULL, " +
+                        "`crop_bottom` INTEGER NOT NULL, " +
+                        "`auto_detected` INTEGER NOT NULL)"
                 )
             }
         }
