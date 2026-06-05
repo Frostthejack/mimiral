@@ -1,5 +1,7 @@
 package com.mimiral.app.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,17 +28,23 @@ import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,15 +53,20 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +77,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mimiral.app.data.local.settings.LibrarySettingsRepository
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.data.local.settings.SyncInterval
@@ -78,7 +92,8 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onNavigateToKavitaSetup: () -> Unit = {},
     onNavigateToReadingPreferences: () -> Unit = {},
-    onNavigateToTTSSettings: () -> Unit = {}
+    onNavigateToTTSSettings: () -> Unit = {},
+    backupRestoreViewModel: BackupRestoreViewModel = viewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val settingsRepository = remember { ReaderSettingsRepository(context) }
@@ -104,6 +119,8 @@ fun SettingsScreen(
     val syncSettings by syncSettingsRepository.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.SyncSettings()
     )
+    val backupState by backupRestoreViewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val currentTheme = try {
         MimiralThemeType.valueOf(readerSettings.themeName)
@@ -111,12 +128,38 @@ fun SettingsScreen(
         MimiralThemeType.DAY
     }
 
+    // SAF file picker for restore
+    val restoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { backupRestoreViewModel.restoreFromUri(it) }
+    }
+
+    // Show snackbar messages for backup/restore results
+    LaunchedEffect(backupState) {
+        when {
+            backupState.backupSuccess -> {
+                snackbarHostState.showSnackbar("Settings backed up successfully")
+                backupRestoreViewModel.clearMessage()
+            }
+            backupState.restoreSuccess -> {
+                snackbarHostState.showSnackbar("Settings restored successfully")
+                backupRestoreViewModel.clearMessage()
+            }
+            backupState.errorMessage != null -> {
+                snackbarHostState.showSnackbar(backupState.errorMessage ?: "Error")
+                backupRestoreViewModel.clearMessage()
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Settings") }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -876,9 +919,112 @@ fun SettingsScreen(
                 }
             }
 
+            // ── Backup & Restore Section ──────────────────────
+            Text(
+                text = "Backup & Restore",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Export your reading preferences, theme, and library settings to a file. " +
+                            "You can restore them later or on a new device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Backup button
+                        Button(
+                            onClick = { backupRestoreViewModel.backupSettings() },
+                            modifier = Modifier.weight(1f),
+                            enabled = !backupState.isBackingUp && !backupState.isRestoring
+                        ) {
+                            if (backupState.isBackingUp) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.SaveAlt,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Text("Backup")
+                        }
+
+                        // Share button (only enabled after a successful backup)
+                        OutlinedButton(
+                            onClick = { backupRestoreViewModel.shareBackup() },
+                            modifier = Modifier.weight(1f),
+                            enabled = backupState.lastBackupFile != null &&
+                                !backupState.isBackingUp && !backupState.isRestoring
+                        ) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Text("Share")
+                        }
+                    }
+
+                    // Restore button
+                    OutlinedButton(
+                        onClick = {
+                            restoreLauncher.launch(arrayOf("application/json"))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !backupState.isBackingUp && !backupState.isRestoring
+                    ) {
+                        if (backupState.isRestoring) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Restore,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("Restore from file...")
+                    }
+
+                    // Last backup info
+                    if (backupState.lastBackupFile != null) {
+                        Text(
+                            text = "Last backup: ${backupState.lastBackupFile}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             // ═══════════════════════════════════════════════════
             // SECTION: About
-            // ═══════════════════════════════════════════════════
             HorizontalDivider()
             SectionHeader(
                 title = "About",
