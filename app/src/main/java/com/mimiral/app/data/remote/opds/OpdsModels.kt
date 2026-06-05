@@ -98,6 +98,9 @@ data class OpdsLink(
         get() = rel?.startsWith("http://opds-spec.org/acquisition") == true ||
             rel?.contains("open-access") == true
 
+    val isOpenAccess: Boolean
+        get() = rel?.contains("open-access") == true
+
     val isImage: Boolean
         get() = type?.startsWith("image/") == true ||
             rel?.contains("image") == true ||

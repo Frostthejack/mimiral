@@ -70,6 +70,24 @@ class KavitaClient(
                 .followSslRedirects(true)
                 .build()
         }
+
+        /** Create a KavitaClient with base URL only (no auth). */
+        fun create(baseUrl: String): KavitaClient {
+            return KavitaClient(baseUrl = baseUrl)
+        }
+
+        /** Create a KavitaClient with authentication. */
+        fun create(
+            baseUrl: String,
+            token: String? = null,
+            apiKey: String? = null
+        ): KavitaClient {
+            return KavitaClient(
+                baseUrl = baseUrl,
+                jwtToken = token,
+                apiKey = apiKey
+            )
+        }
     }
 
     private val normalizedBaseUrl = baseUrl.trimEnd('/')

@@ -139,11 +139,8 @@ class OpdsParserTest {
         val entry = feed.entries[0]
 
         assertEquals("Should have 2 categories", 2, entry.categories.size)
-        assertEquals("fiction", entry.categories[0].term)
-        assertEquals("http://schema.org/BookFormatCategory", entry.categories[0].scheme)
-        assertEquals("Fiction", entry.categories[0].label)
-        assertEquals("fantasy", entry.categories[1].term)
-        assertEquals("Fantasy", entry.categories[1].label)
+        assertEquals("fiction", entry.categories[0])
+        assertEquals("fantasy", entry.categories[1])
     }
 
     @Test
@@ -228,7 +225,7 @@ class OpdsParserTest {
         val entry = feed.entries[0]
 
         assertEquals("https://example.com/covers/1-thumb.jpg", entry.thumbnailUrl)
-        assertEquals("https://example.com/covers/1.jpg", entry.coverUrl)
+        assertEquals("https://example.com/covers/1.jpg", entry.coverImageUrl)
     }
 
     @Test

@@ -327,10 +327,10 @@ class GutenbergOpdsParsingTest {
         val entry = feed.entries.first()
 
         assertNotNull("Should have thumbnail", entry.thumbnailUrl)
-        assertNotNull("Should have cover", entry.coverUrl)
+        assertNotNull("Should have cover", entry.coverImageUrl)
         assertTrue(
             "Cover should be different from thumbnail",
-            entry.coverUrl != entry.thumbnailUrl
+            entry.coverImageUrl != entry.thumbnailUrl
         )
     }
 
