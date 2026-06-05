@@ -2,17 +2,15 @@ package com.mimiral.app.ui.statistics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.ReadingStatsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -40,11 +38,14 @@ data class StatisticsUiState(
     val monthMinutes: Long = 0,
     val dailyStats: List<DailyStat> = emptyList(),
     val recentSessions: List<ReadingSessionEntity> = emptyList(),
+    val isExporting: Boolean = false,
+    val exportSuccess: Boolean = false,
     val error: String? = null
 )
 
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(
+    @ApplicationContext private val context: android.content.Context,
     private val readingStatsRepository: ReadingStatsRepository,
     private val bookRepository: BookRepository
 ) : ViewModel() {
@@ -141,5 +142,45 @@ class StatisticsViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    fun exportStatistics() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isExporting = true, exportSuccess = false)
+            try {
+                val sessions = readingStatsRepository.getAllSessionsList()
+                val booksCompleted = readingStatsRepository.getTotalBooksCompleted()
+                val streak = readingStatsRepository.getReadingStreak()
+
+                val exporter = ReadingStatsExporter(context)
+                val file = exporter.exportStatsToFile(
+                    sessions = sessions,
+                    totalBooksRead = booksCompleted,
+                    currentStreak = streak
+                )
+
+                if (file != null) {
+                    exporter.shareExportedFile(file)
+                    _uiState.value = _uiState.value.copy(
+                        isExporting = false,
+                        exportSuccess = true
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isExporting = false,
+                        error = "No reading statistics to export"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isExporting = false,
+                    error = "Failed to export statistics: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun clearExportSuccess() {
+        _uiState.value = _uiState.value.copy(exportSuccess = false)
     }
 }

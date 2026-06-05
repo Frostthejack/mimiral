@@ -15,6 +15,9 @@ interface ReadingSessionDao {
     @Query("SELECT * FROM reading_sessions ORDER BY start_time DESC")
     fun getAllSessions(): Flow<List<ReadingSessionEntity>>
 
+    @Query("SELECT * FROM reading_sessions ORDER BY start_time DESC")
+    suspend fun getAllSessionsList(): List<ReadingSessionEntity>
+
     @Query("SELECT * FROM reading_sessions WHERE book_id = :bookId ORDER BY start_time DESC")
     fun getSessionsForBook(bookId: Int): Flow<List<ReadingSessionEntity>>
 

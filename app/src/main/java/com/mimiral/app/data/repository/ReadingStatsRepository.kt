@@ -45,6 +45,9 @@ class ReadingStatsRepository @Inject constructor(
     fun getAllSessions(): Flow<List<ReadingSessionEntity>> =
         readingSessionDao.getAllSessions()
 
+    suspend fun getAllSessionsList(): List<ReadingSessionEntity> =
+        readingSessionDao.getAllSessionsList()
+
     fun getSessionsForBook(bookId: Int): Flow<List<ReadingSessionEntity>> =
         readingSessionDao.getSessionsForBook(bookId)
 
@@ -98,6 +101,32 @@ class ReadingStatsRepository @Inject constructor(
         }
 
         return streak
+    }
+
+    /**
+     * Calculate the longest reading streak (maximum consecutive days with reading activity).
+     */
+    suspend fun getLongestStreak(): Int {
+        val dates = readingSessionDao.getDistinctDatesDesc()
+        if (dates.isEmpty()) return 0
+        if (dates.size == 1) return 1
+
+        var longestStreak = 1
+        var currentStreak = 1
+        var latestDate = LocalDate.parse(dates.first(), dateFormatter)
+
+        for (i in 1 until dates.size) {
+            val prevDate = LocalDate.parse(dates[i], dateFormatter)
+            if (latestDate.minusDays(1) == prevDate) {
+                currentStreak++
+                longestStreak = maxOf(longestStreak, currentStreak)
+            } else {
+                currentStreak = 1
+            }
+            latestDate = prevDate
+        }
+
+        return longestStreak
     }
 
     /**
