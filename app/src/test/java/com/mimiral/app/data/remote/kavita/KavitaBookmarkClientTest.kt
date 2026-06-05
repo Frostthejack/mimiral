@@ -1,6 +1,7 @@
 package com.mimiral.app.data.remote.kavita
 
 import com.mimiral.app.data.local.entity.BookmarkEntity
+import com.mimiral.app.data.local.entity.ServerEntity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -237,7 +238,7 @@ class MockBookmarkDao : com.mimiral.app.data.local.dao.BookmarkDao {
 }
 
 class MockServerDao : com.mimiral.app.data.local.dao.ServerDao {
-    override fun getActiveServers(): kotlinx.coroutines.flow.Flow<List<com.mimiral.app.data.local.entity.ServerEntity>> {
+    override fun getActiveServers(): kotlinx.coroutines.flow.Flow<List<ServerEntity>> {
         return kotlinx.coroutines.flow.flowOf(emptyList())
     }
 
