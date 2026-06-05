@@ -1,5 +1,10 @@
 package com.mimiral.app.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -18,13 +24,16 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
@@ -35,6 +44,7 @@ import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -63,6 +73,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mimiral.app.data.local.settings.LibrarySettingsRepository
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import com.mimiral.app.data.local.settings.SyncInterval
 import com.mimiral.app.data.local.settings.SyncSettingsRepository
 import com.mimiral.app.data.local.settings.TTSSettingsRepository
 import com.mimiral.app.ui.theme.MimiralThemeSwitcher
@@ -77,6 +88,8 @@ fun SettingsScreen(
     onNavigateToTTSSettings: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val settingsRepository = remember { ReaderSettingsRepository(context) }
+    val syncSettingsRepository = remember { SyncSettingsRepository(context) }
     val scope = rememberCoroutineScope()
 
     // Repositories
@@ -95,7 +108,7 @@ fun SettingsScreen(
     val ttsSettings by ttsSettingsRepo.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.TTSSettings()
     )
-    val syncSettings by syncSettingsRepo.settings.collectAsState(
+    val syncSettings by syncSettingsRepository.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.SyncSettings()
     )
 
@@ -749,6 +762,123 @@ fun SettingsScreen(
                 }
             }
 
+// ═══════════════════════════════════════════════════
+            // SECTION: Sync Preferences (Enhanced)
+            // ═══════════════════════════════════════════════════
+            SectionHeader(
+                title = "Sync Preferences",
+                icon = Icons.Default.CloudSync
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Auto-sync toggle
+                    SettingsToggleRow(
+                        title = "Auto-Sync",
+                        description = "Automatically sync with connected servers",
+                        icon = Icons.Default.Sync,
+                        checked = syncSettings.autoSyncEnabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch { syncSettingsRepository.setAutoSyncEnabled(enabled) }
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Sync interval
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Timer,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Sync Interval",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SyncIntervalSelector(
+                            selectedInterval = syncSettings.syncInterval,
+                            onIntervalSelected = { interval ->
+                                scope.launch { syncSettingsRepository.setSyncInterval(interval) }
+                            }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // WiFi only toggle
+                    SettingsToggleRow(
+                        title = "Sync on Wi-Fi Only",
+                        description = "Only sync when connected to Wi-Fi",
+                        icon = Icons.Default.Wifi,
+                        checked = syncSettings.syncOnWifiOnly,
+                        onCheckedChange = { enabled ->
+                            scope.launch { syncSettingsRepository.setSyncOnWifiOnly(enabled) }
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Content sync toggles
+                    Text(
+                        text = "Sync Content",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+
+                    SettingsToggleRow(
+                        title = "Reading Progress",
+                        description = "Sync current page and chapter",
+                        icon = Icons.Default.Sync,
+                        checked = syncSettings.syncReadingProgress,
+                        onCheckedChange = { enabled ->
+                            scope.launch { syncSettingsRepository.setSyncReadingProgress(enabled) }
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    SettingsToggleRow(
+                        title = "Bookmarks",
+                        description = "Sync bookmarks with Kavita",
+                        icon = Icons.Default.Book,
+                        checked = syncSettings.syncBookmarks,
+                        onCheckedChange = { enabled ->
+                            scope.launch { syncSettingsRepository.setSyncBookmarks(enabled) }
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    SettingsToggleRow(
+                        title = "Highlights & Notes",
+                        description = "Sync highlights and notes",
+                        icon = Icons.Default.Highlight,
+                        checked = syncSettings.syncHighlights,
+                        onCheckedChange = { enabled ->
+                            scope.launch { syncSettingsRepository.setSyncHighlights(enabled) }
+                        }
+                    )
+                }
+            }
+
             // ═══════════════════════════════════════════════════
             // SECTION: About
             // ═══════════════════════════════════════════════════
@@ -790,6 +920,124 @@ fun SettingsScreen(
 // ═══════════════════════════════════════════════════════════
 // Reusable Components
 // ═══════════════════════════════════════════════════════════
+
+@Composable
+private fun SyncPreferenceRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (icon != null) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+        } else {
+            Spacer(modifier = Modifier.width(24.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+    }
+}
+
+@Composable
+private fun SyncIntervalSelector(
+    selectedInterval: SyncInterval,
+    onIntervalSelected: (SyncInterval) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            Icons.Default.Schedule,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Sync interval",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "How often to auto-sync in the background",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Box {
+            Surface(
+                modifier = Modifier
+                    .clickable { expanded = true },
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Text(
+                    text = selectedInterval.displayName,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                SyncInterval.entries.forEach { interval ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = interval.displayName,
+                                fontWeight = if (interval == selectedInterval) {
+                                    FontWeight.Bold
+                                } else {
+                                    FontWeight.Normal
+                                }
+                            )
+                        },
+                        onClick = {
+                            onIntervalSelected(interval)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun SectionHeader(
