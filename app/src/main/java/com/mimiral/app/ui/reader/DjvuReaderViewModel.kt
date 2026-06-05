@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.reader.DjvuPageText
 import com.mimiral.app.data.repository.BookRepository
+import com.mimiral.app.data.repository.ReadingTimeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,7 @@ data class DjvuReaderUiState(
 @HiltViewModel
 class DjvuReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
+    private val readingTimeRepository: ReadingTimeRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -50,8 +52,12 @@ class DjvuReaderViewModel @Inject constructor(
 
     private val bookId: Int = savedStateHandle.get<Int>("bookId") ?: 0
 
+    // Reading time tracker — accumulates time across pause/resume cycles
+    private val readingTimeTracker = com.mimiral.app.data.local.entity.ReadingTimeTracker()
+
     init {
         loadBook()
+        readingTimeTracker.startSession()
     }
 
     private fun loadBook() {
@@ -237,10 +243,24 @@ class DjvuReaderViewModel @Inject constructor(
                 bookRepository.saveProgress(
                     bookId = bookId,
                     pageNumber = currentPage,
-                    totalPages = totalPages
+                    totalPages = totalPages,
+                    sessionTimeDeltaMs = readingTimeTracker.accumulatedMs()
                 )
             } catch (_: Exception) {
                 // Silently fail
+            }
+        }
+    }
+
+    /** Called when the reader is closed. Persists reading time. */
+    fun onReaderClosed() {
+        readingTimeTracker.stopSession()
+        val totalMs = readingTimeTracker.accumulatedMs()
+        if (totalMs > 0) {
+            viewModelScope.launch {
+                try {
+                    readingTimeRepository.recordReadingTime(bookId, totalMs)
+                } catch (_: Exception) {}
             }
         }
     }

@@ -5,8 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
+import com.mimiral.app.data.local.entity.ReadingTimeTracker
 import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.repository.BookRepository
+import com.mimiral.app.data.repository.ReadingTimeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,6 +80,7 @@ data class ReaderUiState(
 @HiltViewModel
 class EpubReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
+    private val readingTimeRepository: ReadingTimeRepository,
     private val kavitaSyncRepository: com.mimiral.app.data.remote.KavitaSyncRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -97,11 +100,15 @@ class EpubReaderViewModel @Inject constructor(
     private var sessionStartPage: Int = 0
     private var sessionPagesTurned: Int = 0
 
+    // Reading time tracker — accumulates time across pause/resume cycles
+    private val readingTimeTracker = ReadingTimeTracker()
+
     init {
         restoreProgress()
         loadToc()
         loadHighlights()
         autoSyncOnOpen()
+        readingTimeTracker.startSession()
     }
 
     override fun onCleared() {
@@ -277,7 +284,8 @@ class EpubReaderViewModel @Inject constructor(
             characterOffset = characterOffset,
             totalCharacters = totalCharacters,
             pageNumber = pageNumber,
-            lastReadPosition = lastReadPosition
+            lastReadPosition = lastReadPosition,
+            sessionTimeDeltaMs = readingTimeTracker.accumulatedMs()
         )
         pushProgressToKavita(
             pageNumber = pageNumber,
@@ -563,7 +571,8 @@ class EpubReaderViewModel @Inject constructor(
         characterOffset: Long,
         totalCharacters: Long,
         pageNumber: Int,
-        lastReadPosition: String?
+        lastReadPosition: String?,
+        sessionTimeDeltaMs: Long = 0L
     ) {
         viewModelScope.launch {
             try {
@@ -573,7 +582,8 @@ class EpubReaderViewModel @Inject constructor(
                     characterOffset = characterOffset,
                     totalCharacters = totalCharacters,
                     pageNumber = pageNumber,
-                    lastReadPosition = lastReadPosition
+                    lastReadPosition = lastReadPosition,
+                    sessionTimeDeltaMs = sessionTimeDeltaMs
                 )
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to save progress: ${e.message}") }
@@ -775,6 +785,7 @@ class EpubReaderViewModel @Inject constructor(
 
     /**
      * Auto-sync on book close: push final progress to Kavita.
+     * Also stops the reading time tracker and persists daily reading time.
      */
     fun autoSyncOnClose() {
         val state = _uiState.value
@@ -782,6 +793,18 @@ class EpubReaderViewModel @Inject constructor(
             pageNumber = state.progress.pageNumber,
             chapterIndex = state.progress.chapterIndex
         )
+        // Stop timer and persist reading time
+        readingTimeTracker.stopSession()
+        val totalMs = readingTimeTracker.accumulatedMs()
+        if (totalMs > 0) {
+            viewModelScope.launch {
+                try {
+                    readingTimeRepository.recordReadingTime(bookId, totalMs)
+                } catch (_: Exception) {
+                    // Non-critical — time tracking failure should not block close
+                }
+            }
+        }
     }
 
     /**
@@ -791,6 +814,19 @@ class EpubReaderViewModel @Inject constructor(
         val state = _uiState.value
         if (bookId == -1) return
 
+        // Pause the timer and record elapsed time
+        readingTimeTracker.stopSession()
+        val elapsedMs = readingTimeTracker.accumulatedMs()
+        if (elapsedMs > 0) {
+            viewModelScope.launch {
+                try {
+                    readingTimeRepository.recordReadingTime(bookId, elapsedMs)
+                } catch (_: Exception) {
+                    // Non-critical
+                }
+            }
+        }
+
         saveProgress(
             bookId = bookId,
             chapterIndex = state.progress.chapterIndex,
@@ -799,6 +835,10 @@ class EpubReaderViewModel @Inject constructor(
             pageNumber = state.progress.pageNumber,
             lastReadPosition = state.progress.lastReadPosition
         )
+
+        // Resume timer for next session segment
+        readingTimeTracker.reset()
+        readingTimeTracker.startSession()
     }
 
     // --- TTS state management ---

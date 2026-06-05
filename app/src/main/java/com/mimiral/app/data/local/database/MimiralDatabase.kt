@@ -14,6 +14,7 @@ import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingListDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
+import com.mimiral.app.data.local.dao.ReadingTimeDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
@@ -30,6 +31,7 @@ import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingListEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
+import com.mimiral.app.data.local.entity.ReadingTimeEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
 
@@ -50,9 +52,10 @@ import com.mimiral.app.data.local.entity.TagEntity
         ChapterFtsEntity::class,
         ReadingSessionEntity::class,
         ReadingListEntity::class,
-        BookReadingListCrossRef::class
+        BookReadingListCrossRef::class,
+        ReadingTimeEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -68,6 +71,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun readingSessionDao(): ReadingSessionDao
     abstract fun readingListDao(): ReadingListDao
     abstract fun tagDao(): TagDao
+    abstract fun readingTimeDao(): ReadingTimeDao
 
     companion object {
         /**
@@ -319,16 +323,6 @@ abstract class MimiralDatabase : RoomDatabase() {
                         "ON `book_reading_lists` (`reading_list_id`)"
                 )
 
-                db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS " +
-                        "`index_book_reading_lists_book_id` ON `book_reading_lists` (`book_id`)"
-                )
-                db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS " +
-                        "`index_book_reading_lists_reading_list_id` " +
-                        "ON `book_reading_lists` (`reading_list_id`)"
-                )
-
                 // Seed the three built-in system reading lists
                 val now = System.currentTimeMillis()
                 db.execSQL(
@@ -375,6 +369,31 @@ abstract class MimiralDatabase : RoomDatabase() {
                 db.execSQL(
                     "ALTER TABLE `books` " +
                         "ADD COLUMN `series_order` INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        /**
+         * Migration from v9 to v10:
+         * - Create reading_time table for per-book daily reading duration tracking
+         */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `reading_time` (" +
+                        "`book_id` INTEGER NOT NULL, " +
+                        "`date` INTEGER NOT NULL, " +
+                        "`time_read_ms` INTEGER NOT NULL, " +
+                        "`last_session_start` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`book_id`, `date`))"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_reading_time_book_id` ON `reading_time` (`book_id`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_reading_time_date` ON `reading_time` (`date`)"
                 )
             }
         }

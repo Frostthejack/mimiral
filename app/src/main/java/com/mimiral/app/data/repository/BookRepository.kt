@@ -10,6 +10,7 @@ import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
+import com.mimiral.app.data.local.dao.ReadingTimeDao
 import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookTagCrossRef
@@ -41,6 +42,7 @@ class BookRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bookDao: BookDao,
     private val readingProgressDao: ReadingProgressDao,
+    private val readingTimeDao: ReadingTimeDao,
     private val bookmarkDao: BookmarkDao,
     private val pdfSettingsDao: PdfSettingsDao,
     private val chapterDao: ChapterDao,
@@ -192,6 +194,14 @@ class BookRepository @Inject constructor(
         readingProgressDao.getCompletedCountInRange(startTime, endTime)
 
     // ---- Reading progress (updated) ----
+    /**
+     * Save reading progress for a book.
+     * Calculates progressPercent from characterOffset / totalCharacters (EPUB)
+     * or from pageNumber / totalPages (PDF) when character data is unavailable.
+     *
+     * @param sessionTimeDeltaMs Time spent in this reading session (ms), used to
+     *     increment totalTimeRead. Pass 0 if not tracking time for this save.
+     */
     suspend fun saveProgress(
         bookId: Int,
         chapterIndex: Int,
@@ -199,7 +209,8 @@ class BookRepository @Inject constructor(
         totalCharacters: Long,
         pageNumber: Int = 0,
         totalPages: Int = 0,
-        lastReadPosition: String? = null
+        lastReadPosition: String? = null,
+        sessionTimeDeltaMs: Long = 0L
     ) {
         val progressPercent = when {
             totalCharacters > 0 -> {
@@ -225,7 +236,7 @@ class BookRepository @Inject constructor(
             progressPercent = progressPercent,
             lastReadPosition = lastReadPosition,
             lastReadTime = System.currentTimeMillis(),
-            totalTimeRead = existing?.totalTimeRead ?: 0,
+            totalTimeRead = (existing?.totalTimeRead ?: 0) + sessionTimeDeltaMs,
             kavitaSynced = existing?.kavitaSynced ?: false,
             completedAt = when {
                 isNowCompleted && !wasCompleted -> System.currentTimeMillis()
@@ -245,7 +256,8 @@ class BookRepository @Inject constructor(
     suspend fun saveProgress(
         bookId: Int,
         pageNumber: Int,
-        totalPages: Int
+        totalPages: Int,
+        sessionTimeDeltaMs: Long = 0L
     ) {
         saveProgress(
             bookId = bookId,
@@ -254,7 +266,8 @@ class BookRepository @Inject constructor(
             totalCharacters = 0,
             pageNumber = pageNumber,
             totalPages = totalPages,
-            lastReadPosition = null
+            lastReadPosition = null,
+            sessionTimeDeltaMs = sessionTimeDeltaMs
         )
     }
 

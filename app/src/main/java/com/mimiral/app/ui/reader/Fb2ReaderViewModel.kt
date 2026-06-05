@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.repository.BookRepository
+import com.mimiral.app.data.repository.ReadingTimeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ data class Fb2ReaderUiState(
 @HiltViewModel
 class Fb2ReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
+    private val readingTimeRepository: ReadingTimeRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -43,9 +45,13 @@ class Fb2ReaderViewModel @Inject constructor(
     private var currentPageNumber = 0
     private var currentPosition: String? = null
 
+    // Reading time tracker — accumulates time across pause/resume cycles
+    private val readingTimeTracker = com.mimiral.app.data.local.entity.ReadingTimeTracker()
+
     init {
         restoreProgress()
         loadToc()
+        readingTimeTracker.startSession()
     }
 
     private fun loadToc() {
@@ -149,7 +155,8 @@ class Fb2ReaderViewModel @Inject constructor(
             characterOffset = characterOffset,
             totalCharacters = totalCharacters,
             pageNumber = pageNumber,
-            lastReadPosition = lastReadPosition
+            lastReadPosition = lastReadPosition,
+            sessionTimeDeltaMs = readingTimeTracker.accumulatedMs()
         )
     }
 
@@ -269,6 +276,20 @@ class Fb2ReaderViewModel @Inject constructor(
     fun saveCurrentProgress() {
         val state = _uiState.value
         if (bookId == -1) return
+
+        // Pause the timer and record elapsed time
+        readingTimeTracker.stopSession()
+        val elapsedMs = readingTimeTracker.accumulatedMs()
+        if (elapsedMs > 0) {
+            viewModelScope.launch {
+                try {
+                    readingTimeRepository.recordReadingTime(bookId, elapsedMs)
+                } catch (_: Exception) {
+                    // Non-critical
+                }
+            }
+        }
+
         saveProgress(
             bookId = bookId,
             chapterIndex = state.progress.chapterIndex,
@@ -277,6 +298,10 @@ class Fb2ReaderViewModel @Inject constructor(
             pageNumber = state.progress.pageNumber,
             lastReadPosition = state.progress.lastReadPosition
         )
+
+        // Resume timer for next session segment
+        readingTimeTracker.reset()
+        readingTimeTracker.startSession()
     }
 
     private fun calculateProgress(characterOffset: Long, totalCharacters: Long): Float {
@@ -293,7 +318,8 @@ class Fb2ReaderViewModel @Inject constructor(
         characterOffset: Long,
         totalCharacters: Long,
         pageNumber: Int,
-        lastReadPosition: String?
+        lastReadPosition: String?,
+        sessionTimeDeltaMs: Long = 0L
     ) {
         viewModelScope.launch {
             try {
@@ -303,7 +329,8 @@ class Fb2ReaderViewModel @Inject constructor(
                     characterOffset = characterOffset,
                     totalCharacters = totalCharacters,
                     pageNumber = pageNumber,
-                    lastReadPosition = lastReadPosition
+                    lastReadPosition = lastReadPosition,
+                    sessionTimeDeltaMs = sessionTimeDeltaMs
                 )
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to save progress: ${e.message}") }
