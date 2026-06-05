@@ -348,6 +348,9 @@ interface CollectionDao {
     @Query("DELETE FROM book_collections WHERE book_id = :bookId AND collection_id = :collectionId")
     suspend fun removeBookFromCollection(bookId: Int, collectionId: Int)
 
+    @Query("DELETE FROM book_collections WHERE collection_id = :collectionId")
+    suspend fun removeAllBooksFromCollection(collectionId: Int)
+
     @Query(
         "SELECT collections.* FROM collections " +
             "INNER JOIN book_collections ON collections.id = book_collections.collection_id " +

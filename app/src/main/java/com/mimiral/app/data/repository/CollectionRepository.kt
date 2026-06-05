@@ -40,8 +40,10 @@ class CollectionRepository @Inject constructor(
     suspend fun updateCollection(collection: CollectionEntity) =
         collectionDao.updateCollection(collection)
 
-    suspend fun deleteCollection(collection: CollectionEntity) =
+    suspend fun deleteCollection(collection: CollectionEntity) {
+        collectionDao.removeAllBooksFromCollection(collection.id)
         collectionDao.deleteCollection(collection)
+    }
 
     suspend fun getCollectionCount(): Int =
         collectionDao.getCollectionCount()
