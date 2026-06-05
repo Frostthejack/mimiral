@@ -26,7 +26,8 @@ object DatabaseModule {
                 MimiralDatabase.MIGRATION_1_2,
                 MimiralDatabase.MIGRATION_2_3,
                 MimiralDatabase.MIGRATION_3_4,
-                MimiralDatabase.MIGRATION_4_5
+                MimiralDatabase.MIGRATION_4_5,
+                MimiralDatabase.MIGRATION_5_6
             )
             .fallbackToDestructiveMigration()
             .build()
