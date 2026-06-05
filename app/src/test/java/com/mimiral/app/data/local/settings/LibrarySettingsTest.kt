@@ -31,9 +31,9 @@ class LibrarySettingsTest {
     // ---- SortOption ----
 
     @Test
-    fun `SortOption - has six values`() {
+    fun `SortOption - has seven values`() {
         val values = SortOption.values()
-        assertEquals(6, values.size)
+        assertEquals(7, values.size)
     }
 
     @Test
@@ -49,6 +49,11 @@ class LibrarySettingsTest {
     @Test
     fun `SortOption - AUTHOR has correct display name`() {
         assertEquals("Author", SortOption.AUTHOR.displayName)
+    }
+
+    @Test
+    fun `SortOption - SERIES has correct display name`() {
+        assertEquals("Series", SortOption.SERIES.displayName)
     }
 
     @Test
