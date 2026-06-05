@@ -1,0 +1,19 @@
+Chapter 1: The Beginning
+
+Once upon a time, in a land of pure logic and structured data, there lived a small application named Mimiral. Mimiral was a reader — not just any reader, but one who could consume books of many formats.
+
+Chapter 2: The Journey
+
+Mimiral set forth on a journey to parse EPUBs, PDFs, and even the mysterious FB2. Along the way, it encountered many challenges: malformed XML, broken encodings, and the dreaded infinite loop.
+
+Chapter 3: The Resolution
+
+Through careful error handling and resilient parsing, Mimiral persevered. It learned to handle every format gracefully, providing a smooth reading experience for all.
+
+Chapter 4: The Features
+
+Mimiral could highlight text, play TTS, sync with Kavita, and organize books into collections. It was truly a modern reader for the digital age.
+
+Chapter 5: The End
+
+And so Mimiral lived happily ever after, reading books and serving its users with distinction. The end.

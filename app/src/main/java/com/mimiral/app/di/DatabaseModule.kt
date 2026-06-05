@@ -3,6 +3,7 @@ package com.mimiral.app.di
 import android.content.Context
 import androidx.room.Room
 import com.mimiral.app.data.local.database.MimiralDatabase
+import com.mimiral.app.data.local.dao.ReadingListDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,7 +28,8 @@ object DatabaseModule {
                 MimiralDatabase.MIGRATION_2_3,
                 MimiralDatabase.MIGRATION_3_4,
                 MimiralDatabase.MIGRATION_4_5,
-                MimiralDatabase.MIGRATION_5_6
+                MimiralDatabase.MIGRATION_5_6,
+                MimiralDatabase.MIGRATION_6_7
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -62,4 +64,7 @@ object DatabaseModule {
 
     @Provides
     fun provideReadingSessionDao(database: MimiralDatabase) = database.readingSessionDao()
+
+    @Provides
+    fun provideReadingListDao(database: MimiralDatabase) = database.readingListDao()
 }

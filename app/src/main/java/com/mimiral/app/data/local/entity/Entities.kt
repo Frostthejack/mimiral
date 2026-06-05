@@ -181,3 +181,31 @@ data class ChapterFtsEntity(
     val title: String? = null,
     val content: String = ""
 )
+
+/**
+ * Reading list entity — represents a named reading list.
+ * Built-in lists (To Read, Reading, Finished) are auto-created on first use.
+ * Custom lists are user-created and can be renamed/deleted.
+ */
+@Entity(tableName = "reading_lists")
+data class ReadingListEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val name: String,
+    @ColumnInfo(name = "list_type") val listType: String = "CUSTOM",
+    @ColumnInfo(name = "created_time") val createdTime: Long = 0,
+    @ColumnInfo(name = "sort_order") val sortOrder: Int = 0
+)
+
+/**
+ * Cross-reference table: which books are in which reading lists.
+ * A book can be in multiple reading lists (e.g., "To Read" and a custom list).
+ */
+@Entity(
+    tableName = "book_reading_lists",
+    primaryKeys = ["book_id", "reading_list_id"]
+)
+data class BookReadingListCrossRef(
+    @ColumnInfo(name = "book_id") val bookId: Int,
+    @ColumnInfo(name = "reading_list_id") val readingListId: Int,
+    @ColumnInfo(name = "added_time") val addedTime: Long = 0
+)
