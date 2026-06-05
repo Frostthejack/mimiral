@@ -125,7 +125,7 @@ fun TtsControlsBar(
                 TextButton(onClick = onVoicePickerOpen) {
                     Icon(
                         imageVector = Icons.Default.RecordVoiceOver,
-                        contentDescription = null,
+                        contentDescription = "Select voice",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))

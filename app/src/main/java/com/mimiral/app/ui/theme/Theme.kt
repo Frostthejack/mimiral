@@ -35,7 +35,9 @@ enum class MimiralThemeType(val label: String) {
     DAY("Day"),
     SEPIA("Sepia"),
     DARK("Dark"),
-    NIGHT("Night")
+    NIGHT("Night"),
+    HIGH_CONTRAST_LIGHT("High Contrast Light"),
+    HIGH_CONTRAST_DARK("High Contrast Dark")
 }
 
 // ── Color Schemes ──────────────────────────────────────────
@@ -82,6 +84,28 @@ private val NightColorScheme = darkColorScheme(
     onBackground = NightOnBackground,
     surface = NightSurface,
     onSurface = NightOnSurface
+)
+
+private val HighContrastLightColorScheme = lightColorScheme(
+    primary = HcLightPrimary,
+    onPrimary = HcLightOnPrimary,
+    secondary = HcLightSecondary,
+    onSecondary = HcLightOnSecondary,
+    background = HcLightBackground,
+    onBackground = HcLightOnBackground,
+    surface = HcLightSurface,
+    onSurface = HcLightOnSurface
+)
+
+private val HighContrastDarkColorScheme = darkColorScheme(
+    primary = HcDarkPrimary,
+    onPrimary = HcDarkOnPrimary,
+    secondary = HcDarkSecondary,
+    onSecondary = HcDarkOnSecondary,
+    background = HcDarkBackground,
+    onBackground = HcDarkOnBackground,
+    surface = HcDarkSurface,
+    onSurface = HcDarkOnSurface
 )
 
 // ── Theme State ────────────────────────────────────────────
@@ -163,17 +187,22 @@ fun MimiralTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val isDark = themeType == MimiralThemeType.DARK || themeType == MimiralThemeType.NIGHT
+    val isDark = themeType == MimiralThemeType.DARK ||
+        themeType == MimiralThemeType.NIGHT ||
+        themeType == MimiralThemeType.HIGH_CONTRAST_DARK
+    val isHighContrast = themeType == MimiralThemeType.HIGH_CONTRAST_LIGHT ||
+        themeType == MimiralThemeType.HIGH_CONTRAST_DARK
 
     val colorScheme = when {
+        isHighContrast -> {
+            // High contrast themes must not use dynamic colors
+            themeType.toColorScheme()
+        }
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val view = LocalView.current
             if (view.isInEditMode) {
-                // Preview: use static scheme
                 themeType.toColorScheme()
             } else {
-                // On Android 12+, use dynamic colors but only for Day/Sepia (light) or Dark (dark)
-                // Night theme should stay pure black even with dynamic colors
                 if (themeType == MimiralThemeType.NIGHT) {
                     NightColorScheme
                 } else {
@@ -181,9 +210,7 @@ fun MimiralTheme(
                     if (isDark) {
                         dynamicDarkColorScheme(context)
                     } else {
-                        dynamicLightColorScheme(
-                            context
-                        )
+                        dynamicLightColorScheme(context)
                     }
                 }
             }
@@ -214,4 +241,6 @@ fun MimiralThemeType.toColorScheme(): ColorScheme = when (this) {
     MimiralThemeType.SEPIA -> SepiaColorScheme
     MimiralThemeType.DARK -> DarkColorScheme
     MimiralThemeType.NIGHT -> NightColorScheme
+    MimiralThemeType.HIGH_CONTRAST_LIGHT -> HighContrastLightColorScheme
+    MimiralThemeType.HIGH_CONTRAST_DARK -> HighContrastDarkColorScheme
 }

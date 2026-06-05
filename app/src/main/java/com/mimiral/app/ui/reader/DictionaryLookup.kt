@@ -382,7 +382,7 @@ fun DictionaryPopup(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Book,
-                                contentDescription = null,
+                                contentDescription = "Open dictionary",
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -393,7 +393,7 @@ fun DictionaryPopup(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Language,
-                                contentDescription = null,
+                                contentDescription = "Translate",
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -411,7 +411,7 @@ fun DictionaryPopup(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.OpenInNew,
-                                contentDescription = null,
+                                contentDescription = "Search more",
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
