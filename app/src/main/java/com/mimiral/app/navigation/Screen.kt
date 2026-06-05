@@ -9,6 +9,7 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object Statistics : Screen("statistics")
     object KavitaSetup : Screen("kavita_setup")
+    object ReadingPreferences : Screen("reading_preferences")
     object EpubReader : Screen("epub_reader/{bookId}") {
         fun createRoute(bookId: Int): String = "epub_reader/$bookId"
     }
