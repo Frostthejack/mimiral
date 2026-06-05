@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookReadingListCrossRef
@@ -259,6 +260,20 @@ interface CollectionDao {
 
     @Query("DELETE FROM book_collections WHERE book_id = :bookId AND collection_id = :collectionId")
     suspend fun removeBookFromCollection(bookId: Int, collectionId: Int)
+
+    @Query(
+        "SELECT collections.* FROM collections " +
+            "INNER JOIN book_collections ON collections.id = book_collections.collection_id " +
+            "WHERE book_collections.book_id = :bookId " +
+            "ORDER BY collections.sort_order"
+    )
+    fun getCollectionsForBook(bookId: Int): Flow<List<CollectionEntity>>
+
+    @Query("SELECT collection_id FROM book_collections WHERE book_id = :bookId")
+    suspend fun getCollectionIdsForBook(bookId: Int): List<Int>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addBooksToCollections(crossRefs: List<BookCollectionCrossRef>)
 }
 
 @Dao
