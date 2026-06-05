@@ -25,6 +25,7 @@ import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
 import com.mimiral.app.ui.reader.TxtRtfReaderScreen
+import com.mimiral.app.ui.settings.GestureSettingsScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
 import com.mimiral.app.ui.settings.SettingsScreen
@@ -113,7 +114,16 @@ fun MimiralNavGraph(navController: NavHostController) {
                 SettingsScreen(
                     onNavigateToKavitaSetup = {
                         navController.navigate(Screen.KavitaSetup.route)
+                    },
+                    onNavigateToGestureSettings = {
+                        navController.navigate(Screen.GestureSettings.route)
                     }
+                )
+            }
+
+            composable(Screen.GestureSettings.route) {
+                GestureSettingsScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 

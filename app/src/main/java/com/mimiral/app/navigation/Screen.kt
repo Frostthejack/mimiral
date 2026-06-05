@@ -7,6 +7,7 @@ sealed class Screen(val route: String) {
     object AddBooks : Screen("add_books")
     object NowReading : Screen("now_reading")
     object Settings : Screen("settings")
+    object GestureSettings : Screen("gesture_settings")
     object Statistics : Screen("statistics")
     object KavitaSetup : Screen("kavita_setup")
     object EpubReader : Screen("epub_reader/{bookId}") {
