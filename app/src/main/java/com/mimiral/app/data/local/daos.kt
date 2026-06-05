@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
@@ -197,11 +198,20 @@ interface CollectionDao {
     @Query("SELECT * FROM collections ORDER BY sort_order")
     fun getAllCollections(): Flow<List<CollectionEntity>>
 
+    @Query("SELECT * FROM collections WHERE id = :collectionId")
+    suspend fun getCollectionById(collectionId: Int): CollectionEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCollection(collection: CollectionEntity): Long
 
+    @Update
+    suspend fun updateCollection(collection: CollectionEntity)
+
     @Delete
     suspend fun deleteCollection(collection: CollectionEntity)
+
+    @Query("SELECT COUNT(*) FROM collections")
+    suspend fun getCollectionCount(): Int
 
     @Query(
         "SELECT books.* FROM books " +
@@ -209,6 +219,29 @@ interface CollectionDao {
             "WHERE book_collections.collection_id = :collectionId"
     )
     fun getBooksInCollection(collectionId: Int): Flow<List<BookEntity>>
+
+    @Query("SELECT COUNT(*) FROM book_collections WHERE collection_id = :collectionId")
+    suspend fun getBookCountInCollection(collectionId: Int): Int
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addBookToCollection(crossRef: BookCollectionCrossRef)
+
+    @Query("DELETE FROM book_collections WHERE book_id = :bookId AND collection_id = :collectionId")
+    suspend fun removeBookFromCollection(bookId: Int, collectionId: Int)
+
+    @Query(
+        "SELECT collections.* FROM collections " +
+            "INNER JOIN book_collections ON collections.id = book_collections.collection_id " +
+            "WHERE book_collections.book_id = :bookId " +
+            "ORDER BY collections.sort_order"
+    )
+    fun getCollectionsForBook(bookId: Int): Flow<List<CollectionEntity>>
+
+    @Query("SELECT collection_id FROM book_collections WHERE book_id = :bookId")
+    suspend fun getCollectionIdsForBook(bookId: Int): List<Int>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addBooksToCollections(crossRefs: List<BookCollectionCrossRef>)
 }
 
 @Dao

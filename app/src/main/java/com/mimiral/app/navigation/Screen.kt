@@ -24,4 +24,10 @@ sealed class Screen(val route: String) {
     object KavitaSeries : Screen("kavita_series/{seriesId}") {
         fun createRoute(seriesId: Int): String = "kavita_series/$seriesId"
     }
+
+    // Collection picker - accepts comma-separated book IDs
+    object CollectionPicker : Screen("collection_picker/{bookIds}") {
+        fun createRoute(bookIds: List<Int>): String =
+            "collection_picker/${bookIds.joinToString(",")}"
+    }
 }

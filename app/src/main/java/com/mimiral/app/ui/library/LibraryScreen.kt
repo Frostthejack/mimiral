@@ -76,6 +76,7 @@ import com.mimiral.app.data.local.settings.ViewMode
 @Composable
 fun LibraryScreen(
     onBookClick: (Int, String) -> Unit,
+    onNavigateToCollections: ((List<Int>) -> Unit)? = null,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -309,14 +310,14 @@ fun LibraryScreen(
                                 books = uiState.books,
                                 recentBooks = if (showRecent) recentBooks else emptyList(),
                                 onBookClick = onBookClick,
-                                onBookLongPress = { /* handled per-item */ }
+                                onNavigateToCollections = onNavigateToCollections
                             )
                         } else {
                             ListLibraryContent(
                                 books = uiState.books,
                                 recentBooks = if (showRecent) recentBooks else emptyList(),
                                 onBookClick = onBookClick,
-                                onBookLongPress = { /* handled per-item */ }
+                                onNavigateToCollections = onNavigateToCollections
                             )
                         }
                     }
@@ -332,7 +333,7 @@ private fun GridLibraryContent(
     books: List<BookWithProgress>,
     recentBooks: List<BookWithProgress>,
     onBookClick: (Int, String) -> Unit,
-    onBookLongPress: (BookWithProgress) -> Unit
+    onNavigateToCollections: ((List<Int>) -> Unit)? = null
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 150.dp),
@@ -361,7 +362,7 @@ private fun GridLibraryContent(
                     onClick = {
                         onBookClick(bookWithProgress.book.id, bookWithProgress.book.format)
                     },
-                    onLongClick = { onBookLongPress(bookWithProgress) }
+                    onNavigateToCollections = onNavigateToCollections
                 )
             }
 
@@ -387,7 +388,7 @@ private fun GridLibraryContent(
             GridBookItem(
                 bookWithProgress = bookWithProgress,
                 onClick = { onBookClick(bookWithProgress.book.id, bookWithProgress.book.format) },
-                onLongClick = { onBookLongPress(bookWithProgress) }
+                onNavigateToCollections = onNavigateToCollections
             )
         }
     }
@@ -399,7 +400,7 @@ private fun ListLibraryContent(
     books: List<BookWithProgress>,
     recentBooks: List<BookWithProgress>,
     onBookClick: (Int, String) -> Unit,
-    onBookLongPress: (BookWithProgress) -> Unit
+    onNavigateToCollections: ((List<Int>) -> Unit)? = null
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -422,7 +423,7 @@ private fun ListLibraryContent(
                     onClick = {
                         onBookClick(bookWithProgress.book.id, bookWithProgress.book.format)
                     },
-                    onLongClick = { onBookLongPress(bookWithProgress) }
+                    onNavigateToCollections = onNavigateToCollections
                 )
             }
             item {
@@ -448,7 +449,7 @@ private fun ListLibraryContent(
             ListBookItem(
                 bookWithProgress = bookWithProgress,
                 onClick = { onBookClick(bookWithProgress.book.id, bookWithProgress.book.format) },
-                onLongClick = { onBookLongPress(bookWithProgress) }
+                onNavigateToCollections = onNavigateToCollections
             )
         }
     }
@@ -459,7 +460,7 @@ private fun ListLibraryContent(
 private fun GridBookItem(
     bookWithProgress: BookWithProgress,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onNavigateToCollections: ((List<Int>) -> Unit)? = null
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
 
@@ -553,7 +554,10 @@ private fun GridBookItem(
         ) {
             DropdownMenuItem(
                 text = { Text("Add to Collection") },
-                onClick = { showContextMenu = false },
+                onClick = {
+                    showContextMenu = false
+                    onNavigateToCollections?.invoke(listOf(bookWithProgress.book.id))
+                },
                 leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) }
             )
             DropdownMenuItem(
@@ -575,7 +579,7 @@ private fun GridBookItem(
 private fun ListBookItem(
     bookWithProgress: BookWithProgress,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onNavigateToCollections: ((List<Int>) -> Unit)? = null
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
 
@@ -688,7 +692,10 @@ private fun ListBookItem(
         ) {
             DropdownMenuItem(
                 text = { Text("Add to Collection") },
-                onClick = { showContextMenu = false },
+                onClick = {
+                    showContextMenu = false
+                    onNavigateToCollections?.invoke(listOf(bookWithProgress.book.id))
+                },
                 leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) }
             )
             DropdownMenuItem(

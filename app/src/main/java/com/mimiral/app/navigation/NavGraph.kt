@@ -19,6 +19,7 @@ import androidx.navigation.navArgument
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.discover.KavitaSeriesScreen
 import com.mimiral.app.ui.library.AddBooksScreen
+import com.mimiral.app.ui.library.CollectionPickerScreen
 import com.mimiral.app.ui.library.LibraryScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
@@ -84,6 +85,10 @@ fun MimiralNavGraph(navController: NavHostController) {
                 LibraryScreen(
                     onBookClick = { bookId, format ->
                         val route = routeForBookFormat(bookId, format)
+                        navController.navigate(route)
+                    },
+                    onNavigateToCollections = { bookIds ->
+                        val route = Screen.CollectionPicker.createRoute(bookIds)
                         navController.navigate(route)
                     }
                 )
@@ -172,6 +177,21 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onNavigateBack = { navController.popBackStack() },
                     onChapterClick = { _, _, _ -> /* TODO: Navigate to Kavita reader */ }
                 )
+            }
+
+            // Collection picker
+            composable(
+                route = Screen.CollectionPicker.route,
+                arguments = listOf(navArgument("bookIds") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val bookIdsString = backStackEntry.arguments?.getString("bookIds") ?: ""
+                val bookIds = bookIdsString.split(",").mapNotNull { it.toIntOrNull() }
+                if (bookIds.isNotEmpty()) {
+                    CollectionPickerScreen(
+                        bookIds = bookIds,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }
