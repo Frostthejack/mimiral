@@ -91,7 +91,7 @@ data class OpdsLink(
     val isNavigation: Boolean
         get() = (rel == null && type?.contains("application/epub+zip") != true && type?.startsWith("image/") != true && !isAcquisition) ||
             rel == "http://opds-spec.org/facet" ||
-            rel.contains("navigation", ignoreCase = true) ||
+            rel?.contains("navigation", ignoreCase = true) == true ||
             type?.contains("application/atom+xml") == true
 
     val isAcquisition: Boolean
