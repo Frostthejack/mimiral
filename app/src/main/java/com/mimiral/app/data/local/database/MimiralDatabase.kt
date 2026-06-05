@@ -12,6 +12,7 @@ import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
+import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.dao.ReadingTimeDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
@@ -25,6 +26,7 @@ import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ReadingTimeEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
@@ -44,9 +46,10 @@ import com.mimiral.app.data.local.entity.TagEntity
         PdfSettingsEntity::class,
         ChapterEntity::class,
         ChapterFtsEntity::class,
+        ReadingSessionEntity::class,
         ReadingTimeEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -59,6 +62,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun opdsCatalogDao(): OpdsCatalogDao
     abstract fun pdfSettingsDao(): PdfSettingsDao
     abstract fun chapterDao(): ChapterDao
+    abstract fun readingSessionDao(): ReadingSessionDao
     abstract fun readingTimeDao(): ReadingTimeDao
 
     companion object {
@@ -238,9 +242,38 @@ abstract class MimiralDatabase : RoomDatabase() {
 
         /**
          * Migration from v5 to v6:
-         * - Create reading_time table for per-book daily reading duration tracking
+         * - Create reading_sessions table for individual reading session tracking
          */
         val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `reading_sessions` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`book_id` INTEGER NOT NULL, " +
+                        "`start_time` INTEGER NOT NULL, " +
+                        "`end_time` INTEGER NOT NULL, " +
+                        "`duration_seconds` INTEGER NOT NULL, " +
+                        "`pages_read` INTEGER NOT NULL, " +
+                        "`date` TEXT NOT NULL, " +
+                        "FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) " +
+                        "ON DELETE CASCADE)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_reading_sessions_book_id` ON `reading_sessions` (`book_id`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_reading_sessions_start_time` ON `reading_sessions` (`start_time`)"
+                )
+            }
+        }
+
+        /**
+         * Migration from v6 to v7:
+         * - Create reading_time table for per-book daily reading duration tracking
+         */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS `reading_time` (" +
