@@ -230,7 +230,8 @@ class FileScanner @Inject constructor(
         // Add relative path constraints if targeting specific directories
         val pathSelection = if (includeDownloads && includeDocuments) {
             // Both directories - use OR condition
-            " AND (${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ? OR ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?)"
+            val col = MediaStore.Files.FileColumns.RELATIVE_PATH
+            " AND ($col LIKE ? OR $col LIKE ?)"
         } else if (includeDownloads) {
             " AND ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
         } else if (includeDocuments) {
@@ -345,7 +346,8 @@ class FileScanner @Inject constructor(
                     try {
                         val bookEntity = BookEntity(
                             filePath = pending.filePath,
-                            title = pending.fileName, // Placeholder; will be updated by metadata extractor
+                            title = pending.fileName,
+                            // Placeholder; will be updated by metadata extractor
                             author = null,
                             coverPath = null,
                             format = pending.format,

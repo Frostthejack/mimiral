@@ -186,13 +186,14 @@ class FreeSourcesViewModel @Inject constructor(
         )
 
         // Try to construct a search URL for known sources
+        val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
         val searchUrl = when (source) {
             FreeSource.PROJECT_GUTENBERG ->
-                "https://m.gutenberg.org/ebooks/search.opds/?query=${java.net.URLEncoder.encode(query, "UTF-8")}"
+                "https://m.gutenberg.org/ebooks/search.opds/?query=$encodedQuery"
             FreeSource.STANDARD_EBOOKS ->
-                "https://standardebooks.org/opds/all?query=${java.net.URLEncoder.encode(query, "UTF-8")}"
+                "https://standardebooks.org/opds/all?query=$encodedQuery"
             FreeSource.OPEN_LIBRARY ->
-                "https://openlibrary.org/search/inside.opds/?q=${java.net.URLEncoder.encode(query, "UTF-8")}"
+                "https://openlibrary.org/search/inside.opds/?q=$encodedQuery"
         }
 
         viewModelScope.launch {
@@ -214,10 +215,15 @@ class FreeSourcesViewModel @Inject constructor(
                                 entry.authors.any { it.name.contains(query, ignoreCase = true) } ||
                                 entry.summary?.contains(query, ignoreCase = true) == true
                         }
+                        val msg = if (filtered.isEmpty()) {
+                            "No results found for \"$query\""
+                        } else {
+                            null
+                        }
                         _uiState.value = _uiState.value.copy(
                             isSearching = false,
                             searchResults = filtered,
-                            errorMessage = if (filtered.isEmpty()) "No results found for \"$query\"" else null
+                            errorMessage = msg
                         )
                     } else {
                         _uiState.value = _uiState.value.copy(

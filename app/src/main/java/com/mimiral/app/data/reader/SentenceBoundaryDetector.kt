@@ -29,7 +29,8 @@ data class Sentence(
  * ```
  * val detector = SentenceBoundaryDetector()
  * val sentences = detector.findSentences("Hello world! How are you? I'm fine.")
- * // => [Sentence(0,12,"Hello world!"), Sentence(12,27,"How are you?"), Sentence(27,37,"I'm fine.")]
+ * // => [Sentence(0,12,"Hello world!"), Sentence(12,27,"How are you?"),
+ * //     Sentence(27,37,"I'm fine.")]
  * ```
  */
 class SentenceBoundaryDetector(

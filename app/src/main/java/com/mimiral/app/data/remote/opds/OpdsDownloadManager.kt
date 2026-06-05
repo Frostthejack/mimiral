@@ -88,7 +88,7 @@ class OpdsDownloadManager @Inject constructor(
                 filePath = outputFile.absolutePath,
                 title = entry.title,
                 author = entry.authors.firstOrNull()?.name,
-                description = entry.summary.ifBlank { entry.content },
+                description = entry.summary?.ifBlank { entry.content },
                 coverPath = null,
                 format = extension.uppercase(),
                 fileSize = outputFile.length(),
@@ -113,7 +113,7 @@ class OpdsDownloadManager @Inject constructor(
         val fromHref = href.substringAfterLast('.', "")
         if (fromHref in SUPPORTED_EXTENSIONS) return fromHref
 
-        val fromType = link.type.lowercase()
+        val fromType = link.type?.lowercase() ?: ""
         return when {
             fromType.contains("epub") -> "epub"
             fromType.contains("pdf") -> "pdf"

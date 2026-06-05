@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 /**
@@ -128,6 +129,53 @@ class KavitaRepository @Inject constructor(
      */
     suspend fun getActiveServer(): ServerEntity? =
         serverDao.getActiveServerByType("KAVITA")
+
+    /**
+     * List all Kavita libraries.
+     */
+    suspend fun getLibraries(): KavitaResult<List<KavitaLibrary>> =
+        kavitaClient.getLibraries()
+
+    /**
+     * Get all series in a library.
+     */
+    suspend fun getSeriesForLibrary(libraryId: Int): KavitaResult<List<KavitaSeries>> {
+        val result = kavitaClient.getSeries(libraryId = libraryId)
+        return when (result) {
+            is KavitaResult.Success -> KavitaResult.Success(result.data.items)
+            is KavitaResult.Error -> result
+        }
+    }
+
+    /**
+     * Get detailed series metadata including volumes.
+     */
+    suspend fun getSeriesMetadata(seriesId: Int): KavitaResult<KavitaSeries> {
+        // Get volumes for the series
+        val volumesResult = kavitaClient.getVolumes(seriesId)
+        if (volumesResult is KavitaResult.Error) return volumesResult
+        val volumes = (volumesResult as KavitaResult.Success).data
+        // Return a KavitaSeries with the volumes populated
+        // We need basic series info; use a minimal series with volumes
+        return KavitaResult.Success(
+            KavitaSeries(
+                id = seriesId,
+                name = "",
+                libraryId = 0,
+                volumes = volumes
+            )
+        )
+    }
+
+    /**
+     * Resolve a cover image URL from a cover image path.
+     */
+    fun resolveCoverImageUrl(coverImage: String?): String? {
+        if (coverImage.isNullOrBlank()) return null
+        val server = runBlocking { serverDao.getActiveServerByType("KAVITA") } ?: return null
+        val base = server.url.trimEnd('/')
+        return "$base/api/image/cover?coverImage=$coverImage"
+    }
 
     /**
      * Connect to the Kavita server using stored credentials.

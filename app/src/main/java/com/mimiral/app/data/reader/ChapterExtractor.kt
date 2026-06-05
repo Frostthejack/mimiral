@@ -245,10 +245,9 @@ class ChapterExtractor(
         val bytes = when (readResult) {
             is Try.Success -> readResult.value
             is Try.Failure -> {
-                return ChapterExtractionResult.Error(
-                    "Failed to read resource for chapter ${chapter.title}: ${readResult.value.message}",
-                    chapterIndex
-                )
+                val msg = "Failed to read resource for chapter " +
+                    "${chapter.title}: ${readResult.value.message}"
+                return ChapterExtractionResult.Error(msg, chapterIndex)
             }
         }
 

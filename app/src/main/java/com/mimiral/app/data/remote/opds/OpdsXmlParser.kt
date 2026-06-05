@@ -151,6 +151,14 @@ object OpdsXmlParser {
             eventType = parser.next()
         }
 
+        // Extract UI-relevant fields from links
+        val coverImageUrl = links.firstOrNull { it.isCover }?.href
+        val thumbnailUrl = links.firstOrNull { it.isThumbnail }?.href
+        val downloadLinks = links.filter { it.isAcquisition }
+        val acquisitionLinks = links.filter { it.isAcquisition }
+        val navigationLink = links.firstOrNull { it.isNavigation }
+        val isNavigationEntry = navigationLink != null && acquisitionLinks.isEmpty()
+
         return OpdsEntry(
             id = id,
             title = title,
@@ -159,11 +167,17 @@ object OpdsXmlParser {
             updated = updated,
             published = published,
             authors = authors,
-            links = links,
             categories = categories,
-            language = language,
+            coverImageUrl = coverImageUrl,
+            thumbnailUrl = thumbnailUrl,
+            downloadLinks = downloadLinks,
+            acquisitionLinks = acquisitionLinks,
+            navigationLink = navigationLink,
+            isNavigationEntry = isNavigationEntry,
             issued = issued,
-            publisher = publisher
+            publisher = publisher,
+            language = language,
+            links = links
         )
     }
 

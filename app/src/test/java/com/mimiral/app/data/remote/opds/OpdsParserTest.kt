@@ -30,7 +30,7 @@ class OpdsParserTest {
             <link rel="self" type="application/atom+xml" href="https://example.com/catalog.atom"/>
             <link rel="start" type="application/atom+xml" href="https://example.com/catalog.atom"/>
             <link rel="up" type="application/atom+xml" href="https://example.com/"/>
-            <link rel="next" type="application/atom+xml" href="https://example.com/catalog.atom?page=2"/>
+            <link rel="next" type="application/atom+xml" href="https://example.com/c.atom?page=2"/>
             <entry>
                 <id>urn:uuid:book-1</id>
                 <title>Test Book One</title>
@@ -41,7 +41,7 @@ class OpdsParserTest {
                     <name>Author One</name>
                     <uri>https://example.com/authors/1</uri>
                 </author>
-                <category term="fiction" scheme="http://schema.org/BookFormatCategory" label="Fiction"/>
+            <category term="fiction" scheme="http://schema.org/BookFormatCategory" label="Fiction"/>
                 <category term="fantasy" label="Fantasy"/>
                 <dc:subject>Fiction</dc:subject>
                 <dc:subject>Fantasy</dc:subject>

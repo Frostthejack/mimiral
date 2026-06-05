@@ -26,9 +26,11 @@ data class CleaningResult(
  * | Bracketed numbers  | `[1]`, `[23]`  | Square-bracket markers |
  * | Bracketed asterisks| `[*]`, `[**]`  | Asterisk markers |
  * | Parenthesized numbers | `(1)`, `(23)` | Paren markers |
- * | Superscript tag + digits | `<sup>1</sup>`, `<sup>12</sup>` | HTML superscript (before tag stripping) |
+ * | Superscript tag + digits | `<sup>1</sup>`, `<sup>12</sup>` | HTML superscript (before
+ *   tag stripping) |
  * | Dagger / double-dagger | `†`, `‡` | Reference markers |
- * | Asterisk footnote markers | `*`, `**`, `***` at end of word before space/punct | Inline asterisk markers |
+ * | Asterisk footnote markers | `*`, `**`, `***` at end of word before
+ *   space/punct | Inline asterisk markers |
  * | Number-dot footnote    | `1.`, `2.` at start of line (footnote body) | Footnote definitions |
  *
  * ## Page number patterns handled

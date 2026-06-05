@@ -631,7 +631,7 @@ private fun BookEntryItem(
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         entry.acquisitionLinks.take(3).forEach { link ->
-                            val formatLabel = link.formatLabel
+                            val formatLabel = link.formatName ?: link.type ?: "Download"
                             TextButton(
                                 onClick = onDownload,
                                 enabled = !isDownloading

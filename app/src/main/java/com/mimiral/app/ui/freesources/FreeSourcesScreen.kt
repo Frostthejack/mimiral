@@ -243,7 +243,8 @@ private fun SourceSelectionView(
                             color = MaterialTheme.colorScheme.onTertiaryContainer
                         )
                         Text(
-                            text = "Add custom OPDS catalogs from Calibre, Komga, or any OPDS-compatible server in a future update.",
+                            text = "Add custom OPDS catalogs from Calibre, Komga, " +
+                                "or any OPDS-compatible server in a future update.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                         )
@@ -466,7 +467,10 @@ private fun FeedBrowseView(
         }
 
         // Empty feed
-        if (feed.entries.isEmpty() && feed.navigationGroups.isEmpty() && feed.navigationLinks.isEmpty()) {
+        if (feed.entries.isEmpty() &&
+            feed.navigationGroups.isEmpty() &&
+            feed.navigationLinks.isEmpty()
+        ) {
             item {
                 Column(
                     modifier = Modifier

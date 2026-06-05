@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
+import com.mimiral.app.data.remote.opds.OpdsResult
 import com.mimiral.app.data.remote.opds.OpdsDownloadManager
 import com.mimiral.app.data.remote.opds.OpdsEntry
 import com.mimiral.app.data.remote.opds.OpdsFeed
@@ -61,7 +62,7 @@ class OpdsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingCatalogs = true)
             try {
-                opdsRepository.getActiveCatalogs().collect { catalogs ->
+                opdsRepository.getSavedCatalogs().collect { catalogs ->
                     _uiState.value = _uiState.value.copy(
                         catalogs = catalogs,
                         isLoadingCatalogs = false,
@@ -131,23 +132,23 @@ class OpdsViewModel @Inject constructor(
                 errorMessage = null
             )
 
-            val result = opdsRepository.fetchCatalogFeed(catalog)
+            val result = opdsRepository.browseCatalog(catalog)
 
-            result.fold(
-                onSuccess = { feed ->
+            when (result) {
+                is OpdsResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoadingFeed = false,
-                        currentFeed = feed,
-                        searchResults = feed.entries
-                    )
-                },
-                onFailure = { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoadingFeed = false,
-                        errorMessage = "Failed to load catalog: ${error.message}"
+                        currentFeed = result.data,
+                        searchResults = result.data.entries
                     )
                 }
-            )
+                is OpdsResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingFeed = false,
+                        errorMessage = "Failed to load catalog: ${result.message}"
+                    )
+                }
+            }
         }
     }
 

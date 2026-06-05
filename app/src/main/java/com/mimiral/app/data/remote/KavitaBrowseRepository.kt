@@ -9,7 +9,10 @@ import javax.inject.Singleton
  */
 sealed class BrowseResult<out T> {
     data class Success<T>(val data: T) : BrowseResult<T>()
-    data class Error(val message: String, val exception: Exception? = null) : BrowseResult<Nothing>()
+    data class Error(
+        val message: String,
+        val exception: Exception? = null
+    ) : BrowseResult<Nothing>()
     data object Loading : BrowseResult<Nothing>()
 }
 
@@ -33,7 +36,9 @@ class KavitaBrowseRepository @Inject constructor(
                     BrowseResult.Success(it)
                 } ?: BrowseResult.Error("Empty response body")
             } else {
-                BrowseResult.Error("Failed to load series: ${response.code()} ${response.message()}")
+                BrowseResult.Error(
+                    "Failed to load series: ${response.code()} ${response.message()}"
+                )
             }
         } catch (e: Exception) {
             BrowseResult.Error("Error loading series: ${e.message}", e)
@@ -49,7 +54,9 @@ class KavitaBrowseRepository @Inject constructor(
             if (response.isSuccessful) {
                 BrowseResult.Success(response.body() ?: emptyList())
             } else {
-                BrowseResult.Error("Failed to load volumes: ${response.code()} ${response.message()}")
+                BrowseResult.Error(
+                    "Failed to load volumes: ${response.code()} ${response.message()}"
+                )
             }
         } catch (e: Exception) {
             BrowseResult.Error("Error loading volumes: ${e.message}", e)
@@ -67,7 +74,9 @@ class KavitaBrowseRepository @Inject constructor(
                     BrowseResult.Success(it)
                 } ?: BrowseResult.Error("Empty response body")
             } else {
-                BrowseResult.Error("Failed to load volume: ${response.code()} ${response.message()}")
+                BrowseResult.Error(
+                    "Failed to load volume: ${response.code()} ${response.message()}"
+                )
             }
         } catch (e: Exception) {
             BrowseResult.Error("Error loading volume: ${e.message}", e)
@@ -85,7 +94,9 @@ class KavitaBrowseRepository @Inject constructor(
                     BrowseResult.Success(it)
                 } ?: BrowseResult.Error("Empty response body")
             } else {
-                BrowseResult.Error("Failed to load series info: ${response.code()} ${response.message()}")
+                BrowseResult.Error(
+                    "Failed to load series info: ${response.code()} ${response.message()}"
+                )
             }
         } catch (e: Exception) {
             BrowseResult.Error("Error loading series info: ${e.message}", e)

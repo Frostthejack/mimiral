@@ -132,14 +132,12 @@ class OpdsParser {
         }
 
         // Parse categories
-        val categories = mutableListOf<OpdsCategory>()
+        val categories = mutableListOf<String>()
         val categoryElements = entryElement.getElementsByTagName("category")
         for (i in 0 until categoryElements.length) {
             val catElement = categoryElements.item(i) as? Element ?: continue
             val term = catElement.getAttribute("term") ?: continue
-            val scheme = catElement.getAttribute("scheme")
-            val label = catElement.getAttribute("label")
-            categories.add(OpdsCategory(term = term, scheme = scheme, label = label))
+            categories.add(term)
         }
 
         // Parse links
@@ -176,6 +174,14 @@ class OpdsParser {
         val dctermsExtent = entryElement.getTextContentByTag("dcterms:extent")
             ?: entryElement.getTextContentByTag("extent")
 
+        // Extract UI-relevant fields from links
+        val coverImageUrl = links.firstOrNull { it.isCover }?.href
+        val thumbnailUrl = links.firstOrNull { it.isThumbnail }?.href
+        val downloadLinks = links.filter { it.isAcquisition }
+        val acquisitionLinks = links.filter { it.isAcquisition }
+        val navigationLink = links.firstOrNull { it.isNavigation }
+        val isNavigationEntry = navigationLink != null && acquisitionLinks.isEmpty()
+
         return OpdsEntry(
             id = entryId,
             title = entryTitle,
@@ -185,6 +191,15 @@ class OpdsParser {
             published = entryPublished,
             authors = authors,
             categories = categories,
+            coverImageUrl = coverImageUrl,
+            thumbnailUrl = thumbnailUrl,
+            downloadLinks = downloadLinks,
+            acquisitionLinks = acquisitionLinks,
+            navigationLink = navigationLink,
+            isNavigationEntry = isNavigationEntry,
+            issued = dcIssued,
+            publisher = dcPublisher ?: entryElement.getTextContentByTag("publisher"),
+            language = dcLanguage ?: entryElement.getTextContentByTag("language"),
             links = links,
             dcSubjects = dcSubjects,
             dcPublisher = dcPublisher,

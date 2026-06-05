@@ -244,7 +244,7 @@ class DiscoverViewModel @Inject constructor(
             description = description,
             pages = pages,
             format = format.toString(),
-            formatLabel = formatLabel,
+            formatLabel = formatLabel ?: "",
             coverUrl = kavitaRepository.resolveCoverImageUrl(coverImage)
         )
     }
@@ -256,15 +256,15 @@ class DiscoverViewModel @Inject constructor(
             description = description,
             pages = pages,
             format = format.toString(),
-            formatLabel = formatLabel,
+            formatLabel = formatLabel ?: "",
             coverUrl = kavitaRepository.resolveCoverImageUrl(coverImage),
-            volumes = volumes.map { v ->
+            volumes = (volumes ?: emptyList()).map { v ->
                 VolumeItem(
                     id = v.id,
                     name = v.name,
                     number = v.number,
                     pages = v.pages,
-                    chapterCount = v.chapters.size,
+                    chapterCount = (v.chapters ?: emptyList()).size,
                     coverUrl = kavitaRepository.resolveCoverImageUrl(v.coverImage)
                 )
             }

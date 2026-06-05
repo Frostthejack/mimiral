@@ -13,15 +13,18 @@ enum class FreeSource(
 ) {
     PROJECT_GUTENBERG(
         displayName = "Project Gutenberg",
-        description = "Over 70,000 free eBooks from the world's largest single collection of free books."
+        description = "Over 70,000 free eBooks from the world's largest " +
+            "single collection of free books."
     ),
     STANDARD_EBOOKS(
         displayName = "Standard Ebooks",
-        description = "Beautifully formatted free eBooks with professional typography and design."
+        description = "Beautifully formatted free eBooks with professional " +
+            "typography and design."
     ),
     OPEN_LIBRARY(
         displayName = "Open Library",
-        description = "An open, editable library catalog, building towards a web page for every book ever published."
+        description = "An open, editable library catalog, building towards " +
+            "a web page for every book ever published."
     );
 
     /** The root OPDS catalog URL for this source. */

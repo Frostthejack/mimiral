@@ -1,18 +1,6 @@
 package com.mimiral.app.data.remote.kavita
 
 /**
- * Result wrapper for Kavita API operations.
- */
-sealed class KavitaResult<out T> {
-    data class Success<T>(val data: T) : KavitaResult<T>()
-    data class Error(
-        val message: String,
-        val code: Int? = null,
-        val cause: Throwable? = null
-    ) : KavitaResult<Nothing>()
-}
-
-/**
  * Request body for creating/updating a bookmark in Kavita.
  * POST /api/Reader/bookmark
  *

@@ -61,7 +61,8 @@ class OpdsRepository @Inject constructor(
                 )
             }
 
-            val xml = BufferedInputStream(connection.inputStream).bufferedReader().use { it.readText() }
+            val stream = BufferedInputStream(connection.inputStream)
+            val xml = stream.bufferedReader().use { it.readText() }
             connection.disconnect()
 
             val feed = OpdsFeedParser.parse(xml)

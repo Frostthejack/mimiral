@@ -46,6 +46,16 @@ data class KavitaLibrary(
         const val TYPE_IMAGE = 3
         const val TYPE_PDF = 4
     }
+
+    val typeLabel: String
+        get() = when (type) {
+            TYPE_BOOK -> "Books"
+            TYPE_COMIC -> "Comics"
+            TYPE_MANGA -> "Manga"
+            TYPE_IMAGE -> "Images"
+            TYPE_PDF -> "PDFs"
+            else -> "Library"
+        }
 }
 
 /**
@@ -60,7 +70,10 @@ data class KavitaSeries(
     val coverImageLocked: Boolean = false,
     val coverImage: String? = null,
     val pagesRead: Int = 0,
-    val latestReadDate: String? = null
+    val latestReadDate: String? = null,
+    val description: String? = null,
+    val formatLabel: String? = null,
+    val volumes: List<KavitaVolume>? = null
 )
 
 /**
@@ -180,4 +193,43 @@ data class KavitaPagedResponse<T>(
     val totalItems: Int,
     val currentPage: Int,
     val totalPages: Int
+)
+
+/**
+ * Paginated response wrapper for Kavita list endpoints.
+ * Used by KavitaApi for endpoints returning paginated results.
+ */
+data class KavitaPaginatedResponse<T>(
+    val items: List<T> = emptyList(),
+    val totalItems: Int = 0,
+    val currentPage: Int = 0,
+    val totalPages: Int = 0,
+    val pageSize: Int = 0
+)
+
+/**
+ * User-specific reading progress for a chapter.
+ */
+data class KavitaReadingProgress(
+    val id: Int = 0,
+    val chapterId: Int,
+    val pagesRead: Int,
+    val lastModified: String? = null,
+    val volumeId: Int? = null,
+    val seriesId: Int? = null,
+    val libraryId: Int? = null
+)
+
+/**
+ * User info from the Kavita server.
+ */
+data class KavitaUserInfo(
+    val id: String? = null,
+    val username: String? = null,
+    val email: String? = null,
+    val token: String? = null,
+    val refreshToken: String? = null,
+    val apiKey: String? = null,
+    val ageRestriction: Int = 0,
+    val isLocked: Boolean = false
 )
