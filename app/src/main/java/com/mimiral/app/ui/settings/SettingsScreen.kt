@@ -1,5 +1,7 @@
 package com.mimiral.app.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,18 +19,29 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.ui.theme.MimiralThemeSwitcher
 import com.mimiral.app.ui.theme.MimiralThemeType
@@ -46,7 +60,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateToKavitaSetup: () -> Unit = {}
+    onNavigateToKavitaSetup: () -> Unit = {},
+    backupRestoreViewModel: BackupRestoreViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val settingsRepository = remember { ReaderSettingsRepository(context) }
@@ -54,6 +69,8 @@ fun SettingsScreen(
     val settings by settingsRepository.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.ReaderSettings()
     )
+    val backupState by backupRestoreViewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val currentTheme = try {
         MimiralThemeType.valueOf(settings.themeName)
@@ -61,12 +78,38 @@ fun SettingsScreen(
         MimiralThemeType.DAY
     }
 
+    // SAF file picker for restore
+    val restoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { backupRestoreViewModel.restoreFromUri(it) }
+    }
+
+    // Show snackbar messages for backup/restore results
+    LaunchedEffect(backupState) {
+        when {
+            backupState.backupSuccess -> {
+                snackbarHostState.showSnackbar("Settings backed up successfully")
+                backupRestoreViewModel.clearMessage()
+            }
+            backupState.restoreSuccess -> {
+                snackbarHostState.showSnackbar("Settings restored successfully")
+                backupRestoreViewModel.clearMessage()
+            }
+            backupState.errorMessage != null -> {
+                snackbarHostState.showSnackbar(backupState.errorMessage ?: "Error")
+                backupRestoreViewModel.clearMessage()
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Settings") }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -216,6 +259,110 @@ fun SettingsScreen(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // ── Backup & Restore Section ──────────────────────
+            Text(
+                text = "Backup & Restore",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Export your reading preferences, theme, and library settings to a file. " +
+                            "You can restore them later or on a new device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Backup button
+                        Button(
+                            onClick = { backupRestoreViewModel.backupSettings() },
+                            modifier = Modifier.weight(1f),
+                            enabled = !backupState.isBackingUp && !backupState.isRestoring
+                        ) {
+                            if (backupState.isBackingUp) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.SaveAlt,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Text("Backup")
+                        }
+
+                        // Share button (only enabled after a successful backup)
+                        OutlinedButton(
+                            onClick = { backupRestoreViewModel.shareBackup() },
+                            modifier = Modifier.weight(1f),
+                            enabled = backupState.lastBackupFile != null &&
+                                !backupState.isBackingUp && !backupState.isRestoring
+                        ) {
+                            Icon(
+                                Icons.Default.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Text("Share")
+                        }
+                    }
+
+                    // Restore button
+                    OutlinedButton(
+                        onClick = {
+                            restoreLauncher.launch(arrayOf("application/json"))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !backupState.isBackingUp && !backupState.isRestoring
+                    ) {
+                        if (backupState.isRestoring) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Restore,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text("Restore from file...")
+                    }
+
+                    // Last backup info
+                    if (backupState.lastBackupFile != null) {
+                        Text(
+                            text = "Last backup: ${backupState.lastBackupFile}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
