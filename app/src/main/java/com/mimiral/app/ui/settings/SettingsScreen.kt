@@ -476,7 +476,7 @@ fun SettingsScreen(
                         }
                     )
                 }
-            )
+            }
 
             // ═══════════════════════════════════════════════════
             // SECTION: Reading Preferences (Navigation)
@@ -742,7 +742,6 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
-}
 }
 
 // ═══════════════════════════════════════════════════════════
