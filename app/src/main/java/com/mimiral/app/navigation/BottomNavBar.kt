@@ -2,6 +2,7 @@ package com.mimiral.app.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -23,6 +24,7 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem(Screen.Library, "Library", Icons.Filled.MenuBook),
+    BottomNavItem(Screen.Collections, "Collections", Icons.Filled.LibraryBooks),
     BottomNavItem(Screen.Discover, "Discover", Icons.Filled.Explore),
     BottomNavItem(Screen.NowReading, "Now Reading", Icons.Filled.PlayArrow),
     BottomNavItem(Screen.Settings, "Settings", Icons.Filled.Settings)

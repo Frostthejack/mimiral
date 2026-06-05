@@ -16,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.mimiral.app.ui.collections.CollectionsScreen
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.discover.KavitaSeriesScreen
 import com.mimiral.app.ui.library.AddBooksScreen
@@ -60,6 +61,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             val route = currentDestination?.route
             if (route == null || (
                 route != Screen.Library.route &&
+                    route != Screen.Collections.route &&
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
                     route != Screen.Discover.route &&
@@ -82,6 +84,14 @@ fun MimiralNavGraph(navController: NavHostController) {
         ) {
             composable(Screen.Library.route) {
                 LibraryScreen(
+                    onBookClick = { bookId, format ->
+                        val route = routeForBookFormat(bookId, format)
+                        navController.navigate(route)
+                    }
+                )
+            }
+            composable(Screen.Collections.route) {
+                CollectionsScreen(
                     onBookClick = { bookId, format ->
                         val route = routeForBookFormat(bookId, format)
                         navController.navigate(route)
