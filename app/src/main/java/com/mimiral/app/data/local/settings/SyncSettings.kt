@@ -1,0 +1,109 @@
+package com.mimiral.app.data.local.settings
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+private val Context.syncDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "sync_settings"
+)
+
+/**
+ * Sync interval options for automatic background sync.
+ */
+enum class SyncInterval(val displayName: String, val minutes: Int) {
+    MINUTES_15("15 minutes", 15),
+    MINUTES_30("30 minutes", 30),
+    HOURS_1("1 hour", 60),
+    HOURS_2("2 hours", 120),
+    MANUAL("Manual only", 0);
+
+    companion object {
+        fun fromMinutes(minutes: Int): SyncInterval {
+            return entries.find { it.minutes == minutes } ?: MINUTES_30
+        }
+    }
+}
+
+/**
+ * Data class holding all sync-related preferences.
+ */
+data class SyncSettings(
+    val autoSyncEnabled: Boolean = false,
+    val syncInterval: SyncInterval = SyncInterval.MINUTES_30,
+    val syncOnWifiOnly: Boolean = true,
+    val syncBookmarks: Boolean = true,
+    val syncReadingProgress: Boolean = true,
+    val syncHighlights: Boolean = true
+)
+
+/**
+ * Repository for sync preferences using DataStore.
+ */
+class SyncSettingsRepository(private val context: Context) {
+
+    private object Keys {
+        val AUTO_SYNC_ENABLED = booleanPreferencesKey("auto_sync_enabled")
+        val SYNC_INTERVAL = intPreferencesKey("sync_interval_minutes")
+        val SYNC_ON_WIFI_ONLY = booleanPreferencesKey("sync_on_wifi_only")
+        val SYNC_BOOKMARKS = booleanPreferencesKey("sync_bookmarks")
+        val SYNC_READING_PROGRESS = booleanPreferencesKey("sync_reading_progress")
+        val SYNC_HIGHLIGHTS = booleanPreferencesKey("sync_highlights")
+    }
+
+    val settings: Flow<SyncSettings> = context.syncDataStore.data.map { prefs ->
+        SyncSettings(
+            autoSyncEnabled = prefs[Keys.AUTO_SYNC_ENABLED] ?: false,
+            syncInterval = SyncInterval.fromMinutes(
+                prefs[Keys.SYNC_INTERVAL] ?: SyncInterval.MINUTES_30.minutes
+            ),
+            syncOnWifiOnly = prefs[Keys.SYNC_ON_WIFI_ONLY] ?: true,
+            syncBookmarks = prefs[Keys.SYNC_BOOKMARKS] ?: true,
+            syncReadingProgress = prefs[Keys.SYNC_READING_PROGRESS] ?: true,
+            syncHighlights = prefs[Keys.SYNC_HIGHLIGHTS] ?: true
+        )
+    }
+
+    suspend fun setAutoSyncEnabled(enabled: Boolean) {
+        context.syncDataStore.edit { prefs ->
+            prefs[Keys.AUTO_SYNC_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSyncInterval(interval: SyncInterval) {
+        context.syncDataStore.edit { prefs ->
+            prefs[Keys.SYNC_INTERVAL] = interval.minutes
+        }
+    }
+
+    suspend fun setSyncOnWifiOnly(wifiOnly: Boolean) {
+        context.syncDataStore.edit { prefs ->
+            prefs[Keys.SYNC_ON_WIFI_ONLY] = wifiOnly
+        }
+    }
+
+    suspend fun setSyncBookmarks(enabled: Boolean) {
+        context.syncDataStore.edit { prefs ->
+            prefs[Keys.SYNC_BOOKMARKS] = enabled
+        }
+    }
+
+    suspend fun setSyncReadingProgress(enabled: Boolean) {
+        context.syncDataStore.edit { prefs ->
+            prefs[Keys.SYNC_READING_PROGRESS] = enabled
+        }
+    }
+
+    suspend fun setSyncHighlights(enabled: Boolean) {
+        context.syncDataStore.edit { prefs ->
+            prefs[Keys.SYNC_HIGHLIGHTS] = enabled
+        }
+    }
+}
