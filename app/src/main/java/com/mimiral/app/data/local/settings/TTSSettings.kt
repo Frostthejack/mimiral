@@ -20,6 +20,7 @@ data class TTSSettings(
     val pitch: Float = 1.0f,
     val voiceName: String = "",
     val languageTag: String = "",
+    val localeTag: String = "",
     val isTTSEnabled: Boolean = true,
     val autoPlayOnOpen: Boolean = false,
     val highlightWhileReading: Boolean = true,
@@ -33,6 +34,7 @@ class TTSSettingsRepository(private val context: Context) {
         val PITCH = floatPreferencesKey("tts_pitch")
         val VOICE_NAME = stringPreferencesKey("tts_voice_name")
         val LANGUAGE_TAG = stringPreferencesKey("tts_language_tag")
+        val LOCALE_TAG = stringPreferencesKey("tts_locale_tag")
         val TTS_ENABLED = booleanPreferencesKey("tts_enabled")
         val AUTO_PLAY_ON_OPEN = booleanPreferencesKey("tts_auto_play_on_open")
         val HIGHLIGHT_WHILE_READING = booleanPreferencesKey("tts_highlight_while_reading")
@@ -45,6 +47,7 @@ class TTSSettingsRepository(private val context: Context) {
             pitch = prefs[Keys.PITCH] ?: 1.0f,
             voiceName = prefs[Keys.VOICE_NAME] ?: "",
             languageTag = prefs[Keys.LANGUAGE_TAG] ?: "",
+            localeTag = prefs[Keys.LOCALE_TAG] ?: "",
             isTTSEnabled = prefs[Keys.TTS_ENABLED] ?: true,
             autoPlayOnOpen = prefs[Keys.AUTO_PLAY_ON_OPEN] ?: false,
             highlightWhileReading = prefs[Keys.HIGHLIGHT_WHILE_READING] ?: true,
@@ -76,6 +79,12 @@ class TTSSettingsRepository(private val context: Context) {
         }
     }
 
+    suspend fun setLocaleTag(localeTag: String) {
+        context.ttsSettingsDataStore.edit { prefs ->
+            prefs[Keys.LOCALE_TAG] = localeTag
+        }
+    }
+
     suspend fun setTTSEnabled(enabled: Boolean) {
         context.ttsSettingsDataStore.edit { prefs ->
             prefs[Keys.TTS_ENABLED] = enabled
@@ -97,6 +106,16 @@ class TTSSettingsRepository(private val context: Context) {
     suspend fun setSleepTimerDefaultMinutes(minutes: Int) {
         context.ttsSettingsDataStore.edit { prefs ->
             prefs[Keys.SLEEP_TIMER_DEFAULT] = minutes.toString()
+        }
+    }
+
+    suspend fun resetToDefaults() {
+        context.ttsSettingsDataStore.edit { prefs ->
+            prefs[Keys.SPEECH_RATE] = 1.0f
+            prefs[Keys.PITCH] = 1.0f
+            prefs[Keys.VOICE_NAME] = ""
+            prefs[Keys.LANGUAGE_TAG] = ""
+            prefs[Keys.LOCALE_TAG] = ""
         }
     }
 }

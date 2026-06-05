@@ -194,6 +194,9 @@ class TTSService : Service() {
             onInitialized = { success ->
                 if (success) {
                     Log.d(TAG, "TTS engine ready in service")
+                    // Load persisted preferences
+                    val repo = com.mimiral.app.data.local.settings.TTSSettingsRepository(applicationContext)
+                    loadPersistedSettings(repo)
                 } else {
                     Log.e(TAG, "TTS engine failed to initialize in service")
                     stopSelf()

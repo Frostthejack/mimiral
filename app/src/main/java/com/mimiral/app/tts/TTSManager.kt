@@ -11,6 +11,8 @@ import com.mimiral.app.data.reader.SentenceBoundaryDetector
 import java.util.ArrayDeque
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.firstOrNull
 
 enum class TTSState {
     IDLE,
@@ -461,6 +463,34 @@ class TTSManager(
         engine.setSpeechRate(settings.speechRate)
         engine.setPitch(settings.pitch)
         engine.language = settings.locale
+    }
+
+    /**
+     * Load persisted settings from a TTSSettingsRepository.
+     * Call this after initialization to apply saved preferences.
+     */
+    fun loadPersistedSettings(repository: com.mimiral.app.data.local.settings.TTSSettingsRepository) {
+        runBlocking {
+            val persisted = repository.settings.firstOrNull() ?: return@runBlocking
+            settings.speechRate = persisted.speechRate
+            settings.pitch = persisted.pitch
+            if (persisted.localeTag.isNotBlank()) {
+                settings.locale = Locale.forLanguageTag(persisted.localeTag)
+            }
+            ttsEngine?.let { engine ->
+                engine.setSpeechRate(persisted.speechRate)
+                engine.setPitch(persisted.pitch)
+                if (persisted.localeTag.isNotBlank()) {
+                    engine.language = settings.locale
+                }
+                if (persisted.voiceName.isNotBlank()) {
+                    val voice = getAvailableVoices().find { it.name == persisted.voiceName }
+                    if (voice != null) {
+                        setVoice(voice)
+                    }
+                }
+            }
+        }
     }
 
     private fun attachUtteranceListener(engine: TextToSpeech) {

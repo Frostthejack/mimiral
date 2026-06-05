@@ -73,7 +73,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     onNavigateToKavitaSetup: () -> Unit = {},
-    onNavigateToReadingPreferences: () -> Unit = {}
+    onNavigateToReadingPreferences: () -> Unit = {},
+    onNavigateToTTSSettings: () -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -217,13 +218,55 @@ fun SettingsScreen(
                 }
             }
 
-            // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
             // SECTION: TTS Preferences
             // ═══════════════════════════════════════════════════
             SectionHeader(
                 title = "Text-to-Speech",
                 icon = Icons.Default.RecordVoiceOver
             )
+
+            // TTS navigation card - opens full TTS settings screen
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToTTSSettings() }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.RecordVoiceOver,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "TTS Preferences",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Voice, speed, and pitch settings",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
 
             Card(
                 modifier = Modifier.fillMaxWidth(),

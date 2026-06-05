@@ -31,11 +31,17 @@
 
     <!-- TTS controls -->
     <string name="tts_voice_default">Default</string>
+    <string name="tts_voice_default_desc">Use the system default voice</string>
     <string name="tts_speed">Speed</string>
     <string name="tts_speed_format">%.1fx</string>
     <string name="tts_pitch">Pitch</string>
     <string name="tts_pitch_format">%.1fx</string>
     <string name="tts_voice_picker_title">Select Voice</string>
+    <string name="tts_voice_label">Voice</string>
+
+    <!-- TTS Settings screen -->
+    <string name="tts_settings_title">TTS Preferences</string>
+    <string name="tts_reset_defaults">Reset to Defaults</string>
 
     <!-- Highlight -->
     <string name="highlight_color_picker_title">Highlight Color</string>
