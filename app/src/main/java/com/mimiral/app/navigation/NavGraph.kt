@@ -20,6 +20,7 @@ import com.mimiral.app.ui.collections.CollectionsScreen
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.discover.KavitaSeriesScreen
 import com.mimiral.app.ui.library.AddBooksScreen
+import com.mimiral.app.ui.library.BookMetadataEditScreen
 import com.mimiral.app.ui.library.LibraryScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
@@ -87,6 +88,11 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onBookClick = { bookId, format ->
                         val route = routeForBookFormat(bookId, format)
                         navController.navigate(route)
+                    },
+                    onEditBookMetadata = { bookId ->
+                        navController.navigate(
+                            Screen.EditBookMetadata.createRoute(bookId)
+                        )
                     }
                 )
             }
@@ -181,6 +187,18 @@ fun MimiralNavGraph(navController: NavHostController) {
                 KavitaSeriesScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onChapterClick = { _, _, _ -> /* TODO: Navigate to Kavita reader */ }
+                )
+            }
+            // Book metadata editing
+            composable(
+                route = Screen.EditBookMetadata.route,
+                arguments = listOf(navArgument("bookId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
+                BookMetadataEditScreen(
+                    bookId = bookId,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }

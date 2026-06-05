@@ -13,6 +13,7 @@ import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ServerDao
+import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookTagCrossRef
@@ -43,7 +44,7 @@ import com.mimiral.app.data.local.entity.TagEntity
         ChapterEntity::class,
         ChapterFtsEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -56,8 +57,17 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun opdsCatalogDao(): OpdsCatalogDao
     abstract fun pdfSettingsDao(): PdfSettingsDao
     abstract fun chapterDao(): ChapterDao
+    abstract fun tagDao(): TagDao
 
     companion object {
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `books` " +
+                        "ADD COLUMN `rating` INTEGER"
+                )
+            }
+        }
         /**
          * Migration from v1 to v2: initial schema (already applied).
          * Kept for completeness.

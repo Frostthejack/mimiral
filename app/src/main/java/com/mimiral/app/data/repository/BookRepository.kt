@@ -9,12 +9,15 @@ import com.mimiral.app.data.local.dao.ChapterDao
 import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
+import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookEntity
+import com.mimiral.app.data.local.entity.BookTagCrossRef
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.entity.TagEntity
 import com.mimiral.app.data.local.scanner.FileScanner
 import com.mimiral.app.data.local.settings.FilterOption
 import com.mimiral.app.data.local.settings.SortOption
@@ -37,7 +40,8 @@ class BookRepository @Inject constructor(
     private val pdfSettingsDao: PdfSettingsDao,
     private val chapterDao: ChapterDao,
     private val highlightDao: HighlightDao,
-    private val fileScanner: FileScanner
+    private val fileScanner: FileScanner,
+    private val tagDao: TagDao
 ) {
     fun getAllBooks(): Flow<List<BookEntity>> = bookDao.getAllBooks()
 
@@ -338,6 +342,53 @@ class BookRepository @Inject constructor(
 
     suspend fun updateHighlightNote(highlightId: Int, note: String?) {
         highlightDao.updateNote(highlightId, note)
+    }
+
+    // ---- Tag management ----
+
+    fun getTagsForBook(bookId: Int): Flow<List<TagEntity>> =
+        tagDao.getTagsForBook(bookId)
+
+    suspend fun getTagsForBookList(bookId: Int): List<TagEntity> =
+        tagDao.getTagsForBookList(bookId)
+
+    fun getAllTags(): Flow<List<TagEntity>> =
+        tagDao.getAllTags()
+
+    /**
+     * Add a tag to a book. Creates the tag if it doesn't exist.
+     * Returns the tag ID.
+     */
+    suspend fun addTagToBook(bookId: Int, tagName: String): Long {
+        // Find or create the tag
+        val existingTag = tagDao.getTagByName(tagName)
+        val tagId = if (existingTag != null) {
+            existingTag.id.toLong()
+        } else {
+            tagDao.insertTag(TagEntity(name = tagName))
+        }
+        tagDao.addTagToBook(BookTagCrossRef(bookId = bookId, tagId = tagId.toInt()))
+        return tagId
+    }
+
+    suspend fun removeTagFromBook(bookId: Int, tagId: Int) =
+        tagDao.removeTagFromBook(bookId, tagId)
+
+    suspend fun removeAllTagsFromBook(bookId: Int) =
+        tagDao.removeAllTagsFromBook(bookId)
+
+    // ---- Rating ----
+
+    suspend fun updateRating(bookId: Int, rating: Float?) {
+        val book = bookDao.getBookById(bookId) ?: return
+        bookDao.updateBook(book.copy(rating = rating))
+    }
+
+    // ---- Cover ----
+
+    suspend fun updateCoverPath(bookId: Int, coverPath: String?) {
+        val book = bookDao.getBookById(bookId) ?: return
+        bookDao.updateBook(book.copy(coverPath = coverPath))
     }
 
     // ---- SAF / content URI import ----

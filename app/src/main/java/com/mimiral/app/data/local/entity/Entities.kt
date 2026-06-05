@@ -23,7 +23,8 @@ data class BookEntity(
     val source: String = "LOCAL", // LOCAL, KAVITA, OPDS
     @ColumnInfo(name = "source_id") val sourceId: String? = null,
     @ColumnInfo(name = "kavita_series_id") val kavitaSeriesId: Int? = null,
-    @ColumnInfo(name = "kavita_library_id") val kavitaLibraryId: Int? = null
+    @ColumnInfo(name = "kavita_library_id") val kavitaLibraryId: Int? = null,
+    val rating: Float? = null // 0.0–5.0 star rating, null = unrated
 )
 
 @Entity(tableName = "reading_progress")
