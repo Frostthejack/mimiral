@@ -11,17 +11,21 @@ data class LibraryExport(
     @SerializedName("exported_at") val exportedAt: Long = System.currentTimeMillis(),
     @SerializedName("app_version") val appVersion: String = "0.1.0",
     @SerializedName("books") val books: List<ExportBook> = emptyList(),
-    @SerializedName("reading_progress") val readingProgress: List<ExportReadingProgress> = emptyList(),
+    @SerializedName("reading_progress")
+    val readingProgress: List<ExportReadingProgress> = emptyList(),
     @SerializedName("bookmarks") val bookmarks: List<ExportBookmark> = emptyList(),
     @SerializedName("highlights") val highlights: List<ExportHighlight> = emptyList(),
     @SerializedName("collections") val collections: List<ExportCollection> = emptyList(),
-    @SerializedName("book_collections") val bookCollections: List<ExportBookCollectionCrossRef> = emptyList(),
+    @SerializedName("book_collections")
+    val bookCollections: List<ExportBookCollectionCrossRef> = emptyList(),
     @SerializedName("tags") val tags: List<ExportTag> = emptyList(),
     @SerializedName("book_tags") val bookTags: List<ExportBookTagCrossRef> = emptyList(),
-    @SerializedName("reading_sessions") val readingSessions: List<ExportReadingSession> = emptyList(),
+    @SerializedName("reading_sessions")
+    val readingSessions: List<ExportReadingSession> = emptyList(),
     @SerializedName("pdf_settings") val pdfSettings: List<ExportPdfSettings> = emptyList(),
     @SerializedName("servers") val servers: List<ExportServer> = emptyList(),
-    @SerializedName("opds_catalogs") val opdsCatalogs: List<ExportOpdsCatalog> = emptyList()
+    @SerializedName("opds_catalogs")
+    val opdsCatalogs: List<ExportOpdsCatalog> = emptyList()
 ) {
     companion object {
         const val CURRENT_VERSION = 1
