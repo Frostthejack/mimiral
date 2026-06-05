@@ -1,175 +1,127 @@
 package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Response as OkHttpResponse
-import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * OkHttp interceptor that injects authentication headers into requests.
- *
- * Supports two modes:
- * - JWT Bearer token: adds "Authorization: Bearer <token>"
- * - API key: adds "X-Api-Key: <apiKey>"
+ * Result wrapper for Kavita network operations.
  */
-class KavitaAuthInterceptor(
-    private var token: String? = null,
-    private var apiKey: String? = null
-) : Interceptor {
-
-    companion object {
-        private const val TAG = "KavitaAuth"
-    }
-
-    fun setToken(newToken: String?) {
-        token = newToken
-        Log.d(TAG, "JWT token ${if (newToken != null) "set" else "cleared"}")
-    }
-
-    fun setApiKey(newApiKey: String?) {
-        apiKey = newApiKey
-        Log.d(TAG, "API key ${if (newApiKey != null) "set" else "cleared"}")
-    }
-
-    fun clearAuth() {
-        token = null
-        apiKey = null
-        Log.d(TAG, "All auth cleared")
-    }
-
-    override fun intercept(chain: Interceptor.Chain): OkHttpResponse {
-        val originalRequest = chain.request()
-        val requestBuilder = originalRequest.newBuilder()
-            .header("User-Agent", "Mimiral/0.1.0")
-            .header("Accept", "application/json")
-
-        // Prefer JWT token over API key
-        token?.let {
-            requestBuilder.header("Authorization", "Bearer $it")
-        } ?: apiKey?.let {
-            requestBuilder.header("X-Api-Key", it)
-        }
-
-        return chain.proceed(requestBuilder.build())
-    }
+sealed class KavitaResult<out T> {
+    data class Success<T>(val data: T) : KavitaResult<T>()
+    data class Error(
+        val message: String,
+        val code: Int? = null,
+        val cause: Throwable? = null
+    ) : KavitaResult<Nothing>()
 }
 
 /**
- * HTTP client for Kavita API operations.
+ * HTTP client for Kavita server API.
  *
- * Wraps the Retrofit [KavitaApi] service with:
- * - Automatic auth header injection via [KavitaAuthInterceptor]
- * - Connection timeout configuration
- * - Error handling and status code reporting
- * - Token management
+ * Handles:
+ * - JWT authentication (login endpoint)
+ * - API key authentication (header-based)
+ * - Server info and library listing
+ * - Book download with progress
+ * - Cover image download
+ * - Reading progress push/pull
+ * - Bookmark push/pull
+ *
+ * All endpoints are relative to the configured server base URL.
+ * Auth mode (JWT or API key) is selected at client creation time.
  */
 class KavitaClient(
-    private val api: KavitaApi,
-    private val authInterceptor: KavitaAuthInterceptor
+    private val baseUrl: String,
+    private val apiKey: String? = null,
+    private var jwtToken: String? = null,
+    private val client: OkHttpClient = defaultClient()
 ) {
     companion object {
         private const val TAG = "KavitaClient"
         private const val DEFAULT_TIMEOUT_SECONDS = 30L
+        private const val DOWNLOAD_TIMEOUT_SECONDS = 120L
+        private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+        private val gson = Gson()
 
-        /**
-         * Create a KavitaClient from a base URL.
-         *
-         * @param baseUrl The Kavita server base URL (e.g., "https://kavita.example.com/")
-         * @param token Optional JWT token for Bearer auth
-         * @param apiKey Optional API key for X-Api-Key auth
-         * @return Configured KavitaClient
-         */
-        fun create(
-            baseUrl: String,
-            token: String? = null,
-            apiKey: String? = null
-        ): KavitaClient {
-            val authInterceptor = KavitaAuthInterceptor(token, apiKey)
-
-            val loggingInterceptor = HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BASIC
-            }
-
-            val okHttpClient = OkHttpClient.Builder()
+        fun defaultClient(): OkHttpClient {
+            return OkHttpClient.Builder()
                 .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .followRedirects(true)
                 .followSslRedirects(true)
-                .addInterceptor(authInterceptor)
-                .addInterceptor(loggingInterceptor)
                 .build()
+        }
 
-            val retrofit = Retrofit.Builder()
-                .baseUrl(baseUrl)
-                .client(okHttpClient)
-                .addConverterFactory(GsonConverterFactory.create())
+        private fun downloadClient(): OkHttpClient {
+            return OkHttpClient.Builder()
+                .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .readTimeout(DOWNLOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .followRedirects(true)
+                .followSslRedirects(true)
                 .build()
-
-            val api = retrofit.create(KavitaApi::class.java)
-            return KavitaClient(api, authInterceptor)
         }
     }
 
-    // ==================== Auth Management ====================
-
-    fun setToken(token: String?) {
-        authInterceptor.setToken(token)
-    }
-
-    fun setApiKey(apiKey: String?) {
-        authInterceptor.setApiKey(apiKey)
-    }
-
-    fun clearAuth() {
-        authInterceptor.clearAuth()
-    }
-
-    // ==================== Authentication ====================
+    private val normalizedBaseUrl = baseUrl.trimEnd('/')
 
     /**
-     * Authenticate with username and password.
+     * Authenticate with username/password and obtain a JWT token.
+     * The token is stored internally for subsequent requests.
      *
-     * @param username The username
-     * @param password The password
-     * @return [KavitaResult] containing the login response with JWT token
+     * @param username Kavita username
+     * @param password Kavita password
+     * @return KavitaResult with the JWT token string
      */
     suspend fun login(
         username: String,
         password: String
-    ): KavitaResult<KavitaLoginResponse> = withContext(Dispatchers.IO) {
+    ): KavitaResult<String> = withContext(Dispatchers.IO) {
         try {
-            val request = KavitaLoginRequest(username, password)
-            val response = api.login(request)
+            val loginRequest = KavitaLoginRequest(
+                username = username,
+                password = password
+            )
+            val body = gson.toJson(loginRequest).toRequestBody(JSON_MEDIA_TYPE)
 
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null) {
-                    // Auto-set the token for subsequent requests
-                    setToken(body.token)
-                    Log.d(TAG, "Login successful for user: ${body.username}")
-                    KavitaResult.Success(body)
-                } else {
-                    KavitaResult.Error(
-                        message = "Empty login response body",
-                        code = response.code()
-                    )
-                }
-            } else {
-                val errorBody = response.errorBody()?.string() ?: ""
-                Log.w(TAG, "Login failed: ${response.code()} - $errorBody")
-                KavitaResult.Error(
-                    message = parseErrorMessage(errorBody, response.code()),
-                    code = response.code()
+            val requestBuilder = Request.Builder()
+                .url("$normalizedBaseUrl/api/account/login")
+                .post(body)
+                .header("User-Agent", "Mimiral/0.1.0")
+
+            val request = requestBuilder.build()
+            val response = client.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                return@withContext KavitaResult.Error(
+                    message = "Login failed: HTTP ${response.code}",
+                    code = response.code
                 )
             }
+
+            val responseBody = response.body?.string()
+                ?: return@withContext KavitaResult.Error(
+                    message = "Empty login response",
+                    code = response.code
+                )
+
+            val loginResponse = gson.fromJson(
+                responseBody,
+                KavitaLoginResponse::class.java
+            )
+            val token = loginResponse.token
+            jwtToken = token
+            Log.d(TAG, "Login successful for user: ${loginResponse.username}")
+            KavitaResult.Success(token)
         } catch (e: IOException) {
             Log.e(TAG, "Network error during login: ${e.message}", e)
             KavitaResult.Error(
@@ -185,171 +137,518 @@ class KavitaClient(
         }
     }
 
-    // ==================== Connection Validation ====================
-
     /**
-     * Validate the connection to the Kavita server.
-     * Attempts to fetch server info to confirm connectivity and auth.
-     *
-     * @return [KavitaResult] containing server info on success
+     * Get server info to verify connectivity and check auth capabilities.
      */
-    suspend fun validateConnection(): KavitaResult<KavitaServerInfo> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = api.getServerInfo()
-
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body != null) {
-                        Log.d(
-                            TAG,
-                            "Connection valid: Kavita v${body.version} " +
-                                "(${body.totalLibraries} libraries)"
-                        )
-                        KavitaResult.Success(body)
-                    } else {
-                        KavitaResult.Error(
-                            message = "Empty server info response",
-                            code = response.code()
-                        )
-                    }
-                } else {
-                    val errorBody = response.errorBody()?.string() ?: ""
-                    Log.w(
-                        TAG,
-                        "Connection validation failed: ${response.code()} - $errorBody"
-                    )
-                    KavitaResult.Error(
-                        message = parseErrorMessage(errorBody, response.code()),
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                Log.e(TAG, "Network error validating connection: ${e.message}", e)
-                KavitaResult.Error(
-                    message = "Cannot reach server: ${e.message}",
-                    cause = e
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error validating connection: ${e.message}", e)
-                KavitaResult.Error(
-                    message = "Unexpected error: ${e.message}",
-                    cause = e
-                )
-            }
-        }
-
-    // ==================== Libraries ====================
+    suspend fun getServerInfo(): KavitaResult<KavitaServerInfo> =
+        get("/api/server/info", KavitaServerInfo::class.java)
 
     /**
-     * Get all libraries from the server.
-     *
-     * @return [KavitaResult] containing list of libraries
+     * List all libraries on the server.
      */
     suspend fun getLibraries(): KavitaResult<List<KavitaLibrary>> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = api.getLibraries()
-
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body != null) {
-                        Log.d(TAG, "Fetched ${body.size} libraries")
-                        KavitaResult.Success(body)
-                    } else {
-                        KavitaResult.Error(
-                            message = "Empty libraries response",
-                            code = response.code()
-                        )
-                    }
-                } else {
-                    val errorBody = response.errorBody()?.string() ?: ""
-                    Log.w(TAG, "Failed to fetch libraries: ${response.code()}")
-                    KavitaResult.Error(
-                        message = parseErrorMessage(errorBody, response.code()),
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                Log.e(TAG, "Network error fetching libraries: ${e.message}", e)
-                KavitaResult.Error(
-                    message = "Network error: ${e.message}",
-                    cause = e
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error fetching libraries: ${e.message}", e)
-                KavitaResult.Error(
-                    message = "Unexpected error: ${e.message}",
-                    cause = e
-                )
-            }
-        }
-
-    // ==================== User Info ====================
+        getList("/api/library", object : TypeToken<List<KavitaLibrary>>() {})
 
     /**
-     * Get current user info.
+     * List all series across all libraries.
      *
-     * @return [KavitaResult] containing user info
+     * @param libraryId Optional library ID filter
+     * @param pageNumber Page number (1-based)
+     * @param pageSize Items per page
      */
-    suspend fun getUserInfo(): KavitaResult<KavitaUserInfo> =
-        withContext(Dispatchers.IO) {
-            try {
-                val response = api.getUserInfo()
-
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body != null) {
-                        Log.d(TAG, "User info: ${body.username}")
-                        KavitaResult.Success(body)
-                    } else {
-                        KavitaResult.Error(
-                            message = "Empty user info response",
-                            code = response.code()
-                        )
-                    }
-                } else {
-                    val errorBody = response.errorBody()?.string() ?: ""
-                    Log.w(TAG, "Failed to get user info: ${response.code()}")
-                    KavitaResult.Error(
-                        message = parseErrorMessage(errorBody, response.code()),
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                Log.e(TAG, "Network error getting user info: ${e.message}", e)
-                KavitaResult.Error(
-                    message = "Network error: ${e.message}",
-                    cause = e
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error getting user info: ${e.message}", e)
-                KavitaResult.Error(
-                    message = "Unexpected error: ${e.message}",
-                    cause = e
-                )
-            }
+    suspend fun getSeries(
+        libraryId: Int? = null,
+        pageNumber: Int = 1,
+        pageSize: Int = 20
+    ): KavitaResult<KavitaPagedResponse<KavitaSeries>> {
+        val params = mutableListOf(
+            "pageNumber=$pageNumber",
+            "pageSize=$pageSize"
+        )
+        if (libraryId != null) {
+            params.add("libraryId=$libraryId")
         }
-
-    // ==================== Helpers ====================
+        val query = params.joinToString("&")
+        return get(
+            "/api/series/all?$query",
+            object : TypeToken<KavitaPagedResponse<KavitaSeries>>() {}
+        )
+    }
 
     /**
-     * Parse a user-friendly error message from an error response body.
+     * Get all volumes (books) in a series.
      */
-    private fun parseErrorMessage(errorBody: String, code: Int): String {
-        return when (code) {
-            401 -> "Authentication failed: invalid credentials or expired token"
-            403 -> "Access denied: insufficient permissions"
-            404 -> "Server endpoint not found — check the URL"
-            500 -> "Server error: please try again later"
-            502, 503 -> "Server unavailable: please try again later"
-            else -> {
-                if (errorBody.isNotBlank()) {
-                    "HTTP $code: $errorBody"
-                } else {
-                    "HTTP $code"
+    suspend fun getVolumes(seriesId: Int): KavitaResult<List<KavitaVolume>> =
+        getList(
+            "/api/series/volume?$seriesId=$seriesId",
+            object : TypeToken<List<KavitaVolume>>() {}
+        )
+
+    /**
+     * Get all chapters in a volume (contains the actual files).
+     */
+    suspend fun getChapters(volumeId: Int): KavitaResult<List<KavitaChapter>> =
+        getList(
+            "/api/series/chapter?$volumeId=$volumeId",
+            object : TypeToken<List<KavitaChapter>>() {}
+        )
+
+    /**
+     * Download a book file from Kavita.
+     *
+     * Supports two download methods:
+     * - /api/download/book?chapterId={chapterId} for direct book download
+     * - /api/download/scanlator-file?chapterId={chapterId} as fallback
+     *
+     * @param chapterId The chapter ID to download
+     * @return KavitaResult containing the raw bytes
+     */
+    suspend fun downloadBook(
+        chapterId: Int
+    ): KavitaResult<ByteArray> = withContext(Dispatchers.IO) {
+        try {
+            val requestBuilder = Request.Builder()
+                .url("$normalizedBaseUrl/api/download/book?chapterId=$chapterId")
+                .header("User-Agent", "Mimiral/0.1.0")
+
+            addAuthHeader(requestBuilder)
+
+            val request = requestBuilder.build()
+            val dClient = downloadClient()
+            val response = dClient.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                // Fallback: try scanlator-file endpoint
+                val fallbackRequest = Request.Builder()
+                    .url(
+                        "$normalizedBaseUrl/api/download" +
+                            "/scanlator-file?chapterId=$chapterId"
+                    )
+                    .header("User-Agent", "Mimiral/0.1.0")
+                    .also { addAuthHeader(it) }
+                    .build()
+                val fallbackResponse = dClient.newCall(fallbackRequest).execute()
+                if (!fallbackResponse.isSuccessful) {
+                    return@withContext KavitaResult.Error(
+                        message = "Download failed: HTTP ${response.code}",
+                        code = response.code
+                    )
                 }
+                val bytes = fallbackResponse.body?.bytes()
+                    ?: return@withContext KavitaResult.Error(
+                        message = "Empty download response",
+                        code = fallbackResponse.code
+                    )
+                Log.d(
+                    TAG,
+                    "Downloaded book (fallback): ${bytes.size} bytes " +
+                        "for chapter $chapterId"
+                )
+                return@withContext KavitaResult.Success(bytes)
             }
+
+            val bytes = response.body?.bytes()
+                ?: return@withContext KavitaResult.Error(
+                    message = "Empty download response",
+                    code = response.code
+                )
+            Log.d(TAG, "Downloaded book: ${bytes.size} bytes for chapter $chapterId")
+            KavitaResult.Success(bytes)
+        } catch (e: IOException) {
+            Log.e(TAG, "Network error downloading book: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Network error: ${e.message}",
+                cause = e
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error downloading book: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Unexpected error: ${e.message}",
+                cause = e
+            )
+        }
+    }
+
+    /**
+     * Download a cover image from Kavita.
+     *
+     * @param seriesId The series ID for the cover
+     * @return KavitaResult containing the raw image bytes
+     */
+    suspend fun downloadSeriesCover(
+        seriesId: Int
+    ): KavitaResult<ByteArray> = withContext(Dispatchers.IO) {
+        try {
+            val requestBuilder = Request.Builder()
+                .url(
+                    "$normalizedBaseUrl/api/image" +
+                        "/series-cover?seriesId=$seriesId"
+                )
+                .header("User-Agent", "Mimiral/0.1.0")
+
+            addAuthHeader(requestBuilder)
+
+            val request = requestBuilder.build()
+            val response = client.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                return@withContext KavitaResult.Error(
+                    message = "Cover download failed: HTTP ${response.code}",
+                    code = response.code
+                )
+            }
+
+            val bytes = response.body?.bytes()
+                ?: return@withContext KavitaResult.Error(
+                    message = "Empty cover response",
+                    code = response.code
+                )
+            Log.d(
+                TAG,
+                "Downloaded cover: ${bytes.size} bytes for series $seriesId"
+            )
+            KavitaResult.Success(bytes)
+        } catch (e: IOException) {
+            Log.e(TAG, "Network error downloading cover: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Network error: ${e.message}",
+                cause = e
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error downloading cover: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Unexpected error: ${e.message}",
+                cause = e
+            )
+        }
+    }
+
+    /**
+     * Download a book-specific cover image.
+     *
+     * @param chapterId The chapter ID whose cover to download
+     * @return KavitaResult containing the raw image bytes
+     */
+    suspend fun downloadBookCover(
+        chapterId: Int
+    ): KavitaResult<ByteArray> = withContext(Dispatchers.IO) {
+        try {
+            val requestBuilder = Request.Builder()
+                .url(
+                    "$normalizedBaseUrl/api/image" +
+                        "/book-cover?chapterId=$chapterId"
+                )
+                .header("User-Agent", "Mimiral/0.1.0")
+
+            addAuthHeader(requestBuilder)
+
+            val request = requestBuilder.build()
+            val response = client.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                return@withContext KavitaResult.Error(
+                    message = "Book cover download failed: HTTP ${response.code}",
+                    code = response.code
+                )
+            }
+
+            val bytes = response.body?.bytes()
+                ?: return@withContext KavitaResult.Error(
+                    message = "Empty cover response",
+                    code = response.code
+                )
+            Log.d(
+                TAG,
+                "Downloaded book cover: ${bytes.size} bytes " +
+                    "for chapter $chapterId"
+            )
+            KavitaResult.Success(bytes)
+        } catch (e: IOException) {
+            Log.e(TAG, "Network error downloading book cover: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Network error: ${e.message}",
+                cause = e
+            )
+        } catch (e: Exception) {
+            Log.e(
+                TAG,
+                "Unexpected error downloading book cover: ${e.message}",
+                e
+            )
+            KavitaResult.Error(
+                message = "Unexpected error: ${e.message}",
+                cause = e
+            )
+        }
+    }
+
+    /**
+     * Push reading progress to Kavita.
+     *
+     * @param chapterId The chapter ID
+     * @param pageNum The current page number
+     * @param seriesId The series ID
+     * @param volumeId The volume ID
+     * @param libraryId The library ID
+     * @param bookScrollId Optional scroll position identifier
+     */
+    suspend fun pushProgress(
+        chapterId: Int,
+        pageNum: Int,
+        seriesId: Int,
+        volumeId: Int,
+        libraryId: Int,
+        bookScrollId: String? = null
+    ): KavitaResult<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val progress = KavitaProgress(
+                chapterId = chapterId,
+                pageNum = pageNum,
+                seriesId = seriesId,
+                volumeId = volumeId,
+                libraryId = libraryId,
+                bookScrollId = bookScrollId
+            )
+            val body = gson.toJson(progress).toRequestBody(JSON_MEDIA_TYPE)
+
+            val requestBuilder = Request.Builder()
+                .url("$normalizedBaseUrl/api/reader/progress")
+                .post(body)
+                .header("User-Agent", "Mimiral/0.1.0")
+
+            addAuthHeader(requestBuilder)
+
+            val request = requestBuilder.build()
+            val response = client.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                return@withContext KavitaResult.Error(
+                    message = "Progress push failed: HTTP ${response.code}",
+                    code = response.code
+                )
+            }
+            Log.d(TAG, "Pushed progress: chapter=$chapterId page=$pageNum")
+            KavitaResult.Success(Unit)
+        } catch (e: IOException) {
+            Log.e(TAG, "Network error pushing progress: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Network error: ${e.message}",
+                cause = e
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error pushing progress: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Unexpected error: ${e.message}",
+                cause = e
+            )
+        }
+    }
+
+    /**
+     * Pull reading progress from Kavita for a series.
+     *
+     * @param seriesId The series ID
+     */
+    suspend fun pullProgress(
+        seriesId: Int
+    ): KavitaResult<List<KavitaProgress>> =
+        getList(
+            "/api/reader/get-progress?seriesId=$seriesId",
+            object : TypeToken<List<KavitaProgress>>() {}
+        )
+
+    /**
+     * Get bookmarks for a series from Kavita.
+     *
+     * @param seriesId The series ID
+     */
+    suspend fun getBookmarks(
+        seriesId: Int
+    ): KavitaResult<List<KavitaBookmark>> =
+        getList(
+            "/api/reader/chapter-bookmarks?seriesId=$seriesId",
+            object : TypeToken<List<KavitaBookmark>>() {}
+        )
+
+    /**
+     * Push a bookmark to Kavita.
+     */
+    suspend fun pushBookmark(
+        chapterId: Int,
+        pageNum: Int,
+        seriesId: Int,
+        volumeId: Int,
+        libraryId: Int,
+        bookScrollId: String? = null
+    ): KavitaResult<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val bookmark = KavitaBookmark(
+                chapterId = chapterId,
+                pageNum = pageNum,
+                seriesId = seriesId,
+                volumeId = volumeId,
+                libraryId = libraryId,
+                bookScrollId = bookScrollId
+            )
+            val body = gson.toJson(bookmark).toRequestBody(JSON_MEDIA_TYPE)
+
+            val requestBuilder = Request.Builder()
+                .url("$normalizedBaseUrl/api/reader/bookmark")
+                .post(body)
+                .header("User-Agent", "Mimiral/0.1.0")
+
+            addAuthHeader(requestBuilder)
+
+            val request = requestBuilder.build()
+            val response = client.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                return@withContext KavitaResult.Error(
+                    message = "Bookmark push failed: HTTP ${response.code}",
+                    code = response.code
+                )
+            }
+            Log.d(TAG, "Pushed bookmark: chapter=$chapterId page=$pageNum")
+            KavitaResult.Success(Unit)
+        } catch (e: IOException) {
+            Log.e(TAG, "Network error pushing bookmark: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Network error: ${e.message}",
+                cause = e
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error pushing bookmark: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Unexpected error: ${e.message}",
+                cause = e
+            )
+        }
+    }
+
+    /**
+     * Remove a bookmark from Kavita.
+     */
+    suspend fun removeBookmark(
+        seriesId: Int,
+        chapterId: Int,
+        pageNum: Int
+    ): KavitaResult<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val requestBuilder = Request.Builder()
+                .url(
+                    "$normalizedBaseUrl/api/reader/bookmark" +
+                        "?seriesId=$seriesId" +
+                        "&chapterId=$chapterId" +
+                        "&pageNum=$pageNum"
+                )
+                .delete()
+                .header("User-Agent", "Mimiral/0.1.0")
+
+            addAuthHeader(requestBuilder)
+
+            val request = requestBuilder.build()
+            val response = client.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                return@withContext KavitaResult.Error(
+                    message = "Bookmark removal failed: HTTP ${response.code}",
+                    code = response.code
+                )
+            }
+            Log.d(
+                TAG,
+                "Removed bookmark: series=$seriesId " +
+                    "chapter=$chapterId page=$pageNum"
+            )
+            KavitaResult.Success(Unit)
+        } catch (e: IOException) {
+            Log.e(TAG, "Network error removing bookmark: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Network error: ${e.message}",
+                cause = e
+            )
+        } catch (e: Exception) {
+            Log.e(
+                TAG,
+                "Unexpected error removing bookmark: ${e.message}",
+                e
+            )
+            KavitaResult.Error(
+                message = "Unexpected error: ${e.message}",
+                cause = e
+            )
+        }
+    }
+
+    // ---- Internal helpers ----
+
+    private fun addAuthHeader(requestBuilder: Request.Builder) {
+        val token = jwtToken
+        val key = apiKey
+        when {
+            token != null -> requestBuilder.header("Authorization", "Bearer $token")
+            key != null -> requestBuilder.header("ApiKey", key)
+        }
+    }
+
+    private suspend fun <T> get(
+        path: String,
+        clazz: Class<T>
+    ): KavitaResult<T> = fetch(path) { body ->
+        gson.fromJson(body, clazz)
+    }
+
+    private suspend fun <T> get(
+        path: String,
+        typeToken: TypeToken<T>
+    ): KavitaResult<T> = fetch(path) { body ->
+        gson.fromJson<T>(body, typeToken.type)
+    }
+
+    private suspend fun <T> getList(
+        path: String,
+        typeToken: TypeToken<T>
+    ): KavitaResult<T> = fetch(path) { body ->
+        gson.fromJson<T>(body, typeToken.type)
+    }
+
+    private suspend inline fun <T> fetch(
+        path: String,
+        crossinline parser: (String) -> T
+    ): KavitaResult<T> {
+        val requestBuilder = Request.Builder()
+            .url("$normalizedBaseUrl$path")
+            .header("Accept", "application/json")
+            .header("User-Agent", "Mimiral/0.1.0")
+
+        addAuthHeader(requestBuilder)
+
+        val request = requestBuilder.build()
+        val response = withContext(Dispatchers.IO) {
+            client.newCall(request).execute()
+        }
+
+        if (!response.isSuccessful) {
+            return KavitaResult.Error(
+                message = "HTTP ${response.code}: ${response.message}",
+                code = response.code
+            )
+        }
+
+        val body = response.body?.string()
+            ?: return KavitaResult.Error(
+                message = "Empty response body",
+                code = response.code
+            )
+
+        return try {
+            KavitaResult.Success(parser(body))
+        } catch (e: Exception) {
+            Log.e(TAG, "Parse error: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Parse error: ${e.message}",
+                cause = e
+            )
         }
     }
 }

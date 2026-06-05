@@ -1,128 +1,183 @@
 package com.mimiral.app.data.remote.kavita
 
-import com.google.gson.annotations.SerializedName
+/**
+ * Kavita server information returned by /api/server/info.
+ */
+data class KavitaServerInfo(
+    val installId: String,
+    val isInstalled: Boolean,
+    val version: String,
+    val allowAnyToken: Boolean = false
+)
 
 /**
- * Kavita API response for GET /api/Library.
- * Represents a Kavita library (can be books, comics, etc.)
+ * Request body for Kavita JWT login.
+ */
+data class KavitaLoginRequest(
+    val username: String,
+    val password: String
+)
+
+/**
+ * Response from Kavita JWT login.
+ */
+data class KavitaLoginResponse(
+    val username: String?,
+    val token: String,
+    val refreshToken: String?,
+    val tokenDuration: String?,
+    val apiKey: String?
+)
+
+/**
+ * A Kavita library entry.
  */
 data class KavitaLibrary(
-    @SerializedName("id") val id: Int,
-    @SerializedName("name") val name: String,
-    @SerializedName("type") val type: Int,
-    @SerializedName("lastScanned") val lastScanned: String? = null
+    val id: Int,
+    val name: String,
+    val type: Int,
+    val lastScanned: String? = null,
+    val fileExtTypes: List<String>? = null
 ) {
     companion object {
         const val TYPE_BOOK = 0
         const val TYPE_COMIC = 1
         const val TYPE_MANGA = 2
+        const val TYPE_IMAGE = 3
+        const val TYPE_PDF = 4
     }
-
-    val isBookLibrary: Boolean
-        get() = type == TYPE_BOOK
-
-    val isComicLibrary: Boolean
-        get() = type == TYPE_COMIC || type == TYPE_MANGA
-
-    val typeLabel: String
-        get() = when (type) {
-            TYPE_BOOK -> "Books"
-            TYPE_COMIC -> "Comics"
-            TYPE_MANGA -> "Manga"
-            else -> "Unknown"
-        }
 }
 
 /**
- * Kavita API response for GET /api/Series/metadata.
- * Represents a series (collection of volumes/issues).
+ * A Kavita series (logical grouping of books/volumes).
  */
 data class KavitaSeries(
-    @SerializedName("id") val id: Int,
-    @SerializedName("name") val name: String,
-    @SerializedName("originalName") val originalName: String? = null,
-    @SerializedName("description") val description: String? = null,
-    @SerializedName("pages") val pages: Int = 0,
-    @SerializedName("format") val format: Int = 0,
-    @SerializedName("created") val created: String? = null,
-    @SerializedName("lastModified") val lastModified: String? = null,
-    @SerializedName("coverImage") val coverImage: String? = null,
-    @SerializedName("primaryColor") val primaryColor: String? = null,
-    @SerializedName("secondaryColor") val secondaryColor: String? = null,
-    @SerializedName("volumes") val volumes: List<KavitaVolume> = emptyList()
-) {
-    companion object {
-        const val FORMAT_BOOK = 0
-        const val FORMAT_COMIC = 1
-        const val FORMAT_MANGA = 2
-    }
-
-    val formatLabel: String
-        get() = when (format) {
-            FORMAT_BOOK -> "Book"
-            FORMAT_COMIC -> "Comic"
-            FORMAT_MANGA -> "Manga"
-            else -> "Unknown"
-        }
-}
+    val id: Int,
+    val name: String,
+    val libraryId: Int,
+    val pages: Int = 0,
+    val format: Int = 0,
+    val coverImageLocked: Boolean = false,
+    val coverImage: String? = null,
+    val pagesRead: Int = 0,
+    val latestReadDate: String? = null
+)
 
 /**
- * Kavita API response for a volume within a series.
- * Represents a single book/issue/volume.
+ * A Kavita volume within a series.
  */
 data class KavitaVolume(
-    @SerializedName("id") val id: Int,
-    @SerializedName("name") val name: String,
-    @SerializedName("number") val number: Int = 0,
-    @SerializedName("pages") val pages: Int = 0,
-    @SerializedName("created") val created: String? = null,
-    @SerializedName("lastModified") val lastModified: String? = null,
-    @SerializedName("coverImage") val coverImage: String? = null,
-    @SerializedName("primaryColor") val primaryColor: String? = null,
-    @SerializedName("secondaryColor") val secondaryColor: String? = null,
-    @SerializedName("chapters") val chapters: List<KavitaChapter> = emptyList()
+    val id: Int,
+    val name: String,
+    val number: Int,
+    val minNumber: Int = 0,
+    val maxNumber: Int = 0,
+    val pages: Int = 0,
+    val pagesRead: Int = 0,
+    val lastModified: String? = null,
+    val files: List<KavitaBookFile>? = null,
+    val chapters: List<KavitaChapter>? = null,
+    val coverImage: String? = null
 )
 
 /**
- * Kavita chapter within a volume.
+ * A Kavita chapter within a volume.
  */
 data class KavitaChapter(
-    @SerializedName("id") val id: Int,
-    @SerializedName("number") val number: String,
-    @SerializedName("name") val name: String? = null,
-    @SerializedName("pages") val pages: Int = 0,
-    @SerializedName("coverImage") val coverImage: String? = null,
-    @SerializedName("created") val created: String? = null
+    val id: Int,
+    val range: String? = null,
+    val number: String? = null,
+    val minNumber: Int = 0,
+    val maxNumber: Int = 0,
+    val pages: Int = 0,
+    val pagesRead: Int = 0,
+    val isSpecial: Boolean = false,
+    val title: String? = null,
+    val files: List<KavitaBookFile>? = null
 )
 
 /**
- * Simplified book entry for browsing display.
- * Constructed from KavitaSeries/Volume data.
+ * A file entry in a Kavita chapter or volume.
+ */
+data class KavitaBookFile(
+    val id: Int,
+    val filePath: String,
+    val pages: Int = 0,
+    val format: String? = null,
+    val created: String? = null,
+    val lastModified: String? = null,
+    val size: Long = 0
+)
+
+/**
+ * Detailed book info from Kavita API.
  */
 data class KavitaBook(
     val id: Int,
     val seriesId: Int,
-    val seriesName: String,
-    val title: String,
-    val volumeNumber: Int,
-    val author: String? = null,
-    val description: String? = null,
-    val pageCount: Int,
-    val format: String,
+    val name: String,
+    val pages: Int = 0,
+    val pagesRead: Int = 0,
+    val seriesName: String? = null,
+    val libraryId: Int = 0,
+    val libraryType: Int = 0,
+    val format: Int = 0,
+    val created: String? = null,
+    val lastModified: String? = null,
+    val coverImageLocked: Boolean = false,
     val coverImage: String? = null,
-    val libraryId: Int,
-    val libraryName: String,
-    val libraryType: String
+    val path: String? = null,
+    val files: List<KavitaBookFile>? = null
 )
 
 /**
- * Result wrapper for Kavita API operations.
+ * Simplified book reference for download operations.
  */
-sealed class KavitaResult<out T> {
-    data class Success<T>(val data: T) : KavitaResult<T>()
-    data class Error(
-        val message: String,
-        val code: Int? = null,
-        val cause: Throwable? = null
-    ) : KavitaResult<Nothing>()
-}
+data class KavitaBookRef(
+    val bookId: Int,
+    val title: String,
+    val format: String,
+    val seriesId: Int? = null,
+    val libraryId: Int,
+    val volumeName: String? = null,
+    val chapterNumber: String? = null
+)
+
+/**
+ * Progress bookmark from Kavita.
+ */
+data class KavitaBookmark(
+    val id: Int = 0,
+    val chapterId: Int,
+    val pageNum: Int,
+    val seriesId: Int,
+    val volumeId: Int,
+    val libraryId: Int,
+    val bookScrollId: String? = null,
+    val created: String? = null,
+    val lastModified: String? = null
+)
+
+/**
+ * Reading progress for syncing with Kavita.
+ */
+data class KavitaProgress(
+    val id: Int = 0,
+    val chapterId: Int,
+    val pageNum: Int,
+    val seriesId: Int,
+    val volumeId: Int,
+    val libraryId: Int,
+    val bookScrollId: String? = null,
+    val lastModified: String? = null
+)
+
+/**
+ * Wrapper for paginated API responses.
+ */
+data class KavitaPagedResponse<T>(
+    val items: List<T>,
+    val totalItems: Int,
+    val currentPage: Int,
+    val totalPages: Int
+)
