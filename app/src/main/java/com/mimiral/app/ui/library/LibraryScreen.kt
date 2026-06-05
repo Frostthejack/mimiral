@@ -33,6 +33,9 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -258,11 +261,13 @@ fun LibraryScreen(
                 } else {
                     val showRecent = recentBooks.isNotEmpty() &&
                         uiState.searchQuery.isBlank() &&
-                        uiState.filterOption == FilterOption.ALL
+                        uiState.filterOption == FilterOption.ALL &&
+                        uiState.sortOption != SortOption.SERIES
 
                     val hasBooks = uiState.books.isNotEmpty() || showRecent
+                    val isSeriesSort = uiState.sortOption == SortOption.SERIES
 
-                    if (!hasBooks) {
+                    if (!hasBooks && !isSeriesSort) {
                         // Empty state
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -302,6 +307,20 @@ fun LibraryScreen(
                                     )
                                 }
                             }
+                        }
+                    } else if (isSeriesSort) {
+                        if (uiState.viewMode == ViewMode.GRID) {
+                            SeriesGridContent(
+                                seriesGroups = uiState.seriesGroups,
+                                onBookClick = onBookClick,
+                                onBookLongPress = { /* handled per-item */ }
+                            )
+                        } else {
+                            SeriesListContent(
+                                seriesGroups = uiState.seriesGroups,
+                                onBookClick = onBookClick,
+                                onBookLongPress = { /* handled per-item */ }
+                            )
                         }
                     } else {
                         if (uiState.viewMode == ViewMode.GRID) {
@@ -451,6 +470,137 @@ private fun ListLibraryContent(
                 onLongClick = { onBookLongPress(bookWithProgress) }
             )
         }
+    }
+}
+
+// ── Series Grouped Views ──
+
+@Composable
+private fun SeriesGridContent(
+    seriesGroups: List<SeriesGroup>,
+    onBookClick: (Int, String) -> Unit,
+    onBookLongPress: (BookWithProgress) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        seriesGroups.forEach { group ->
+            item(key = "series_header_${group.name}") {
+                SeriesHeader(
+                    name = group.name,
+                    bookCount = group.books.size
+                )
+            }
+
+            // Use a nested LazyVerticalGrid-like layout by showing books in rows
+            val rows = group.books.chunked(2)
+            rows.forEachIndexed { rowIdx, rowBooks ->
+                item(key = "series_row_${group.name}_$rowIdx") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        rowBooks.forEach { bookWithProgress ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                GridBookItem(
+                                    bookWithProgress = bookWithProgress,
+                                    onClick = {
+                                        onBookClick(
+                                            bookWithProgress.book.id,
+                                            bookWithProgress.book.format
+                                        )
+                                    },
+                                    onLongClick = { onBookLongPress(bookWithProgress) }
+                                )
+                            }
+                        }
+                        // Fill remaining space if odd number of books
+                        if (rowBooks.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeriesListContent(
+    seriesGroups: List<SeriesGroup>,
+    onBookClick: (Int, String) -> Unit,
+    onBookLongPress: (BookWithProgress) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        seriesGroups.forEach { group ->
+            item(key = "series_header_${group.name}") {
+                SeriesHeader(
+                    name = group.name,
+                    bookCount = group.books.size
+                )
+            }
+
+            items(
+                group.books,
+                key = { "series_${group.name}_${it.book.id}" }
+            ) { bookWithProgress ->
+                ListBookItem(
+                    bookWithProgress = bookWithProgress,
+                    onClick = {
+                        onBookClick(
+                            bookWithProgress.book.id,
+                            bookWithProgress.book.format
+                        )
+                    },
+                    onLongClick = { onBookLongPress(bookWithProgress) }
+                )
+            }
+
+            item(key = "series_divider_${group.name}") {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeriesHeader(
+    name: String,
+    bookCount: Int
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.Folder,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = "$bookCount book${if (bookCount != 1) "s" else ""}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

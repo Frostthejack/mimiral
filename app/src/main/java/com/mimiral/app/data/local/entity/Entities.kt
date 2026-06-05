@@ -23,7 +23,9 @@ data class BookEntity(
     val source: String = "LOCAL", // LOCAL, KAVITA, OPDS
     @ColumnInfo(name = "source_id") val sourceId: String? = null,
     @ColumnInfo(name = "kavita_series_id") val kavitaSeriesId: Int? = null,
-    @ColumnInfo(name = "kavita_library_id") val kavitaLibraryId: Int? = null
+    @ColumnInfo(name = "kavita_library_id") val kavitaLibraryId: Int? = null,
+    @ColumnInfo(name = "series_name") val seriesName: String? = null,
+    @ColumnInfo(name = "series_order") val seriesOrder: Int = 0
 )
 
 @Entity(tableName = "reading_progress")

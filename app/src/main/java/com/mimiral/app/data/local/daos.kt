@@ -96,6 +96,27 @@ interface BookDao {
 
     @Query("SELECT file_path FROM books")
     suspend fun getAllFilePaths(): List<String>
+
+    // -- Series grouping --
+
+    @Query(
+        "SELECT * FROM books ORDER BY " +
+            "COALESCE(series_name, title) ASC, series_order ASC"
+    )
+    fun getAllBooksSortedBySeries(): Flow<List<BookEntity>>
+
+    @Query(
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' " +
+            "OR author LIKE '%' || :query || '%' " +
+            "ORDER BY COALESCE(series_name, title) ASC, series_order ASC"
+    )
+    fun searchBooksSortedBySeries(query: String): Flow<List<BookEntity>>
+
+    @Query("SELECT DISTINCT series_name FROM books WHERE series_name IS NOT NULL ORDER BY series_name ASC")
+    suspend fun getDistinctSeriesNames(): List<String>
+
+    @Query("SELECT * FROM books WHERE series_name = :seriesName ORDER BY series_order ASC")
+    fun getBooksInSeries(seriesName: String): Flow<List<BookEntity>>
 }
 
 @Dao

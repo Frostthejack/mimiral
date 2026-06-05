@@ -52,6 +52,7 @@ class BookRepository @Inject constructor(
         SortOption.AUTHOR -> bookDao.getAllBooksSortedByAuthor()
         SortOption.RECENT -> bookDao.getAllBooksSortedByRecent()
         SortOption.DATE_ADDED -> bookDao.getAllBooksSortedByDateAdded()
+        SortOption.SERIES -> bookDao.getAllBooksSortedBySeries()
         // Progress and Rating need in-memory sorting (no DB columns for rating)
         SortOption.PROGRESS -> bookDao.getAllBooks()
         SortOption.RATING -> bookDao.getAllBooksSortedByTitle()
@@ -62,6 +63,7 @@ class BookRepository @Inject constructor(
         SortOption.AUTHOR -> bookDao.searchBooksSortedByAuthor(query)
         SortOption.RECENT -> bookDao.searchBooksSortedByRecent(query)
         SortOption.DATE_ADDED -> bookDao.searchBooksSortedByDateAdded(query)
+        SortOption.SERIES -> bookDao.searchBooksSortedBySeries(query)
         SortOption.PROGRESS -> bookDao.searchBooks(query)
         SortOption.RATING -> bookDao.searchBooksSortedByTitle(query)
     }
@@ -256,6 +258,14 @@ class BookRepository @Inject constructor(
      */
     fun searchBooksAndChapters(query: String): Flow<List<BookEntity>> =
         bookDao.searchBooks(query)
+
+    // ---- Series grouping ----
+
+    suspend fun getDistinctSeriesNames(): List<String> =
+        bookDao.getDistinctSeriesNames()
+
+    fun getBooksInSeries(seriesName: String): Flow<List<BookEntity>> =
+        bookDao.getBooksInSeries(seriesName)
 
     // ---- Bookmark wrappers ----
 
