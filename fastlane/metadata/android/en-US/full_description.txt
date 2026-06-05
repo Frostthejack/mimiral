@@ -1,0 +1,52 @@
+Transform your phone into the ultimate e-book library. Mimiral is a modern, beautiful, and feature-rich e-book reader for Android that supports all major formats — EPUB, PDF, MOBI, CBZ, DJVU, FB2, TXT, RTF, DOC, DOCX, and Markdown.
+
+📖 READ YOUR WAY
+• Customize fonts, themes, margins, and page-turn animations
+• Day/night mode with adjustable color temperature
+• Smooth scrolling or paginated reading
+• Vertical and horizontal reading directions
+
+🔊 LISTEN WITH TTS
+• Built-in text-to-speech with voice selection and speed control
+• Sleep timer for bedtime reading
+• Skip chapter, paragraph, or sentence
+• Background playback with notification controls
+
+📚 MANAGE YOUR LIBRARY
+• Automatic library scanning and metadata extraction
+• Collections and bookshelves for organizing your library
+• Tags, ratings, and custom sorting
+• Reading lists: To Read, Reading, Finished
+• Powerful search across titles, authors, and tags
+
+📊 TRACK YOUR READING
+• Pages read per day, week, and month
+• Books completed and reading time tracking
+• Reading streak to keep you motivated
+• Set daily, weekly, and yearly reading goals
+• Export statistics to CSV
+
+☁️ CLOUD SYNC
+• Connect to your Kavita or OPDS server
+• Access your library from anywhere
+• Built-in free OPDS source browser (Gutenberg, Standard Ebooks, and more)
+• Sync reading progress across devices
+
+✍️ ANNOTATE & HIGHLIGHT
+• Multi-color highlights with notes
+• Export highlights and notes
+• Bookmark pages with one tap
+
+⚙️ FULLY CUSTOMIZABLE
+• Comprehensive settings for reading, TTS, sync, and library
+• Gesture customization
+• Backup and restore your settings and data
+• Import and export library data
+
+🌐 SUPPORTED FORMATS
+EPUB • PDF • MOBI • FB2 • DJVU • CBZ/CBR • TXT • RTF • DOC/DOCX • Markdown
+
+PRIVACY-FOCUSED
+Mimiral respects your privacy. Your reading data stays on your device and your personal cloud server. No tracking, no ads, no data harvesting.
+
+Free and open-source at https://github.com/Frostthejack/mimiral

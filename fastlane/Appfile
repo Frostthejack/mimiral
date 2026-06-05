@@ -1,0 +1,7 @@
+# Fastlane Appfile
+# Package name for the Play Store
+package_name("com.mimiral.app")
+
+# Path to the service account JSON key file for Play Console API
+# Uncomment and set the path when ready to use automated publishing
+# json_key_file("fastlane/play-store-key.json")
