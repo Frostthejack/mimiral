@@ -28,6 +28,7 @@ import com.mimiral.app.ui.reader.TxtRtfReaderScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
 import com.mimiral.app.ui.settings.SettingsScreen
+import com.mimiral.app.ui.stats.ReadingStatsScreen
 
 /**
  * Format-aware navigation: routes to the correct reader based on the book's format.
@@ -64,6 +65,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                     route != Screen.Collections.route &&
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
+                    route != Screen.Stats.route &&
                     route != Screen.Discover.route &&
                     route != Screen.Settings.route
                 )
@@ -103,6 +105,9 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
             composable(Screen.NowReading.route) {
                 PlaceholderScreen("Now Reading")
+            }
+            composable(Screen.Stats.route) {
+                ReadingStatsScreen()
             }
             composable(Screen.Discover.route) {
                 DiscoverScreen()

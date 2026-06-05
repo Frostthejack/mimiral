@@ -60,8 +60,32 @@ class PdfReaderViewModel @Inject constructor(
 
     private val bookId: Int = savedStateHandle.get<Int>("bookId") ?: 0
 
+    // Session tracking
+    private var sessionStartTime: Long = System.currentTimeMillis()
+    private var sessionStartPage: Int = 0
+    private var sessionPagesTurned: Int = 0
+
     init {
         loadBook()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Record reading session when ViewModel is cleared (user leaves reader)
+        if (bookId != 0 && sessionPagesTurned > 0) {
+            viewModelScope.launch {
+                try {
+                    bookRepository.recordReadingSession(
+                        bookId = bookId,
+                        startTime = sessionStartTime,
+                        endTime = System.currentTimeMillis(),
+                        pagesRead = sessionPagesTurned
+                    )
+                } catch (_: Exception) {
+                    // Non-critical: session recording failure should not crash
+                }
+            }
+        }
     }
 
     private fun loadBook() {
@@ -87,6 +111,7 @@ class PdfReaderViewModel @Inject constructor(
                         currentPage = savedPage,
                         cropMargins = cropMargins
                     )
+                    sessionStartPage = savedPage
                     loadBookmarks()
                     autoSyncOnOpen()
                 } else {
@@ -147,6 +172,13 @@ class PdfReaderViewModel @Inject constructor(
     fun onPageChanged(newPage: Int) {
         val total = _uiState.value.totalPages
         val clamped = newPage.coerceIn(0, (total - 1).coerceAtLeast(0))
+
+        // Track pages turned for session stats
+        val pagesDelta = kotlin.math.abs(clamped - sessionStartPage)
+        if (pagesDelta > sessionPagesTurned) {
+            sessionPagesTurned = pagesDelta
+        }
+
         _uiState.update {
             it.copy(
                 currentPage = clamped,

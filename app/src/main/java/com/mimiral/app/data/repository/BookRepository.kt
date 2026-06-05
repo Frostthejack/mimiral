@@ -9,12 +9,14 @@ import com.mimiral.app.data.local.dao.ChapterDao
 import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
+import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.scanner.FileScanner
 import com.mimiral.app.data.local.settings.FilterOption
 import com.mimiral.app.data.local.settings.SortOption
@@ -33,6 +35,7 @@ class BookRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bookDao: BookDao,
     private val readingProgressDao: ReadingProgressDao,
+    private val readingSessionDao: ReadingSessionDao,
     private val bookmarkDao: BookmarkDao,
     private val pdfSettingsDao: PdfSettingsDao,
     private val chapterDao: ChapterDao,
@@ -381,4 +384,86 @@ class BookRepository @Inject constructor(
             -1L
         }
     }
+
+    // ---- Reading Sessions ----
+
+    suspend fun recordReadingSession(
+        bookId: Int,
+        startTime: Long,
+        endTime: Long,
+        pagesRead: Int
+    ) {
+        val durationSeconds = ((endTime - startTime) / 1000).coerceAtLeast(0)
+        val session = ReadingSessionEntity(
+            bookId = bookId,
+            startTime = startTime,
+            endTime = endTime,
+            pagesRead = pagesRead,
+            durationSeconds = durationSeconds
+        )
+        readingSessionDao.insertSession(session)
+    }
+
+    fun getRecentSessions(limit: Int = 50): Flow<List<ReadingSessionEntity>> =
+        readingSessionDao.getRecentSessions(limit)
+
+    suspend fun getPagesReadToday(): Int {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        return readingSessionDao.getPagesReadSince(cal.timeInMillis)
+    }
+
+    suspend fun getPagesReadThisWeek(): Int {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(java.util.Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        return readingSessionDao.getPagesReadSince(cal.timeInMillis)
+    }
+
+    suspend fun getPagesReadThisMonth(): Int {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(java.util.Calendar.DAY_OF_MONTH, 1)
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        return readingSessionDao.getPagesReadSince(cal.timeInMillis)
+    }
+
+    suspend fun getTotalReadingTimeToday(): Long {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        return readingSessionDao.getTotalDurationSince(cal.timeInMillis)
+    }
+
+    suspend fun getSessionCountToday(): Int {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        return readingSessionDao.getSessionCountSince(cal.timeInMillis)
+    }
+
+    suspend fun getDailyPagesForLastDays(days: Int): List<com.mimiral.app.data.local.dao.DailyPages> {
+        val cal = java.util.Calendar.getInstance()
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -days)
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        return readingSessionDao.getDailyPagesInRange(cal.timeInMillis)
+    }
+
+    suspend fun getSessionsInRange(rangeStart: Long): List<ReadingSessionEntity> =
+        readingSessionDao.getSessionsInRange(rangeStart)
 }
