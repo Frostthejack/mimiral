@@ -36,9 +36,15 @@ data class BookWithProgress(
     val isFinished: Boolean get() = (progress?.progressPercent ?: 0f) >= 99f
 }
 
+data class SeriesGroup(
+    val name: String,
+    val books: List<BookWithProgress>
+)
+
 data class LibraryUiState(
     val books: List<BookWithProgress> = emptyList(),
     val recentBooks: List<BookWithProgress> = emptyList(),
+    val seriesGroups: List<SeriesGroup> = emptyList(),
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val scanState: ScanState = ScanState.Idle,
@@ -108,19 +114,28 @@ class LibraryViewModel @Inject constructor(
             SortOption.RATING -> books
             else -> books
         }
-        Pair(sorted, sort)
-    }.combine(_filterOption) { (books, sort), filter ->
-        Pair(books, filter)
-    }.combine(_viewMode) { (books, filter), viewMode ->
+        val groups = if (sort == SortOption.SERIES) {
+            val grouped = sorted.groupBy { it.book.seriesName ?: it.book.title }
+            grouped.map { (name, booksInGroup) ->
+                SeriesGroup(name = name, books = booksInGroup)
+            }.sortedBy { it.name.lowercase() }
+        } else {
+            emptyList()
+        }
+        Triple(sorted, sort, groups)
+    }.combine(_filterOption) { (books, sort, groups), filter ->
+        Triple(books, sort, groups)
+    }.combine(_viewMode) { (books, sort, groups), viewMode ->
         LibraryUiState(
             books = books,
             recentBooks = emptyList(),
+            seriesGroups = groups,
             isLoading = false,
             isRefreshing = _isRefreshing.value,
             scanState = _scanState.value,
             searchQuery = _searchQuery.value,
             sortOption = _sortOption.value,
-            filterOption = filter,
+            filterOption = _filterOption.value,
             viewMode = viewMode
         )
     }.combine(_isRefreshing) { state, refreshing ->

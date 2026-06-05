@@ -75,6 +75,7 @@ enum class SortOption(val displayName: String) {
     RECENT("Recent"),
     TITLE("Title"),
     AUTHOR("Author"),
+    SERIES("Series"),
     PROGRESS("Progress"),
     RATING("Rating"),
     DATE_ADDED("Date Added")

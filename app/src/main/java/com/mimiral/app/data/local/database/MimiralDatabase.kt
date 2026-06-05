@@ -52,7 +52,7 @@ import com.mimiral.app.data.local.entity.ReadingListEntity
         ReadingListEntity::class,
         BookReadingListCrossRef::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -345,6 +345,23 @@ abstract class MimiralDatabase : RoomDatabase() {
                 db.execSQL(
                     "ALTER TABLE `books` " +
                         "ADD COLUMN `rating` INTEGER"
+                )
+            }
+        }
+
+        /**
+         * Migration from v8 to v9:
+         * - Add series_name, series_order columns to books
+         */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `books` " +
+                        "ADD COLUMN `series_name` TEXT"
+                )
+                db.execSQL(
+                    "ALTER TABLE `books` " +
+                        "ADD COLUMN `series_order` INTEGER NOT NULL DEFAULT 0"
                 )
             }
         }
