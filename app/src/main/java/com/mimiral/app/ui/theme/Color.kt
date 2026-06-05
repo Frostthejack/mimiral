@@ -41,3 +41,23 @@ val NightPrimary = Color(0xFFFFD700) // gold
 val NightOnPrimary = Color(0xFF000000)
 val NightSecondary = Color(0xFF404040) // dark gray
 val NightOnSecondary = Color(0xFFB0B0B0)
+
+// ── High Contrast Light ────────────────────────────────────
+val HcLightBackground = Color(0xFFFFFFFF) // pure white
+val HcLightOnBackground = Color(0xFF000000) // pure black
+val HcLightSurface = Color(0xFFFFFFFF)
+val HcLightOnSurface = Color(0xFF000000)
+val HcLightPrimary = Color(0xFF000000) // black
+val HcLightOnPrimary = Color(0xFFFFFFFF) // white
+val HcLightSecondary = Color(0xFF333333) // dark gray
+val HcLightOnSecondary = Color(0xFFFFFFFF)
+
+// ── High Contrast Dark ─────────────────────────────────────
+val HcDarkBackground = Color(0xFF000000) // pure black
+val HcDarkOnBackground = Color(0xFFFFFF00) // yellow
+val HcDarkSurface = Color(0xFF000000)
+val HcDarkOnSurface = Color(0xFFFFFF00)
+val HcDarkPrimary = Color(0xFFFFFF00) // yellow
+val HcDarkOnPrimary = Color(0xFF000000) // black
+val HcDarkSecondary = Color(0xFF00FFFF) // cyan
+val HcDarkOnSecondary = Color(0xFF000000)

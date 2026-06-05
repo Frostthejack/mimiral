@@ -32,6 +32,7 @@ import com.mimiral.app.ui.readinglists.ReadingListsScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
 import com.mimiral.app.ui.settings.ReadingPreferencesScreen
+import com.mimiral.app.ui.settings.AccessibilitySettingsScreen
 import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.settings.TTSSettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
@@ -75,7 +76,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     route != Screen.Discover.route &&
                     route != Screen.Settings.route &&
                     route != Screen.Statistics.route &&
-                    route != Screen.TTSSettings.route
+                    route != Screen.TTSSettings.route &&
+                    route != Screen.AccessibilitySettings.route
                 )
             ) {
                 // Don't show bottom bar
@@ -159,6 +161,9 @@ fun MimiralNavGraph(navController: NavHostController) {
                     },
                     onNavigateToTTSSettings = {
                         navController.navigate(Screen.TTSSettings.route)
+                    },
+                    onNavigateToAccessibilitySettings = {
+                        navController.navigate(Screen.AccessibilitySettings.route)
                     }
                 )
             }
@@ -171,6 +176,10 @@ fun MimiralNavGraph(navController: NavHostController) {
                 TTSSettingsScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
+            }
+
+            composable(Screen.AccessibilitySettings.route) {
+                AccessibilitySettingsScreen()
             }
 
             composable(Screen.KavitaSetup.route) {

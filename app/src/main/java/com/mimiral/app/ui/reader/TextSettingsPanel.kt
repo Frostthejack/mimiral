@@ -326,7 +326,7 @@ private fun FontFamilySection(
         ) {
             Icon(
                 Icons.Default.FolderOpen,
-                contentDescription = null,
+                contentDescription = "Load custom font file",
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
