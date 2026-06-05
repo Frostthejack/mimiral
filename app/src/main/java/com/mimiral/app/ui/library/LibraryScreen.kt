@@ -316,13 +316,15 @@ fun LibraryScreen(
                             SeriesGridContent(
                                 seriesGroups = uiState.seriesGroups,
                                 onBookClick = onBookClick,
-                                onBookLongPress = { /* handled per-item */ }
+                                onBookLongPress = { /* handled per-item */ },
+                                onEditBookMetadata = onEditBookMetadata
                             )
                         } else {
                             SeriesListContent(
                                 seriesGroups = uiState.seriesGroups,
                                 onBookClick = onBookClick,
-                                onBookLongPress = { /* handled per-item */ }
+                                onBookLongPress = { /* handled per-item */ },
+                                onEditBookMetadata = onEditBookMetadata
                             )
                         }
                     } else {
@@ -498,7 +500,8 @@ private fun ListLibraryContent(
 private fun SeriesGridContent(
     seriesGroups: List<SeriesGroup>,
     onBookClick: (Int, String) -> Unit,
-    onBookLongPress: (BookWithProgress) -> Unit
+    onBookLongPress: (BookWithProgress) -> Unit,
+    onEditBookMetadata: (Int) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -531,7 +534,8 @@ private fun SeriesGridContent(
                                             bookWithProgress.book.format
                                         )
                                     },
-                                    onLongClick = { onBookLongPress(bookWithProgress) }
+                                    onLongClick = { onBookLongPress(bookWithProgress) },
+                                    onEditBookMetadata = onEditBookMetadata
                                 )
                             }
                         }
@@ -550,7 +554,8 @@ private fun SeriesGridContent(
 private fun SeriesListContent(
     seriesGroups: List<SeriesGroup>,
     onBookClick: (Int, String) -> Unit,
-    onBookLongPress: (BookWithProgress) -> Unit
+    onBookLongPress: (BookWithProgress) -> Unit,
+    onEditBookMetadata: (Int) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -577,7 +582,8 @@ private fun SeriesListContent(
                             bookWithProgress.book.format
                         )
                     },
-                    onLongClick = { onBookLongPress(bookWithProgress) }
+                    onLongClick = { onBookLongPress(bookWithProgress) },
+                    onEditBookMetadata = onEditBookMetadata
                 )
             }
 

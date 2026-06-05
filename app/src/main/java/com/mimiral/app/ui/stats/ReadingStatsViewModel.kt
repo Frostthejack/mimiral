@@ -57,9 +57,9 @@ class ReadingStatsViewModel @Inject constructor(
                 val dailyData = bookRepository.getDailyPagesForLastDays(7)
                 val dailyStats = dailyData.map { daily ->
                     DailyPageStat(
-                        dateMillis = daily.start_time,
-                        dateLabel = dateFormatter.format(Date(daily.start_time)),
-                        pagesRead = daily.total_pages
+                        dateMillis = daily.startTime,
+                        dateLabel = dateFormatter.format(Date(daily.startTime)),
+                        pagesRead = daily.totalPages
                     )
                 }
 

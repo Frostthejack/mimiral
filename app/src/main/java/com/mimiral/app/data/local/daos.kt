@@ -8,7 +8,6 @@ import androidx.room.Query
 import androidx.room.Update
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
-import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookReadingListCrossRef
 import com.mimiral.app.data.local.entity.BookTagCrossRef
 import com.mimiral.app.data.local.entity.BookmarkEntity

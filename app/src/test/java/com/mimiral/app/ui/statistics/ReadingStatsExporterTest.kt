@@ -1,8 +1,6 @@
 package com.mimiral.app.ui.statistics
 
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import java.io.File
 import kotlinx.coroutines.runBlocking
@@ -15,19 +13,22 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import org.junit.runner.RunWith
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
-@RunWith(AndroidJUnit4::class)
 class ReadingStatsExporterTest {
 
     @get:Rule
     val tempFolder = TemporaryFolder()
 
+    private lateinit var context: Context
     private lateinit var exporter: ReadingStatsExporter
 
     @Before
     fun setup() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
+        context = mock()
+        val cacheDir = tempFolder.root
+        whenever(context.cacheDir).thenReturn(cacheDir)
         exporter = ReadingStatsExporter(context)
     }
 

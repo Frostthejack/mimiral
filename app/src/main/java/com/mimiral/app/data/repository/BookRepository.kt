@@ -9,6 +9,7 @@ import com.mimiral.app.data.local.dao.ChapterDao
 import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
+import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookTagCrossRef
@@ -16,6 +17,7 @@ import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
+import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.TagEntity
 import com.mimiral.app.data.local.scanner.FileScanner
@@ -24,6 +26,9 @@ import com.mimiral.app.data.local.settings.SortOption
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +46,8 @@ class BookRepository @Inject constructor(
     private val chapterDao: ChapterDao,
     private val highlightDao: HighlightDao,
     private val fileScanner: FileScanner,
-    private val tagDao: TagDao
+    private val tagDao: TagDao,
+    private val readingSessionDao: ReadingSessionDao
 ) {
     fun getAllBooks(): Flow<List<BookEntity>> = bookDao.getAllBooks()
 
@@ -441,5 +447,87 @@ class BookRepository @Inject constructor(
         } catch (_: Exception) {
             -1L
         }
+    }
+
+    // ---- Reading Session tracking ----
+
+    suspend fun recordReadingSession(
+            bookId: Int,
+        startTime: Long,
+        endTime: Long,
+        pagesRead: Int
+    ) {
+        val durationSeconds = (endTime - startTime) / 1000
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val date = dateFormat.format(Date(startTime))
+        val session = ReadingSessionEntity(
+            bookId = bookId,
+            startTime = startTime,
+            endTime = endTime,
+            durationSeconds = durationSeconds,
+            pagesRead = pagesRead,
+            date = date
+        )
+        readingSessionDao.insertSession(session)
+    }
+
+    suspend fun getPagesReadToday(): Int {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val today = dateFormat.format(Date())
+        return readingSessionDao.getTotalPagesReadBetween(today, today) ?: 0
+    }
+
+    suspend fun getPagesReadThisWeek(): Int {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val cal = java.util.Calendar.getInstance()
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -7)
+        val weekAgo = dateFormat.format(cal.time)
+        val today = dateFormat.format(Date())
+        return readingSessionDao.getTotalPagesReadBetween(weekAgo, today) ?: 0
+    }
+
+    suspend fun getPagesReadThisMonth(): Int {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val cal = java.util.Calendar.getInstance()
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -30)
+        val monthAgo = dateFormat.format(cal.time)
+        val today = dateFormat.format(Date())
+        return readingSessionDao.getTotalPagesReadBetween(monthAgo, today) ?: 0
+    }
+
+    suspend fun getTotalReadingTimeToday(): Long {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val today = dateFormat.format(Date())
+        return readingSessionDao.getTotalReadingTimeBetween(today, today) ?: 0L
+    }
+
+    suspend fun getSessionCountToday(): Int {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val today = dateFormat.format(Date())
+        return readingSessionDao.getSessionCountForDate(today)
+    }
+
+    data class DailyPageStatRaw(
+        val startTime: Long,
+        val totalPages: Int
+    )
+
+    suspend fun getDailyPagesForLastDays(days: Int): List<DailyPageStatRaw> {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val cal = java.util.Calendar.getInstance()
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -days)
+        val startDate = dateFormat.format(cal.time)
+        val today = dateFormat.format(Date())
+        val sessions = readingSessionDao.getAllSessionsList()
+    // Filter and aggregate by date
+        val filtered = sessions.filter { session ->
+            session.date in startDate..today && session.date <= today
+        }
+        return filtered.groupBy { it.date }.map { (_, sessionList) ->
+            DailyPageStatRaw(
+                startTime = sessionList.first().startTime,
+                totalPages = sessionList.sumOf { it.pagesRead }
+            )
+        }.sortedBy { it.startTime }
     }
 }
