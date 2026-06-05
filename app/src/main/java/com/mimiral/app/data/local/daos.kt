@@ -18,6 +18,7 @@ import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingListEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
 import kotlinx.coroutines.flow.Flow
@@ -406,6 +407,64 @@ interface PdfSettingsDao {
 
     @Query("DELETE FROM pdf_settings WHERE book_id = :bookId")
     suspend fun deleteSettingsForBook(bookId: Int)
+}
+
+@Dao
+interface ReadingSessionDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSession(session: ReadingSessionEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSessions(sessions: List<ReadingSessionEntity>)
+
+    /** Get all sessions for a specific book, ordered by date descending. */
+    @Query("SELECT * FROM reading_sessions WHERE book_id = :bookId ORDER BY session_date DESC")
+    fun getSessionsForBook(bookId: Int): Flow<List<ReadingSessionEntity>>
+
+    /** Get all sessions across all books, ordered by date descending. */
+    @Query("SELECT * FROM reading_sessions ORDER BY session_date DESC")
+    fun getAllSessions(): Flow<List<ReadingSessionEntity>>
+
+    /** Get distinct session dates (epoch days) in descending order — used for streak calculation. */
+    @Query("SELECT DISTINCT session_date FROM reading_sessions ORDER BY session_date DESC")
+    suspend fun getDistinctReadingDates(): List<Long>
+
+    /** Get sessions within a date range (epoch days, inclusive). */
+    @Query(
+        "SELECT * FROM reading_sessions " +
+            "WHERE session_date >= :startDate " +
+            "AND session_date <= :endDate " +
+            "ORDER BY session_date DESC"
+    )
+    fun getSessionsInRange(startDate: Long, endDate: Long): Flow<List<ReadingSessionEntity>>
+
+    /** Get total reading duration in ms for a specific date (epoch day). */
+    @Query(
+        "SELECT COALESCE(SUM(duration_ms), 0) FROM reading_sessions WHERE session_date = :epochDay"
+    )
+    suspend fun getTotalDurationForDay(epochDay: Long): Long
+
+    /** Get total pages read for a specific date (epoch day). */
+    @Query(
+        "SELECT COALESCE(SUM(pages_read), 0) FROM reading_sessions WHERE session_date = :epochDay"
+    )
+    suspend fun getTotalPagesForDay(epochDay: Long): Int
+
+    /** Get total reading duration in ms across all sessions. */
+    @Query("SELECT COALESCE(SUM(duration_ms), 0) FROM reading_sessions")
+    suspend fun getTotalReadingDurationMs(): Long
+
+    /** Get total pages read across all sessions. */
+    @Query("SELECT COALESCE(SUM(pages_read), 0) FROM reading_sessions")
+    suspend fun getTotalPagesRead(): Int
+
+    /** Count distinct reading days. */
+    @Query("SELECT COUNT(DISTINCT session_date) FROM reading_sessions")
+    suspend fun getDistinctReadingDaysCount(): Int
+
+    /** Delete all sessions for a book (e.g., when book is deleted). */
+    @Query("DELETE FROM reading_sessions WHERE book_id = :bookId")
+    suspend fun deleteSessionsForBook(bookId: Int)
 }
 
 @Dao

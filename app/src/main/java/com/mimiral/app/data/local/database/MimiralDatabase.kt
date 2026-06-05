@@ -250,7 +250,7 @@ abstract class MimiralDatabase : RoomDatabase() {
 
         /**
          * Migration from v5 to v6:
-         * - Create reading_sessions table for reading statistics tracking
+         * - Create reading_sessions table for reading statistics tracking and streak calculation
          * - Add completed_at column to reading_progress
          * - Add times_completed column to reading_progress
          */
@@ -260,11 +260,12 @@ abstract class MimiralDatabase : RoomDatabase() {
                     "CREATE TABLE IF NOT EXISTS `reading_sessions` (" +
                         "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
                         "`book_id` INTEGER NOT NULL, " +
-                        "`start_time` INTEGER NOT NULL, " +
-                        "`end_time` INTEGER NOT NULL, " +
-                        "`duration_seconds` INTEGER NOT NULL, " +
+                        "`session_date` INTEGER NOT NULL, " +
+                        "`duration_ms` INTEGER NOT NULL, " +
                         "`pages_read` INTEGER NOT NULL, " +
-                        "`date` TEXT NOT NULL, " +
+                        "`start_page` INTEGER NOT NULL, " +
+                        "`end_page` INTEGER NOT NULL, " +
+                        "`created_at` INTEGER NOT NULL, " +
                         "FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) " +
                         "ON DELETE CASCADE)"
                 )
@@ -274,7 +275,8 @@ abstract class MimiralDatabase : RoomDatabase() {
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS " +
-                        "`index_reading_sessions_start_time` ON `reading_sessions` (`start_time`)"
+                        "`index_reading_sessions_session_date` " +
+                        "ON `reading_sessions` (`session_date`)"
                 )
                 db.execSQL(
                     "ALTER TABLE `reading_progress` " +
