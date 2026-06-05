@@ -1,9 +1,7 @@
 package com.mimiral.app.data.reader
 
-import java.io.File
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before

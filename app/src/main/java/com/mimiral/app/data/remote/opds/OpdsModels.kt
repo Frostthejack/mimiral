@@ -113,16 +113,16 @@ data class OpdsLink(
     val isThumbnail: Boolean
         get() = rel?.contains("thumbnail") == true ||
             rel?.let {
-                it.contains("http://opds-spec.org/image/thumbnail") ||
-                    it.contains("thumbnail")
-            } == true
+            it.contains("http://opds-spec.org/image/thumbnail") ||
+                it.contains("thumbnail")
+        } == true
 
     val isCover: Boolean
         get() = rel?.contains("cover") == true ||
             rel?.let {
-                it.contains("http://opds-spec.org/image") &&
-                    !it.contains("thumbnail")
-            } == true
+            it.contains("http://opds-spec.org/image") &&
+                !it.contains("thumbnail")
+        } == true
 
     val isSearch: Boolean
         get() = type == "application/opensearchdescription+xml"

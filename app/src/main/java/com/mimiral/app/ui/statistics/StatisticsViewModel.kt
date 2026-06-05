@@ -7,14 +7,14 @@ import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.ReadingStatsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import javax.inject.Inject
 
 data class DailyStat(
     val date: String,
@@ -122,7 +122,6 @@ class StatisticsViewModel @Inject constructor(
                         recentSessions = allSessions.take(10)
                     )
                 }.collect { }
-
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,

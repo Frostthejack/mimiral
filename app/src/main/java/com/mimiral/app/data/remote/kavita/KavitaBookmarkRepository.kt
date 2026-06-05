@@ -4,7 +4,6 @@ import android.util.Log
 import com.mimiral.app.data.local.dao.BookmarkDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.BookmarkEntity
-import com.mimiral.app.data.local.entity.ServerEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 

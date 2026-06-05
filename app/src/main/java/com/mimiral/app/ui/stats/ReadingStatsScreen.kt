@@ -108,12 +108,14 @@ fun ReadingStatsScreen(
                 }
 
                 if (state.sessionCountToday > 0) {
+                    val sessionLabel = "${state.sessionCountToday} reading session" +
+                        "${if (state.sessionCountToday != 1) "s" else ""}"
                     StatCard(
                         modifier = Modifier.fillMaxWidth(),
                         icon = Icons.Default.Timer,
                         iconColor = MaterialTheme.colorScheme.tertiary,
                         label = "Sessions",
-                        value = "${state.sessionCountToday} reading session${if (state.sessionCountToday != 1) "s" else ""}"
+                        value = sessionLabel
                     )
                 }
 
@@ -268,7 +270,9 @@ private fun DailyBarChart(
             dailyStats.forEach { day ->
                 val barHeightFraction = if (maxPages > 0) {
                     day.pagesRead.toFloat() / maxPages.toFloat()
-                } else 0f
+                } else {
+                    0f
+                }
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -286,11 +290,16 @@ private fun DailyBarChart(
                     Box(
                         modifier = Modifier
                             .width(24.dp)
-                            .height(if (day.pagesRead > 0) maxBarHeight * barHeightFraction else 4.dp)
+                            .height(
+                                if (day.pagesRead > 0) maxBarHeight * barHeightFraction else 4.dp
+                            )
                             .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                             .background(
-                                if (day.pagesRead > 0) barColor
-                                else barColor.copy(alpha = 0.2f)
+                                if (day.pagesRead > 0) {
+                                    barColor
+                                } else {
+                                    barColor.copy(alpha = 0.2f)
+                                }
                             )
                     )
                     Spacer(modifier = Modifier.height(4.dp))

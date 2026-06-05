@@ -3,7 +3,6 @@ package com.mimiral.app.di
 import android.content.Context
 import androidx.room.Room
 import com.mimiral.app.data.local.database.MimiralDatabase
-import com.mimiral.app.data.local.dao.ReadingListDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

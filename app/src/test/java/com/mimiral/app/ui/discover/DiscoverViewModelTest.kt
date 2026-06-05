@@ -3,7 +3,6 @@ package com.mimiral.app.ui.discover
 import com.mimiral.app.data.remote.kavita.KavitaLibrary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -95,7 +94,8 @@ class DiscoverViewModelTest {
         val lib = KavitaLibrary(id = 1, name = "Manga", type = 2)
         val seriesInLib = DiscoverNavItem.SeriesInLibrary(lib)
         val seriesDetail = DiscoverNavItem.SeriesDetail(
-            KavitaLibrary(id = 1, name = "Manga", type = 2), "One Piece"
+            KavitaLibrary(id = 1, name = "Manga", type = 2),
+            "One Piece"
         )
 
         assertTrue(libraries is DiscoverNavItem.Libraries)

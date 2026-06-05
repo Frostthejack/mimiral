@@ -17,8 +17,8 @@ import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
-import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.TagEntity
 import com.mimiral.app.data.local.scanner.FileScanner
 import com.mimiral.app.data.local.settings.FilterOption
@@ -452,7 +452,7 @@ class BookRepository @Inject constructor(
     // ---- Reading Session tracking ----
 
     suspend fun recordReadingSession(
-            bookId: Int,
+        bookId: Int,
         startTime: Long,
         endTime: Long,
         pagesRead: Int
@@ -519,7 +519,7 @@ class BookRepository @Inject constructor(
         val startDate = dateFormat.format(cal.time)
         val today = dateFormat.format(Date())
         val sessions = readingSessionDao.getAllSessionsList()
-    // Filter and aggregate by date
+        // Filter and aggregate by date
         val filtered = sessions.filter { session ->
             session.date in startDate..today && session.date <= today
         }

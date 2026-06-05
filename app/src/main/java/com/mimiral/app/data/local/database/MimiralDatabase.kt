@@ -11,10 +11,10 @@ import com.mimiral.app.data.local.dao.CollectionDao
 import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
+import com.mimiral.app.data.local.dao.ReadingListDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.dao.ServerDao
-import com.mimiral.app.data.local.dao.ReadingListDao
 import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
@@ -27,11 +27,11 @@ import com.mimiral.app.data.local.entity.CollectionEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
+import com.mimiral.app.data.local.entity.ReadingListEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
-import com.mimiral.app.data.local.entity.ReadingListEntity
 
 @Database(
     entities = [
@@ -322,15 +322,18 @@ abstract class MimiralDatabase : RoomDatabase() {
                 // Seed the three built-in system reading lists
                 val now = System.currentTimeMillis()
                 db.execSQL(
-                    "INSERT OR IGNORE INTO `reading_lists`(`name`, `list_type`, `created_time`, `sort_order`) " +
+                    "INSERT OR IGNORE INTO `reading_lists`" +
+                        "(`name`, `list_type`, `created_time`, `sort_order`) " +
                         "VALUES('To Read', 'TO_READ', $now, 0)"
                 )
                 db.execSQL(
-                    "INSERT OR IGNORE INTO `reading_lists`(`name`, `list_type`, `created_time`, `sort_order`) " +
+                    "INSERT OR IGNORE INTO `reading_lists`" +
+                        "(`name`, `list_type`, `created_time`, `sort_order`) " +
                         "VALUES('Reading', 'READING', $now, 1)"
                 )
                 db.execSQL(
-                    "INSERT OR IGNORE INTO `reading_lists`(`name`, `list_type`, `created_time`, `sort_order`) " +
+                    "INSERT OR IGNORE INTO `reading_lists`" +
+                        "(`name`, `list_type`, `created_time`, `sort_order`) " +
                         "VALUES('Finished', 'FINISHED', $now, 2)"
                 )
             }

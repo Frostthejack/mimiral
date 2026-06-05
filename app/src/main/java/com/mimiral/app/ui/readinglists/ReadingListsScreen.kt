@@ -167,7 +167,8 @@ private fun EmptyReadingListsState(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Tap + to create a custom list, or use the built-in To Read, Reading, and Finished lists",
+            text = "Tap + to create a custom list, or use the built-in " +
+                "To Read, Reading, and Finished lists",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
@@ -194,7 +195,11 @@ private fun ReadingListsList(
             ReadingListCard(
                 listWithCount = listWithCount,
                 isExpanded = expandedListId == listWithCount.list.id,
-                booksInList = if (expandedListId == listWithCount.list.id) booksInExpanded else emptyList(),
+                booksInList = if (expandedListId == listWithCount.list.id) {
+                    booksInExpanded
+                } else {
+                    emptyList()
+                },
                 onExpand = { onExpand(listWithCount.list.id) },
                 onEdit = { onEdit(listWithCount.list) },
                 onDelete = { onDelete(listWithCount.list) },
@@ -257,8 +262,10 @@ private fun ReadingListCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    val bookCountStr = "${listWithCount.bookCount} book" +
+                        "${if (listWithCount.bookCount != 1) "s" else ""}"
                     Text(
-                        text = "${listWithCount.bookCount} book${if (listWithCount.bookCount != 1) "s" else ""}",
+                        text = bookCountStr,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -282,7 +289,11 @@ private fun ReadingListCard(
                     }
                 }
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    imageVector = if (isExpanded) {
+                        Icons.Default.ExpandLess
+                    } else {
+                        Icons.Default.ExpandMore
+                    },
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -306,7 +317,9 @@ private fun ReadingListCard(
                             Text(
                                 text = "No books in this list",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.6f
+                                )
                             )
                         }
                     } else {
@@ -324,10 +337,12 @@ private fun ReadingListCard(
     }
 
     if (showDeleteConfirm) {
+        val deleteMsg = "Delete \"${list.name}\"? " +
+            "Books will not be removed from your library."
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text("Delete List") },
-            text = { Text("Delete \"${list.name}\"? Books will not be removed from your library.") },
+            text = { Text(deleteMsg) },
             confirmButton = {
                 TextButton(
                     onClick = {

@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.ExpandLess
@@ -54,7 +53,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.mimiral.app.data.remote.ChapterDto
-import com.mimiral.app.data.remote.SeriesDto
 import com.mimiral.app.data.remote.VolumeDto
 
 // ── Series List Screen ──
@@ -247,7 +245,9 @@ private fun SeriesHeaderCard(
                 val readCount = seriesDetail.totalCount - seriesDetail.unreadCount
                 val progress = if (seriesDetail.totalCount > 0) {
                     readCount.toFloat() / seriesDetail.totalCount
-                } else 0f
+                } else {
+                    0f
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 LinearProgressIndicator(
                     progress = { progress },
@@ -354,7 +354,9 @@ private fun VolumeCard(
                     Spacer(modifier = Modifier.height(4.dp))
                     val progress = if (volume.pages > 0) {
                         volume.pagesRead.toFloat() / volume.pages
-                    } else 0f
+                    } else {
+                        0f
+                    }
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxWidth(),

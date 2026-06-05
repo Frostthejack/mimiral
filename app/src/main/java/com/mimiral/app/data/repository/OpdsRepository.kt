@@ -1,20 +1,20 @@
 package com.mimiral.app.data.repository
 
+import android.content.Context
 import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.remote.opds.OpdsFeed
 import com.mimiral.app.data.remote.opds.OpdsFeedParser
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
-import android.content.Context
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 @Singleton
 class OpdsRepository @Inject constructor(

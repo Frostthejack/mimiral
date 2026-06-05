@@ -17,8 +17,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.mimiral.app.ui.collections.CollectionsScreen
-import com.mimiral.app.ui.readinglists.ReadingListDetailScreen
-import com.mimiral.app.ui.readinglists.ReadingListsScreen
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.discover.KavitaSeriesScreen
 import com.mimiral.app.ui.library.AddBooksScreen
@@ -29,6 +27,8 @@ import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
 import com.mimiral.app.ui.reader.TxtRtfReaderScreen
+import com.mimiral.app.ui.readinglists.ReadingListDetailScreen
+import com.mimiral.app.ui.readinglists.ReadingListsScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
 import com.mimiral.app.ui.settings.SettingsScreen

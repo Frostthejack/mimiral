@@ -5,6 +5,8 @@ import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -15,8 +17,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 class ReadingStatsRepositoryTest {
 
@@ -95,12 +95,20 @@ class ReadingStatsRepositoryTest {
     fun `getAllSessions - delegates to dao`() {
         val sessions = listOf(
             ReadingSessionEntity(
-                bookId = 1, startTime = 0, endTime = 60000,
-                durationSeconds = 60, pagesRead = 5, date = "2026-06-01"
+                bookId = 1,
+                startTime = 0,
+                endTime = 60000,
+                durationSeconds = 60,
+                pagesRead = 5,
+                date = "2026-06-01"
             ),
             ReadingSessionEntity(
-                bookId = 1, startTime = 120000, endTime = 180000,
-                durationSeconds = 60, pagesRead = 3, date = "2026-06-02"
+                bookId = 1,
+                startTime = 120000,
+                endTime = 180000,
+                durationSeconds = 60,
+                pagesRead = 3,
+                date = "2026-06-02"
             )
         )
         whenever(readingSessionDao.getAllSessions()).thenReturn(flowOf(sessions))

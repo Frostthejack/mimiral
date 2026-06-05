@@ -107,8 +107,11 @@ class KavitaBookmarkClient(
                 )
             }
 
-            Log.d(TAG, "Pushed bookmark: chapter=${request.chapterId}, " +
-                "page=${request.page}")
+            Log.d(
+                TAG,
+                "Pushed bookmark: chapter=${request.chapterId}, " +
+                    "page=${request.page}"
+            )
             KavitaResult.Success(Unit)
         } catch (e: IOException) {
             Log.e(TAG, "Network error pushing bookmark: ${e.message}", e)
@@ -172,13 +175,17 @@ class KavitaBookmarkClient(
                 val bookmarks: List<KavitaChapterBookmark> =
                     gson.fromJson(responseBody, type)
 
-                Log.d(TAG, "Pulled ${bookmarks.size} bookmarks " +
-                    "for chapter $chapterId")
+                Log.d(
+                    TAG,
+                    "Pulled ${bookmarks.size} bookmarks " +
+                        "for chapter $chapterId"
+                )
                 KavitaResult.Success(bookmarks)
             } catch (e: IOException) {
                 Log.e(
                     TAG,
-                    "Network error pulling bookmarks: ${e.message}", e
+                    "Network error pulling bookmarks: ${e.message}",
+                    e
                 )
                 KavitaResult.Error(
                     message = "Network error: ${e.message}",
@@ -187,7 +194,8 @@ class KavitaBookmarkClient(
             } catch (e: Exception) {
                 Log.e(
                     TAG,
-                    "Unexpected error pulling bookmarks: ${e.message}", e
+                    "Unexpected error pulling bookmarks: ${e.message}",
+                    e
                 )
                 KavitaResult.Error(
                     message = "Unexpected error: ${e.message}",
@@ -241,7 +249,8 @@ class KavitaBookmarkClient(
         } catch (e: IOException) {
             Log.e(
                 TAG,
-                "Network error deleting bookmark: ${e.message}", e
+                "Network error deleting bookmark: ${e.message}",
+                e
             )
             KavitaResult.Error(
                 message = "Network error: ${e.message}",
@@ -250,7 +259,8 @@ class KavitaBookmarkClient(
         } catch (e: Exception) {
             Log.e(
                 TAG,
-                "Unexpected error deleting bookmark: ${e.message}", e
+                "Unexpected error deleting bookmark: ${e.message}",
+                e
             )
             KavitaResult.Error(
                 message = "Unexpected error: ${e.message}",

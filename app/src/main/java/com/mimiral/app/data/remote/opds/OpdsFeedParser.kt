@@ -1,8 +1,8 @@
 package com.mimiral.app.data.remote.opds
 
+import java.io.StringReader
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
-import java.io.StringReader
 
 /**
  * Parses OPDS 1.2 (Atom XML) catalog feeds into [OpdsFeed] objects.

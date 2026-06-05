@@ -201,8 +201,11 @@ private fun CollectionsList(
             CollectionCard(
                 collectionWithCount = collectionWithCount,
                 isExpanded = isExpanded,
-                booksInCollection = if (isExpanded) booksInExpanded
-                    else emptyList(),
+                booksInCollection = if (isExpanded) {
+                    booksInExpanded
+                } else {
+                    emptyList()
+                },
                 onExpand = { onExpand(collectionWithCount.collection.id) },
                 onEdit = { onEdit(collectionWithCount.collection) },
                 onDelete = { onDelete(collectionWithCount.collection) },
@@ -299,8 +302,11 @@ private fun CollectionCard(
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
-                val icon = if (isExpanded) Icons.Default.ExpandLess
-                    else Icons.Default.ExpandMore
+                val icon = if (isExpanded) {
+                    Icons.Default.ExpandLess
+                } else {
+                    Icons.Default.ExpandMore
+                }
                 Icon(
                     imageVector = icon,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",

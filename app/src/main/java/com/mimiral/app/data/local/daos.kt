@@ -116,7 +116,10 @@ interface BookDao {
     )
     fun searchBooksSortedBySeries(query: String): Flow<List<BookEntity>>
 
-    @Query("SELECT DISTINCT series_name FROM books WHERE series_name IS NOT NULL ORDER BY series_name ASC")
+    @Query(
+        "SELECT DISTINCT series_name FROM books " +
+            "WHERE series_name IS NOT NULL ORDER BY series_name ASC"
+    )
     suspend fun getDistinctSeriesNames(): List<String>
 
     @Query("SELECT * FROM books WHERE series_name = :seriesName ORDER BY series_order ASC")
@@ -128,10 +131,16 @@ interface TagDao {
     @Query("SELECT * FROM tags ORDER BY name ASC")
     fun getAllTags(): Flow<List<TagEntity>>
 
-    @Query("SELECT t.* FROM tags t INNER JOIN book_tags bt ON t.id = bt.tag_id WHERE bt.book_id = :bookId ORDER BY t.name ASC")
+    @Query(
+        "SELECT t.* FROM tags t INNER JOIN book_tags bt " +
+            "ON t.id = bt.tag_id WHERE bt.book_id = :bookId ORDER BY t.name ASC"
+    )
     fun getTagsForBook(bookId: Int): Flow<List<TagEntity>>
 
-    @Query("SELECT t.* FROM tags t INNER JOIN book_tags bt ON t.id = bt.tag_id WHERE bt.book_id = :bookId ORDER BY t.name ASC")
+    @Query(
+        "SELECT t.* FROM tags t INNER JOIN book_tags bt " +
+            "ON t.id = bt.tag_id WHERE bt.book_id = :bookId ORDER BY t.name ASC"
+    )
     suspend fun getTagsForBookList(bookId: Int): List<TagEntity>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -409,7 +418,10 @@ interface ReadingListDao {
     @Query("DELETE FROM book_reading_lists WHERE book_id = :bookId AND reading_list_id = :listId")
     suspend fun removeBookFromReadingList(bookId: Int, listId: Int)
 
-    @Query("SELECT EXISTS(SELECT 1 FROM book_reading_lists WHERE book_id = :bookId AND reading_list_id = :listId)")
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM book_reading_lists " +
+            "WHERE book_id = :bookId AND reading_list_id = :listId)"
+    )
     suspend fun isBookInReadingList(bookId: Int, listId: Int): Boolean
 
     @Query("SELECT COUNT(*) FROM book_reading_lists WHERE reading_list_id = :listId")

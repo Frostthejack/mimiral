@@ -2,10 +2,8 @@ package com.mimiral.app.ui.statistics
 
 import android.content.Context
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
-import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue

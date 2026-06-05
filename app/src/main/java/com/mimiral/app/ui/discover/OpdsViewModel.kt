@@ -4,11 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
-import com.mimiral.app.data.remote.opds.OpdsResult
 import com.mimiral.app.data.remote.opds.OpdsDownloadManager
 import com.mimiral.app.data.remote.opds.OpdsEntry
 import com.mimiral.app.data.remote.opds.OpdsFeed
 import com.mimiral.app.data.remote.opds.OpdsRepository
+import com.mimiral.app.data.remote.opds.OpdsResult
 import com.mimiral.app.data.remote.opds.OpdsSearchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
