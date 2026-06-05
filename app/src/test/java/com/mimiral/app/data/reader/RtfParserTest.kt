@@ -27,7 +27,7 @@ class RtfParserTest {
     fun `parse simple RTF file`() = runBlocking {
         val rtf = "{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033" +
             "{\\colortbl;\\red0\\green0\\blue0;}" +
-            "\\viewkind4\\uc1\\pard\\cf1\\fs24 Hello, World!\\par" +
+            "\\viewkind4\\uc1\\pard\\cf1\\fs24 Hello, World!\\par " +
             "This is a test.\\par}"
         val file = tempFolder.newFile("test.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
@@ -127,7 +127,7 @@ class RtfParserTest {
     @Test
     fun `title extracted from RTF content`() = runBlocking {
         val rtf = "{\\rtf1\\ansi\\ansicpg1252" +
-            "My Great Novel\\par" +
+            "My Great Novel\\par " +
             "Chapter one begins here.\\par}"
         val file = tempFolder.newFile("titled_novel.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
@@ -160,7 +160,7 @@ class RtfParserTest {
             "\\par" +
             "\\par" +
             "\\par" +
-            "CHAPTER TWO\\par" +
+            "CHAPTER TWO\\par " +
             "Content.\\par}"
         val file = tempFolder.newFile("rtf_chapters.rtf")
         file.writeText(rtf, StandardCharsets.US_ASCII)
