@@ -359,11 +359,9 @@ class LibraryImporter(
     private fun ExportReadingSession.toEntity(bookId: Int) = ReadingSessionEntity(
         id = 0,
         bookId = bookId,
-        startTime = startTime,
-        endTime = endTime,
-        durationSeconds = durationSeconds,
-        pagesRead = pagesRead,
-        date = date
+        sessionDate = date.toLongOrNull() ?: 0,
+        durationMs = durationSeconds * 1000,
+        pagesRead = pagesRead
     )
 
     private fun ExportPdfSettings.toEntity(bookId: Int) = PdfSettingsEntity(

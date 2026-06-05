@@ -68,7 +68,7 @@ class LibraryExporter(
             val progressList = readingProgressDao.getAllProgress().first()
             val collections = collectionDao.getAllCollections().first()
             val bookCollections = collectionDao.getAllBookCollections()
-            val tags = tagDao.getAllTags()
+            val tags = tagDao.getAllTags().first()
             val bookTags = tagDao.getAllBookTags()
             val servers = serverDao.getActiveServers().first()
             val opdsCatalogs = opdsCatalogDao.getActiveCatalogs().first()
@@ -229,11 +229,11 @@ class LibraryExporter(
     private fun ReadingSessionEntity.toExport() = ExportReadingSession(
         id = id,
         bookId = bookId,
-        startTime = startTime,
-        endTime = endTime,
-        durationSeconds = durationSeconds,
+        startTime = 0,
+        endTime = 0,
+        durationSeconds = durationMs / 1000,
         pagesRead = pagesRead,
-        date = date
+        date = sessionDate.toString()
     )
 
     private fun PdfSettingsEntity.toExport() = ExportPdfSettings(
