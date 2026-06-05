@@ -15,6 +15,7 @@ import com.mimiral.app.data.local.dao.ReadingListDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.dao.ReadingTimeDao
+import com.mimiral.app.data.local.dao.ReadingGoalDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
@@ -32,6 +33,7 @@ import com.mimiral.app.data.local.entity.ReadingListEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ReadingTimeEntity
+import com.mimiral.app.data.local.entity.ReadingGoalEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
 
@@ -53,7 +55,8 @@ import com.mimiral.app.data.local.entity.TagEntity
         ReadingSessionEntity::class,
         ReadingListEntity::class,
         BookReadingListCrossRef::class,
-        ReadingTimeEntity::class
+        ReadingTimeEntity::class,
+        ReadingGoalEntity::class
     ],
     version = 10,
     exportSchema = false
@@ -72,6 +75,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun readingListDao(): ReadingListDao
     abstract fun tagDao(): TagDao
     abstract fun readingTimeDao(): ReadingTimeDao
+    abstract fun readingGoalDao(): ReadingGoalDao
 
     companion object {
         /**
@@ -396,6 +400,24 @@ abstract class MimiralDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS " +
                         "`index_reading_time_date` ON `reading_time` (`date`)"
+                )
+            }
+        }
+
+        /**
+         * Migration from v10 to v11:
+         * - Create reading_goals table for daily/weekly/yearly reading goals
+         */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `reading_goals` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`goal_type` TEXT NOT NULL, " +
+                        "`target_type` TEXT NOT NULL, " +
+                        "`target_value` INTEGER NOT NULL, " +
+                        "`is_active` INTEGER NOT NULL, " +
+                        "`created_at` INTEGER NOT NULL)"
                 )
             }
         }

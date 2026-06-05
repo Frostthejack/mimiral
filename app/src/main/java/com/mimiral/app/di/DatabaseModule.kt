@@ -31,7 +31,8 @@ object DatabaseModule {
                 MimiralDatabase.MIGRATION_6_7,
                 MimiralDatabase.MIGRATION_7_8,
                 MimiralDatabase.MIGRATION_8_9,
-                MimiralDatabase.MIGRATION_9_10
+                MimiralDatabase.MIGRATION_9_10,
+                MimiralDatabase.MIGRATION_10_11
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -75,4 +76,7 @@ object DatabaseModule {
 
     @Provides
     fun provideReadingTimeDao(database: MimiralDatabase) = database.readingTimeDao()
+
+    @Provides
+    fun provideReadingGoalDao(database: MimiralDatabase) = database.readingGoalDao()
 }

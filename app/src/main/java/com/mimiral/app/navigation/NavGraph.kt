@@ -36,6 +36,7 @@ import com.mimiral.app.ui.settings.AccessibilitySettingsScreen
 import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.settings.TTSSettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
+import com.mimiral.app.ui.goals.ReadingGoalsScreen
 
 /**
  * Format-aware navigation: routes to the correct reader based on the book's format.
@@ -77,7 +78,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     route != Screen.Settings.route &&
                     route != Screen.Statistics.route &&
                     route != Screen.TTSSettings.route &&
-                    route != Screen.AccessibilitySettings.route
+                    route != Screen.AccessibilitySettings.route &&
+                    route != Screen.ReadingGoals.route
                 )
             ) {
                 // Don't show bottom bar
@@ -169,7 +171,15 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
 
             composable(Screen.Statistics.route) {
-                StatisticsScreen()
+                StatisticsScreen(
+                    onNavigateToGoals = {
+                        navController.navigate(Screen.ReadingGoals.route)
+                    }
+                )
+            }
+
+            composable(Screen.ReadingGoals.route) {
+                ReadingGoalsScreen()
             }
 
             composable(Screen.TTSSettings.route) {
