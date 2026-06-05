@@ -490,7 +490,10 @@ fun EpubReaderScreen(
                                                     0.85f
                                                 }
                                                 val scale =
-                                                    1f - (abs(pageOffset) * 0.08f).coerceIn(0f, 0.15f)
+                                                    1f - (abs(pageOffset) * 0.08f).coerceIn(
+                                                        0f,
+                                                        0.15f
+                                                    )
                                                 scaleX = scale
                                                 scaleY = scale
                                                 translationX =

@@ -53,8 +53,10 @@ class ReadingStatsRepository @Inject constructor(
         startDate: String,
         endDate: String
     ): Flow<List<ReadingSessionEntity>> {
-        val startEpochDay = LocalDate.parse(startDate, DateTimeFormatter.ISO_LOCAL_DATE).toEpochDay()
-        val endEpochDay = LocalDate.parse(endDate, DateTimeFormatter.ISO_LOCAL_DATE).toEpochDay()
+        val parsedStart = LocalDate.parse(startDate, DateTimeFormatter.ISO_LOCAL_DATE)
+        val startEpochDay = parsedStart.toEpochDay()
+        val parsedEnd = LocalDate.parse(endDate, DateTimeFormatter.ISO_LOCAL_DATE)
+        val endEpochDay = parsedEnd.toEpochDay()
         return readingSessionDao.getSessionsInRange(startEpochDay, endEpochDay)
     }
 

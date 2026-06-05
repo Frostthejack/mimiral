@@ -1,10 +1,5 @@
 package com.mimiral.app.ui.settings
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,9 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FormatSize
@@ -514,7 +507,11 @@ fun SettingsScreen(
                         SyncIntervalDropdown(
                             selectedMinutes = syncSettings.syncInterval.minutes,
                             onIntervalSelected = { minutes ->
-                                scope.launch { syncSettingsRepo.setSyncInterval(SyncInterval.fromMinutes(minutes)) }
+                                scope.launch {
+                                    syncSettingsRepo.setSyncInterval(
+                                        SyncInterval.fromMinutes(minutes)
+                                    )
+                                }
                             }
                         )
                     }

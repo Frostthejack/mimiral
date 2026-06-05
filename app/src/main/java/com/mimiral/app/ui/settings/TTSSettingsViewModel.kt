@@ -4,17 +4,16 @@ import android.app.Application
 import android.speech.tts.Voice
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.mimiral.app.data.local.settings.TTSSettings
 import com.mimiral.app.data.local.settings.TTSSettingsRepository
 import com.mimiral.app.tts.TTSManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.Locale
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Locale
-import javax.inject.Inject
 
 data class TTSSettingsUiState(
     val speechRate: Float = 1.0f,

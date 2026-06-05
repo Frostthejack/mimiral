@@ -2,9 +2,9 @@ package com.mimiral.app.data.repository
 
 import com.mimiral.app.data.local.dao.ReadingTimeDao
 import com.mimiral.app.data.local.entity.ReadingTimeEntity
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Repository for reading time tracking.

@@ -46,7 +46,9 @@ class ReadingTimeTracker {
     fun accumulatedMs(): Long {
         val current = if (isRunning) {
             System.currentTimeMillis() - sessionStartMs
-        } else 0L
+        } else {
+            0L
+        }
         return accumulatedMs + current
     }
 

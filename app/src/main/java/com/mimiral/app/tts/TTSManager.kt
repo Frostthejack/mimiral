@@ -6,13 +6,14 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
 import android.util.Log
+import com.mimiral.app.data.local.settings.TTSSettingsRepository
 import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.reader.SentenceBoundaryDetector
 import java.util.ArrayDeque
 import java.util.Locale
 import java.util.UUID
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.runBlocking
 
 enum class TTSState {
     IDLE,
@@ -469,7 +470,7 @@ class TTSManager(
      * Load persisted settings from a TTSSettingsRepository.
      * Call this after initialization to apply saved preferences.
      */
-    fun loadPersistedSettings(repository: com.mimiral.app.data.local.settings.TTSSettingsRepository) {
+    fun loadPersistedSettings(repository: TTSSettingsRepository) {
         runBlocking {
             val persisted = repository.settings.firstOrNull() ?: return@runBlocking
             settings.speechRate = persisted.speechRate

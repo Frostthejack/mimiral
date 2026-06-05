@@ -190,14 +190,20 @@ private fun VoiceSelector(
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (selectedVoice != null) selectedVoice.name
-                else stringResource(R.string.tts_voice_default),
+                text = if (selectedVoice != null) {
+                    selectedVoice.name
+                } else {
+                    stringResource(R.string.tts_voice_default)
+                },
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
             if (selectedVoice != null) {
+                val voiceDesc = "${selectedVoice.locale.displayName} · ${voiceQualityLabel(
+                    selectedVoice
+                )}"
                 Text(
-                    text = "${selectedVoice.locale.displayName} · ${voiceQualityLabel(selectedVoice)}",
+                    text = voiceDesc,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
