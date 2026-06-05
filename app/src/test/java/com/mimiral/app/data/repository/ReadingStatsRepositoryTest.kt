@@ -94,8 +94,14 @@ class ReadingStatsRepositoryTest {
     @Test
     fun `getAllSessions - delegates to dao`() {
         val sessions = listOf(
-            ReadingSessionEntity(bookId = 1, startTime = 0, endTime = 60000, durationSeconds = 60, pagesRead = 5, date = "2026-06-01"),
-            ReadingSessionEntity(bookId = 1, startTime = 120000, endTime = 180000, durationSeconds = 60, pagesRead = 3, date = "2026-06-02")
+            ReadingSessionEntity(
+                bookId = 1, startTime = 0, endTime = 60000,
+                durationSeconds = 60, pagesRead = 5, date = "2026-06-01"
+            ),
+            ReadingSessionEntity(
+                bookId = 1, startTime = 120000, endTime = 180000,
+                durationSeconds = 60, pagesRead = 3, date = "2026-06-02"
+            )
         )
         whenever(readingSessionDao.getAllSessions()).thenReturn(flowOf(sessions))
 

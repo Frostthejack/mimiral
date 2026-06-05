@@ -92,7 +92,8 @@ class DiscoverViewModelTest {
     @Test
     fun `DiscoverNavItem - sealed class variants`() {
         val libraries = DiscoverNavItem.Libraries
-        val seriesInLib = DiscoverNavItem.SeriesInLibrary(KavitaLibrary(id = 1, name = "Manga", type = 2))
+        val lib = KavitaLibrary(id = 1, name = "Manga", type = 2)
+        val seriesInLib = DiscoverNavItem.SeriesInLibrary(lib)
         val seriesDetail = DiscoverNavItem.SeriesDetail(
             KavitaLibrary(id = 1, name = "Manga", type = 2), "One Piece"
         )

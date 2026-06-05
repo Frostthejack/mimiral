@@ -89,10 +89,14 @@ data class OpdsLink(
     val properties: Map<String, String> = emptyMap()
 ) {
     val isNavigation: Boolean
-        get() = (rel == null && type?.contains("application/epub+zip") != true && type?.startsWith("image/") != true && !isAcquisition) ||
-            rel == "http://opds-spec.org/facet" ||
-            rel?.contains("navigation", ignoreCase = true) == true ||
-            type?.contains("application/atom+xml") == true
+        get() {
+            val notEpub = type?.contains("application/epub+zip") != true
+            val notImage = type?.startsWith("image/") != true
+            return (rel == null && notEpub && notImage && !isAcquisition) ||
+                rel == "http://opds-spec.org/facet" ||
+                rel?.contains("navigation", ignoreCase = true) == true ||
+                type?.contains("application/atom+xml") == true
+        }
 
     val isAcquisition: Boolean
         get() = rel?.startsWith("http://opds-spec.org/acquisition") == true ||

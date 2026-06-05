@@ -89,7 +89,11 @@ fun CollectionsScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.startEditing(CollectionEntity(name = "", description = null)) }
+                onClick = {
+                    viewModel.startEditing(
+                        CollectionEntity(name = "", description = null)
+                    )
+                }
             ) {
                 Icon(Icons.Default.Add, contentDescription = "New Collection")
             }
@@ -192,10 +196,13 @@ private fun CollectionsList(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(collections, key = { it.collection.id }) { collectionWithCount ->
+            val collectionId = collectionWithCount.collection.id
+            val isExpanded = expandedCollectionId == collectionId
             CollectionCard(
                 collectionWithCount = collectionWithCount,
-                isExpanded = expandedCollectionId == collectionWithCount.collection.id,
-                booksInCollection = if (expandedCollectionId == collectionWithCount.collection.id) booksInExpanded else emptyList(),
+                isExpanded = isExpanded,
+                booksInCollection = if (isExpanded) booksInExpanded
+                    else emptyList(),
                 onExpand = { onExpand(collectionWithCount.collection.id) },
                 onEdit = { onEdit(collectionWithCount.collection) },
                 onDelete = { onDelete(collectionWithCount.collection) },
@@ -267,8 +274,10 @@ private fun CollectionCard(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+                    val count = collectionWithCount.bookCount
+                    val label = if (count != 1) "books" else "book"
                     Text(
-                        text = "${collectionWithCount.bookCount} book${if (collectionWithCount.bookCount != 1) "s" else ""}",
+                        text = "$count $label",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -290,8 +299,10 @@ private fun CollectionCard(
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
+                val icon = if (isExpanded) Icons.Default.ExpandLess
+                    else Icons.Default.ExpandMore
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    imageVector = icon,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -316,7 +327,8 @@ private fun CollectionCard(
                             Text(
                                 text = "No books in this collection",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    .copy(alpha = 0.6f)
                             )
                         }
                     } else {
@@ -338,7 +350,12 @@ private fun CollectionCard(
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text("Delete Collection") },
-            text = { Text("Delete \"${collection.name}\"? Books will not be removed from your library.") },
+            text = {
+                Text(
+                    "Delete \"${collection.name}\"? " +
+                        "Books will not be removed from your library."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {

@@ -101,9 +101,10 @@ class ReadingStatsExporter(
         // Sort by start_time ascending for chronological order
         val sortedSessions = sessions.sortedBy { it.startTime }
         for (session in sortedSessions) {
-            sb.appendLine(
-                "${session.date},${session.bookId},${session.startTime},${session.endTime},${session.durationSeconds},${session.pagesRead}"
-            )
+            val csvRow = "${session.date},${session.bookId}," +
+                "${session.startTime},${session.endTime}," +
+                "${session.durationSeconds},${session.pagesRead}"
+            sb.appendLine(csvRow)
         }
 
         return sb.toString()

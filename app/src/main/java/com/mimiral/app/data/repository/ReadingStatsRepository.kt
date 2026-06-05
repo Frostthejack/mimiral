@@ -54,7 +54,10 @@ class ReadingStatsRepository @Inject constructor(
     fun getSessionsForDate(date: String): Flow<List<ReadingSessionEntity>> =
         readingSessionDao.getSessionsForDate(date)
 
-    fun getSessionsBetweenDates(startDate: String, endDate: String): Flow<List<ReadingSessionEntity>> =
+    fun getSessionsBetweenDates(
+        startDate: String,
+        endDate: String
+    ): Flow<List<ReadingSessionEntity>> =
         readingSessionDao.getSessionsBetweenDates(startDate, endDate)
 
     fun getAllReadingDates(): Flow<List<String>> =

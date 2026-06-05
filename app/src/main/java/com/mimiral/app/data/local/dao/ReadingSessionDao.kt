@@ -24,17 +24,36 @@ interface ReadingSessionDao {
     @Query("SELECT * FROM reading_sessions WHERE date = :date ORDER BY start_time DESC")
     fun getSessionsForDate(date: String): Flow<List<ReadingSessionEntity>>
 
-    @Query("SELECT * FROM reading_sessions WHERE date BETWEEN :startDate AND :endDate ORDER BY start_time DESC")
-    fun getSessionsBetweenDates(startDate: String, endDate: String): Flow<List<ReadingSessionEntity>>
+    @Query(
+        "SELECT * FROM reading_sessions " +
+            "WHERE date BETWEEN :startDate AND :endDate " +
+            "ORDER BY start_time DESC"
+    )
+    fun getSessionsBetweenDates(
+        startDate: String,
+        endDate: String
+    ): Flow<List<ReadingSessionEntity>>
 
     @Query("SELECT COUNT(*) FROM reading_sessions WHERE date = :date")
     suspend fun getSessionCountForDate(date: String): Int
 
-    @Query("SELECT SUM(duration_seconds) FROM reading_sessions WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalReadingTimeBetween(startDate: String, endDate: String): Long?
+    @Query(
+        "SELECT SUM(duration_seconds) FROM reading_sessions " +
+            "WHERE date BETWEEN :startDate AND :endDate"
+    )
+    suspend fun getTotalReadingTimeBetween(
+        startDate: String,
+        endDate: String
+    ): Long?
 
-    @Query("SELECT SUM(pages_read) FROM reading_sessions WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalPagesReadBetween(startDate: String, endDate: String): Int?
+    @Query(
+        "SELECT SUM(pages_read) FROM reading_sessions " +
+            "WHERE date BETWEEN :startDate AND :endDate"
+    )
+    suspend fun getTotalPagesReadBetween(
+        startDate: String,
+        endDate: String
+    ): Int?
 
     @Query("SELECT date FROM reading_sessions GROUP BY date ORDER BY date DESC")
     fun getAllReadingDates(): Flow<List<String>>

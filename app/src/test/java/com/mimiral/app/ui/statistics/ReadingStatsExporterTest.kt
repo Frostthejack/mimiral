@@ -86,26 +86,34 @@ class ReadingStatsExporterTest {
         val content = file.readText()
 
         // Check summary section
-        assertTrue("Should contain header comment", content.contains("# Mimiral Reading Statistics Export"))
+        val headerComment = "# Mimiral Reading Statistics Export"
+        assertTrue("Should contain header comment", content.contains(headerComment))
         assertTrue("Should contain total sessions", content.contains("# Total sessions: 3"))
         assertTrue("Should contain total pages", content.contains("# Total pages read: 70"))
-        assertTrue("Should contain total reading time", content.contains("# Total reading time (seconds): 9000"))
+        val timeStr = "# Total reading time (seconds): 9000"
+        assertTrue("Should contain total reading time", content.contains(timeStr))
         assertTrue("Should contain books completed", content.contains("# Books completed: 2"))
         assertTrue("Should contain current streak", content.contains("# Current streak (days): 3"))
 
         // Check CSV header
-        assertTrue("Should contain CSV header", content.contains("date,book_id,start_time,end_time,duration_seconds,pages_read"))
+        val csvHeader = "date,book_id,start_time,end_time,duration_seconds,pages_read"
+        assertTrue("Should contain CSV header", content.contains(csvHeader))
 
         // Check CSV data rows (sorted by startTime ascending)
-        val lines = content.lines().filter { it.isNotBlank() && !it.startsWith("#") && !it.startsWith("date") }
+        val lines = content.lines().filter { line ->
+            line.isNotBlank() && !line.startsWith("#") && !line.startsWith("date")
+        }
         assertEquals("Should have 3 data rows", 3, lines.size)
 
         // First row: 2026-06-01, book 10
-        assertTrue("First row should contain 2026-06-01 data", lines[0].startsWith("2026-06-01,10,"))
+        val row1Prefix = "2026-06-01,10,"
+        assertTrue("First row should contain 2026-06-01 data", lines[0].startsWith(row1Prefix))
         // Second row: 2026-06-02, book 10
-        assertTrue("Second row should contain 2026-06-02 data", lines[1].startsWith("2026-06-02,10,"))
+        val row2Prefix = "2026-06-02,10,"
+        assertTrue("Second row should contain 2026-06-02 data", lines[1].startsWith(row2Prefix))
         // Third row: 2026-06-03, book 20
-        assertTrue("Third row should contain 2026-06-03 data", lines[2].startsWith("2026-06-03,20,"))
+        val row3Prefix = "2026-06-03,20,"
+        assertTrue("Third row should contain 2026-06-03 data", lines[2].startsWith(row3Prefix))
     }
 
     @Test
@@ -130,7 +138,8 @@ class ReadingStatsExporterTest {
 
         assertNotNull(file)
         assertTrue("File should have .csv extension", file!!.name.endsWith(".csv"))
-        assertTrue("File name should start with mimiral_statistics_", file.name.startsWith("mimiral_statistics_"))
+        val prefix = "mimiral_statistics_"
+        assertTrue("File name should start with $prefix", file.name.startsWith(prefix))
     }
 
     @Test
