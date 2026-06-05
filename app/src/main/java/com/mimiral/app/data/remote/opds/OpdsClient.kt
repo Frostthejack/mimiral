@@ -3,6 +3,7 @@ package com.mimiral.app.data.remote.opds
 import android.util.Log
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Credentials
@@ -31,7 +32,7 @@ sealed class OpdsResult<out T> {
  * - Timeout configuration
  * - Error handling and status code reporting
  */
-class OpdsClient(
+class OpdsClient @Inject constructor(
     private val client: OkHttpClient = defaultClient()
 ) {
     companion object {

@@ -2,6 +2,7 @@ package com.mimiral.app.data.opds
 
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -11,7 +12,7 @@ import okhttp3.Request
  * HTTP client for fetching OPDS feeds.
  * Uses OkHttp with reasonable timeouts for mobile network conditions.
  */
-class OpdsClient(
+class OpdsClient @Inject constructor(
     private val okHttpClient: OkHttpClient = defaultClient()
 ) {
 
