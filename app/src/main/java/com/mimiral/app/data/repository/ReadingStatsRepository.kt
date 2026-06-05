@@ -4,12 +4,11 @@ import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
 
 @Singleton
 class ReadingStatsRepository @Inject constructor(
@@ -54,7 +53,10 @@ class ReadingStatsRepository @Inject constructor(
     fun getSessionsForDate(date: String): Flow<List<ReadingSessionEntity>> =
         readingSessionDao.getSessionsForDate(date)
 
-    fun getSessionsBetweenDates(startDate: String, endDate: String): Flow<List<ReadingSessionEntity>> =
+    fun getSessionsBetweenDates(
+        startDate: String,
+        endDate: String
+    ): Flow<List<ReadingSessionEntity>> =
         readingSessionDao.getSessionsBetweenDates(startDate, endDate)
 
     fun getAllReadingDates(): Flow<List<String>> =

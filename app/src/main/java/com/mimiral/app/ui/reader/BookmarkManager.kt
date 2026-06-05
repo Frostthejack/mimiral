@@ -89,7 +89,10 @@ class BookmarkManager @Inject constructor(
 
         viewModelScope.launch {
             val existing = bookRepository.getBookmarkAtPosition(
-                bookId, chapter, page, position
+                bookId,
+                chapter,
+                page,
+                position
             )
             if (existing != null) {
                 // Delete bookmark and sync removal to Kavita

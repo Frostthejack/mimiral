@@ -4,10 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
-import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -86,26 +84,48 @@ class ReadingStatsExporterTest {
         val content = file.readText()
 
         // Check summary section
-        assertTrue("Should contain header comment", content.contains("# Mimiral Reading Statistics Export"))
+        assertTrue(
+            "Should contain header comment",
+            content.contains("# Mimiral Reading Statistics Export")
+        )
         assertTrue("Should contain total sessions", content.contains("# Total sessions: 3"))
         assertTrue("Should contain total pages", content.contains("# Total pages read: 70"))
-        assertTrue("Should contain total reading time", content.contains("# Total reading time (seconds): 9000"))
+        assertTrue(
+            "Should contain total reading time",
+            content.contains("# Total reading time (seconds): 9000")
+        )
         assertTrue("Should contain books completed", content.contains("# Books completed: 2"))
         assertTrue("Should contain current streak", content.contains("# Current streak (days): 3"))
 
         // Check CSV header
-        assertTrue("Should contain CSV header", content.contains("date,book_id,start_time,end_time,duration_seconds,pages_read"))
+        assertTrue(
+            "Should contain CSV header",
+            content.contains("date,book_id,start_time,end_time,duration_seconds,pages_read")
+        )
 
         // Check CSV data rows (sorted by startTime ascending)
-        val lines = content.lines().filter { it.isNotBlank() && !it.startsWith("#") && !it.startsWith("date") }
+        val lines = content.lines().filter {
+            it.isNotBlank() && !it.startsWith("#") && !it.startsWith(
+                "date"
+            )
+        }
         assertEquals("Should have 3 data rows", 3, lines.size)
 
         // First row: 2026-06-01, book 10
-        assertTrue("First row should contain 2026-06-01 data", lines[0].startsWith("2026-06-01,10,"))
+        assertTrue(
+            "First row should contain 2026-06-01 data",
+            lines[0].startsWith("2026-06-01,10,")
+        )
         // Second row: 2026-06-02, book 10
-        assertTrue("Second row should contain 2026-06-02 data", lines[1].startsWith("2026-06-02,10,"))
+        assertTrue(
+            "Second row should contain 2026-06-02 data",
+            lines[1].startsWith("2026-06-02,10,")
+        )
         // Third row: 2026-06-03, book 20
-        assertTrue("Third row should contain 2026-06-03 data", lines[2].startsWith("2026-06-03,20,"))
+        assertTrue(
+            "Third row should contain 2026-06-03 data",
+            lines[2].startsWith("2026-06-03,20,")
+        )
     }
 
     @Test
@@ -130,7 +150,10 @@ class ReadingStatsExporterTest {
 
         assertNotNull(file)
         assertTrue("File should have .csv extension", file!!.name.endsWith(".csv"))
-        assertTrue("File name should start with mimiral_statistics_", file.name.startsWith("mimiral_statistics_"))
+        assertTrue(
+            "File name should start with mimiral_statistics_",
+            file.name.startsWith("mimiral_statistics_")
+        )
     }
 
     @Test

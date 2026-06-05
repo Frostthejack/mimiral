@@ -1,7 +1,6 @@
 package com.mimiral.app.ui.reader
 
 import android.util.Log
-import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.remote.kavita.KavitaBookmarkRepository
 import com.mimiral.app.data.repository.BookRepository

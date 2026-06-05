@@ -145,7 +145,9 @@ class CollectionRepositoryTest {
     @Test
     fun `addBookToCollection - inserts cross reference`() = runTest {
         repository.addBookToCollection(bookId = 1, collectionId = 2)
-        verify(collectionDao).addBookToCollection(BookCollectionCrossRef(bookId = 1, collectionId = 2))
+        verify(collectionDao).addBookToCollection(
+            BookCollectionCrossRef(bookId = 1, collectionId = 2)
+        )
     }
 
     // ---- removeBookFromCollection ----

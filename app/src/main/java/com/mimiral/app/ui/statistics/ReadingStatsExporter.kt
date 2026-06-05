@@ -102,7 +102,9 @@ class ReadingStatsExporter(
         val sortedSessions = sessions.sortedBy { it.startTime }
         for (session in sortedSessions) {
             sb.appendLine(
-                "${session.date},${session.bookId},${session.startTime},${session.endTime},${session.durationSeconds},${session.pagesRead}"
+                "${session.date},${session.bookId}," +
+                    "${session.startTime},${session.endTime}," +
+                    "${session.durationSeconds},${session.pagesRead}"
             )
         }
 

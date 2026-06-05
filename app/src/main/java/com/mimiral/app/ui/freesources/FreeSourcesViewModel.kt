@@ -5,14 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.remote.opds.FreeSource
 import com.mimiral.app.data.remote.opds.OpdsEntry
 import com.mimiral.app.data.remote.opds.OpdsFeed
-import com.mimiral.app.data.remote.opds.OpdsLink
 import com.mimiral.app.data.repository.OpdsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class FreeSourcesUiState(
     val sources: List<FreeSource> = FreeSource.all(),

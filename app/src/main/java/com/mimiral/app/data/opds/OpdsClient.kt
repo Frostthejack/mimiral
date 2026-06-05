@@ -2,7 +2,6 @@ package com.mimiral.app.data.opds
 
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient

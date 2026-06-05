@@ -14,16 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TrendingUp
@@ -48,16 +45,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -312,10 +305,11 @@ private fun StreakBanner(currentStreak: Int) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (currentStreak > 0)
+            containerColor = if (currentStreak > 0) {
                 MaterialTheme.colorScheme.primaryContainer
-            else
+            } else {
                 MaterialTheme.colorScheme.surfaceVariant
+            }
         )
     ) {
         Row(
@@ -329,10 +323,11 @@ private fun StreakBanner(currentStreak: Int) {
                 imageVector = Icons.Default.LocalFireDepartment,
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
-                tint = if (currentStreak > 0)
+                tint = if (currentStreak > 0) {
                     MaterialTheme.colorScheme.primary
-                else
+                } else {
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                }
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
@@ -340,15 +335,20 @@ private fun StreakBanner(currentStreak: Int) {
                     text = if (currentStreak > 0) "$currentStreak" else "0",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = if (currentStreak > 0)
+                    color = if (currentStreak > 0) {
                         MaterialTheme.colorScheme.primary
-                    else
+                    } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
                 Text(
-                    text = if (currentStreak == 1) "day streak"
-                    else if (currentStreak > 0) "day streak"
-                    else "Start reading to build a streak!",
+                    text = if (currentStreak == 1) {
+                        "day streak"
+                    } else if (currentStreak > 0) {
+                        "day streak"
+                    } else {
+                        "Start reading to build a streak!"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -437,7 +437,9 @@ private fun ReadingActivityChart(
                 last14.forEach { stat ->
                     val barHeight = if (maxInView > 0) {
                         (stat.totalPages.toFloat() / maxInView * 80f).coerceAtLeast(2f)
-                    } else 2f
+                    } else {
+                        2f
+                    }
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -451,8 +453,11 @@ private fun ReadingActivityChart(
                                 .height(barHeight.dp + 4.dp)
                         ) {
                             drawRoundRect(
-                                color = if (stat.totalPages > 0) primaryColor
-                                else surfaceVariantColor.copy(alpha = 0.3f),
+                                color = if (stat.totalPages > 0) {
+                                    primaryColor
+                                } else {
+                                    surfaceVariantColor.copy(alpha = 0.3f)
+                                },
                                 topLeft = Offset(0f, 0f),
                                 size = androidx.compose.ui.geometry.Size(
                                     size.width,

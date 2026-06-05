@@ -6,11 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.remote.ConnectionStatus
-import com.mimiral.app.data.remote.KavitaLoginRequest
-import com.mimiral.app.data.remote.KavitaLoginResponse
 import com.mimiral.app.data.remote.KavitaServerInfo
 import com.mimiral.app.data.remote.KavitaSyncApi
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,8 +19,6 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit
-import javax.inject.Inject
 
 /**
  * Authentication method for connecting to a Kavita server.
@@ -215,13 +213,19 @@ class KavitaSetupViewModel @Inject constructor(
                     url = "$normalizedUrl/",
                     username = if (state.authMethod == AuthMethod.USERNAME_PASSWORD) {
                         state.username.ifBlank { null }
-                    } else null,
+                    } else {
+                        null
+                    },
                     password = if (state.authMethod == AuthMethod.USERNAME_PASSWORD) {
                         state.password.ifBlank { null }
-                    } else null,
+                    } else {
+                        null
+                    },
                     apiKey = if (state.authMethod == AuthMethod.API_KEY) {
                         state.apiKey.ifBlank { null }
-                    } else null,
+                    } else {
+                        null
+                    },
                     isActive = true
                 )
 

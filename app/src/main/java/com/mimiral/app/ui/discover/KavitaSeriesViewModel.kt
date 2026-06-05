@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.remote.BrowseResult
 import com.mimiral.app.data.remote.KavitaBrowseRepository
-import com.mimiral.app.data.remote.SeriesDto
 import com.mimiral.app.data.remote.SeriesDetailDto
+import com.mimiral.app.data.remote.SeriesDto
 import com.mimiral.app.data.remote.VolumeDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
