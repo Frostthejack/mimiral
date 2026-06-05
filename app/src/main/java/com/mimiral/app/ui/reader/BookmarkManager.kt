@@ -21,7 +21,8 @@ data class BookmarkUiState(
 
 @HiltViewModel
 class BookmarkManager @Inject constructor(
-    private val bookRepository: BookRepository
+    private val bookRepository: BookRepository,
+    private val syncManager: BookmarkSyncManager
 ) : ViewModel() {
 
     private val _currentBookId = MutableStateFlow<Int?>(null)
@@ -35,17 +36,28 @@ class BookmarkManager @Inject constructor(
     private val _currentPosition = MutableStateFlow<String?>(null)
 
     /**
-     * Call when the reader opens a book. Loads all bookmarks for that book.
+     * Call when the reader opens a book. Loads all bookmarks for that book
+     * and triggers a sync with Kavita if the book is from a remote source.
      */
     fun loadBook(bookId: Int) {
         _currentBookId.value = bookId
         viewModelScope.launch {
             bookRepository.getBookmarksForBook(bookId)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.WhileSubscribed(5000),
+                    emptyList()
+                )
                 .collect { bookmarks ->
-                    _uiState.value = _uiState.value.copy(bookmarks = bookmarks)
+                    _uiState.value = _uiState.value.copy(
+                        bookmarks = bookmarks
+                    )
                     checkIfCurrentPositionBookmarked()
                 }
+        }
+        // Trigger sync with Kavita in background
+        viewModelScope.launch {
+            syncManager.syncOnBookOpen(bookId)
         }
     }
 
@@ -53,7 +65,11 @@ class BookmarkManager @Inject constructor(
      * Call when the reader navigates to a new position.
      * Updates the bookmark indicator state.
      */
-    fun updatePosition(chapterIndex: Int, pageNumber: Int, position: String? = null) {
+    fun updatePosition(
+        chapterIndex: Int,
+        pageNumber: Int,
+        position: String? = null
+    ) {
         _currentChapterIndex.value = chapterIndex
         _currentPageNumber.value = pageNumber
         _currentPosition.value = position
@@ -63,6 +79,7 @@ class BookmarkManager @Inject constructor(
     /**
      * Toggle bookmark at the current reading position.
      * If bookmarked, remove it. If not, add it.
+     * Syncs changes to Kavita.
      */
     fun toggleBookmarkAtCurrentPosition() {
         val bookId = _currentBookId.value ?: return
@@ -71,12 +88,16 @@ class BookmarkManager @Inject constructor(
         val position = _currentPosition.value
 
         viewModelScope.launch {
-            val existing = bookRepository.getBookmarkAtPosition(bookId, chapter, page, position)
+            val existing = bookRepository.getBookmarkAtPosition(
+                bookId, chapter, page, position
+            )
             if (existing != null) {
+                // Delete bookmark and sync removal to Kavita
                 bookRepository.deleteBookmark(existing)
+                syncManager.syncOnBookmarkDeleted(existing)
             } else {
-                val title = "Chapter ${chapter + 1}" // Simple title; reader can customize
-                bookRepository.addBookmark(
+                val title = "Chapter ${chapter + 1}"
+                val bookmarkId = bookRepository.addBookmark(
                     bookId = bookId,
                     chapterIndex = chapter,
                     pageNumber = page,
@@ -84,6 +105,19 @@ class BookmarkManager @Inject constructor(
                     title = title,
                     note = null
                 )
+                // Push new bookmark to Kavita
+                val newBookmark = BookmarkEntity(
+                    id = bookmarkId.toInt(),
+                    bookId = bookId,
+                    chapterIndex = chapter,
+                    pageNumber = page,
+                    position = position,
+                    title = title,
+                    note = null,
+                    createdTime = System.currentTimeMillis(),
+                    modifiedTime = System.currentTimeMillis()
+                )
+                syncManager.syncOnBookmarkCreated(newBookmark)
             }
             // State will auto-update via the Flow collection in loadBook()
         }
@@ -91,10 +125,12 @@ class BookmarkManager @Inject constructor(
 
     /**
      * Delete a specific bookmark.
+     * Syncs the deletion to Kavita.
      */
     fun deleteBookmark(bookmark: BookmarkEntity) {
         viewModelScope.launch {
             bookRepository.deleteBookmark(bookmark)
+            syncManager.syncOnBookmarkDeleted(bookmark)
         }
     }
 
@@ -128,7 +164,9 @@ class BookmarkManager @Inject constructor(
                 page,
                 position
             )
-            _uiState.value = _uiState.value.copy(isCurrentPositionBookmarked = isBookmarked)
+            _uiState.value = _uiState.value.copy(
+                isCurrentPositionBookmarked = isBookmarked
+            )
         }
     }
 }

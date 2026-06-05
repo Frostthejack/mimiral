@@ -52,7 +52,9 @@ data class BookmarkEntity(
     val title: String? = null,
     val note: String? = null,
     @ColumnInfo(name = "created_time") val createdTime: Long = System.currentTimeMillis(),
-    @ColumnInfo(name = "kavita_synced") val kavitaSynced: Boolean = false
+    @ColumnInfo(name = "kavita_synced") val kavitaSynced: Boolean = false,
+    @ColumnInfo(name = "kavita_chapter_id") val kavitaChapterId: Int? = null,
+    @ColumnInfo(name = "modified_time") val modifiedTime: Long = System.currentTimeMillis()
 )
 
 @Entity(tableName = "highlights")

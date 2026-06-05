@@ -279,8 +279,10 @@ class BookRepository @Inject constructor(
         pageNumber: Int,
         position: String?,
         title: String?,
-        note: String?
+        note: String?,
+        kavitaChapterId: Int? = null
     ): Long {
+        val now = System.currentTimeMillis()
         val entity = BookmarkEntity(
             bookId = bookId,
             chapterIndex = chapterIndex,
@@ -288,7 +290,10 @@ class BookRepository @Inject constructor(
             position = position,
             title = title,
             note = note,
-            createdTime = System.currentTimeMillis()
+            createdTime = now,
+            modifiedTime = now,
+            kavitaChapterId = kavitaChapterId,
+            kavitaSynced = kavitaChapterId != null
         )
         return bookmarkDao.insertBookmark(entity)
     }

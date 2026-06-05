@@ -157,6 +157,24 @@ interface BookmarkDao {
         pageNumber: Int,
         position: String?
     ): BookmarkEntity?
+
+    @Query(
+        "UPDATE bookmarks " +
+            "SET kavita_synced = 1, kavita_chapter_id = :chapterId, " +
+            "modified_time = :modifiedTime " +
+            "WHERE id = :bookmarkId"
+    )
+    suspend fun updateKavitaSync(
+        bookmarkId: Int,
+        chapterId: Int?,
+        modifiedTime: Long
+    )
+
+    @Query(
+        "SELECT * FROM bookmarks " +
+            "WHERE book_id = :bookId AND kavita_chapter_id IS NOT NULL"
+    )
+    suspend fun getKavitaSyncedBookmarkIds(bookId: Int): List<BookmarkEntity>
 }
 
 @Dao

@@ -85,15 +85,18 @@ abstract class MimiralDatabase : RoomDatabase() {
                         "`chapter_index` INTEGER NOT NULL, " +
                         "`title` TEXT, " +
                         "`content` TEXT NOT NULL, " +
-                        "FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON DELETE CASCADE)"
+                        "FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) " +
+                        "ON DELETE CASCADE)"
                 )
                 db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_chapters_book_id` ON `chapters` (`book_id`)"
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_chapters_book_id` ON `chapters` (`book_id`)"
                 )
 
                 // Create FTS5 external content virtual table
                 db.execSQL(
-                    "CREATE VIRTUAL TABLE IF NOT EXISTS `chapters_fts` USING fts5(" +
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS `chapters_fts` " +
+                        "USING fts5(" +
                         "`book_id` UNINDEXED, " +
                         "`chapter_index` UNINDEXED, " +
                         "`title`, " +
@@ -106,9 +109,10 @@ abstract class MimiralDatabase : RoomDatabase() {
                     "CREATE TRIGGER IF NOT EXISTS `chapters_ai` " +
                         "AFTER INSERT ON `chapters` BEGIN " +
                         "INSERT INTO `chapters_fts`(" +
-                        "`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
-                        "VALUES (new.`id`, new.`book_id`, new.`chapter_index`, " +
-                        "new.`title`, new.`content`); " +
+                        "`rowid`, `book_id`, `chapter_index`, `title`, " +
+                        "`content`) " +
+                        "VALUES (new.`id`, new.`book_id`, " +
+                        "new.`chapter_index`, new.`title`, new.`content`); " +
                         "END"
                 )
 
@@ -117,7 +121,8 @@ abstract class MimiralDatabase : RoomDatabase() {
                     "CREATE TRIGGER IF NOT EXISTS `chapters_ad` " +
                         "AFTER DELETE ON `chapters` BEGIN " +
                         "INSERT INTO `chapters_fts`(`chapters_fts`, " +
-                        "`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
+                        "`rowid`, `book_id`, `chapter_index`, `title`, " +
+                        "`content`) " +
                         "VALUES('delete', old.`id`, old.`book_id`, " +
                         "old.`chapter_index`, old.`title`, old.`content`); " +
                         "END"
@@ -128,13 +133,15 @@ abstract class MimiralDatabase : RoomDatabase() {
                     "CREATE TRIGGER IF NOT EXISTS `chapters_au` " +
                         "AFTER UPDATE ON `chapters` BEGIN " +
                         "INSERT INTO `chapters_fts`(`chapters_fts`, " +
-                        "`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
+                        "`rowid`, `book_id`, `chapter_index`, `title`, " +
+                        "`content`) " +
                         "VALUES('delete', old.`id`, old.`book_id`, " +
                         "old.`chapter_index`, old.`title`, old.`content`); " +
                         "INSERT INTO `chapters_fts`(" +
-                        "`rowid`, `book_id`, `chapter_index`, `title`, `content`) " +
-                        "VALUES (new.`id`, new.`book_id`, new.`chapter_index`, " +
-                        "new.`title`, new.`content`); " +
+                        "`rowid`, `book_id`, `chapter_index`, `title`, " +
+                        "`content`) " +
+                        "VALUES (new.`id`, new.`book_id`, " +
+                        "new.`chapter_index`, new.`title`, new.`content`); " +
                         "END"
                 )
             }
@@ -142,16 +149,18 @@ abstract class MimiralDatabase : RoomDatabase() {
 
         /**
          * Migration from v3 to v4:
-         * - Add `token` and `auth_type` columns to opds_catalogs table
+         * - Add kavita_chapter_id column to bookmarks
+         * - Add modified_time column to bookmarks
          */
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
-                    "ALTER TABLE `opds_catalogs` ADD COLUMN `token` TEXT"
+                    "ALTER TABLE `bookmarks` " +
+                        "ADD COLUMN `kavita_chapter_id` INTEGER"
                 )
                 db.execSQL(
-                    "ALTER TABLE `opds_catalogs` " +
-                        "ADD COLUMN `auth_type` TEXT NOT NULL DEFAULT 'NONE'"
+                    "ALTER TABLE `bookmarks` " +
+                        "ADD COLUMN `modified_time` INTEGER NOT NULL DEFAULT 0"
                 )
             }
         }

@@ -1,0 +1,253 @@
+package com.mimiral.app.data.remote.kavita
+
+import com.mimiral.app.data.local.entity.BookmarkEntity
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class KavitaBookmarkModelsTest {
+
+    @Test
+    fun `KavitaBookmarkRequest creates correct data class`() {
+        val request = KavitaBookmarkRequest(
+            page = 10,
+            chapterId = 99,
+            seriesId = 20,
+            libraryId = 3
+        )
+
+        assertEquals(10, request.page)
+        assertEquals(99, request.chapterId)
+        assertEquals(20, request.seriesId)
+        assertEquals(3, request.libraryId)
+    }
+
+    @Test
+    fun `KavitaChapterBookmark creates correct data class`() {
+        val bookmark = KavitaChapterBookmark(
+            chapterId = 42,
+            page = 5,
+            seriesId = 10
+        )
+
+        assertEquals(42, bookmark.chapterId)
+        assertEquals(5, bookmark.page)
+        assertEquals(10, bookmark.seriesId)
+    }
+
+    @Test
+    fun `KavitaChapterMapping creates correct data class`() {
+        val mapping = KavitaChapterMapping(
+            libraryId = 1,
+            seriesId = 10,
+            chapterId = 42
+        )
+
+        assertEquals(1, mapping.libraryId)
+        assertEquals(10, mapping.seriesId)
+        assertEquals(42, mapping.chapterId)
+    }
+
+    @Test
+    fun `KavitaResult Success holds data`() {
+        val result = KavitaResult.Success("test data")
+        assertEquals("test data", result.data)
+    }
+
+    @Test
+    fun `KavitaResult Error holds message and code`() {
+        val result = KavitaResult.Error(
+            message = "Not found",
+            code = 404
+        )
+
+        assertEquals("Not found", result.message)
+        assertEquals(404, result.code)
+    }
+
+    @Test
+    fun `KavitaBookmarkRequest copy creates with modified page`() {
+        val original = KavitaBookmarkRequest(
+            page = 5,
+            chapterId = 42,
+            seriesId = 10,
+            libraryId = 1
+        )
+
+        val deleted = original.copy(page = -1)
+        assertEquals(-1, deleted.page)
+        assertEquals(42, deleted.chapterId)
+    }
+}
+
+class BookmarkConflictResolutionTest {
+
+    @Test
+    fun `resolveConflict local wins when local is newer`() {
+        val repository = KavitaBookmarkRepository(
+            client = KavitaBookmarkClient(),
+            bookmarkDao = MockBookmarkDao(),
+            serverDao = MockServerDao()
+        )
+
+        val local = BookmarkEntity(
+            id = 1,
+            bookId = 1,
+            chapterIndex = 0,
+            pageNumber = 5,
+            position = null,
+            title = "Test",
+            note = null,
+            createdTime = 1000L,
+            modifiedTime = 2000L
+        )
+
+        val result = repository.resolveConflict(
+            local = local,
+            remotePage = 5,
+            remoteTimestamp = 1000L
+        )
+
+        assertTrue("Local should win when newer", result)
+    }
+
+    @Test
+    fun `resolveConflict remote wins when newer`() {
+        val repository = KavitaBookmarkRepository(
+            client = KavitaBookmarkClient(),
+            bookmarkDao = MockBookmarkDao(),
+            serverDao = MockServerDao()
+        )
+
+        val local = BookmarkEntity(
+            id = 1,
+            bookId = 1,
+            chapterIndex = 0,
+            pageNumber = 5,
+            position = null,
+            title = "Test",
+            note = null,
+            createdTime = 1000L,
+            modifiedTime = 1000L
+        )
+
+        val result = repository.resolveConflict(
+            local = local,
+            remotePage = 5,
+            remoteTimestamp = 2000L
+        )
+
+        assertFalse("Remote should win when newer", result)
+    }
+
+    @Test
+    fun `resolveConflict local wins on equal timestamps`() {
+        val repository = KavitaBookmarkRepository(
+            client = KavitaBookmarkClient(),
+            bookmarkDao = MockBookmarkDao(),
+            serverDao = MockServerDao()
+        )
+
+        val local = BookmarkEntity(
+            id = 1,
+            bookId = 1,
+            chapterIndex = 0,
+            pageNumber = 5,
+            position = null,
+            title = "Test",
+            note = null,
+            createdTime = 1000L,
+            modifiedTime = 1000L
+        )
+
+        val result = repository.resolveConflict(
+            local = local,
+            remotePage = 5,
+            remoteTimestamp = 1000L
+        )
+
+        assertTrue("Local should win on equal timestamps", result)
+    }
+
+    @Test
+    fun `resolveConflict local wins when no remote timestamp`() {
+        val repository = KavitaBookmarkRepository(
+            client = KavitaBookmarkClient(),
+            bookmarkDao = MockBookmarkDao(),
+            serverDao = MockServerDao()
+        )
+
+        val local = BookmarkEntity(
+            id = 1,
+            bookId = 1,
+            chapterIndex = 0,
+            pageNumber = 5,
+            position = null,
+            title = "Test",
+            note = null,
+            createdTime = 1000L,
+            modifiedTime = 500L
+        )
+
+        val result = repository.resolveConflict(
+            local = local,
+            remotePage = 5,
+            remoteTimestamp = null
+        )
+
+        assertTrue("Local should win when no remote timestamp", result)
+    }
+}
+
+// Minimal mock implementations for testing conflict resolution
+class MockBookmarkDao : com.mimiral.app.data.local.dao.BookmarkDao {
+    override fun getBookmarksForBook(
+        bookId: Int
+    ): kotlinx.coroutines.flow.Flow<List<BookmarkEntity>> {
+        return kotlinx.coroutines.flow.flowOf(emptyList())
+    }
+
+    override suspend fun insertBookmark(bookmark: BookmarkEntity): Long = 0L
+    override suspend fun deleteBookmark(bookmark: BookmarkEntity) {}
+    override suspend fun getUnsyncedBookmarks(): List<BookmarkEntity> = emptyList()
+    override suspend fun countBookmarksAtPosition(
+        bookId: Int,
+        chapterIndex: Int,
+        pageNumber: Int,
+        position: String?
+    ): Int = 0
+
+    override suspend fun getBookmarkAtPosition(
+        bookId: Int,
+        chapterIndex: Int,
+        pageNumber: Int,
+        position: String?
+    ): BookmarkEntity? = null
+
+    override suspend fun updateKavitaSync(
+        bookmarkId: Int,
+        chapterId: Int?,
+        modifiedTime: Long
+    ) {}
+
+    override suspend fun getKavitaSyncedBookmarkIds(
+        bookId: Int
+    ): List<BookmarkEntity> = emptyList()
+}
+
+class MockServerDao : com.mimiral.app.data.local.dao.ServerDao {
+    override fun getActiveServers(): kotlinx.coroutines.flow.Flow<List<com.mimiral.app.data.local.entity.ServerEntity>> {
+        return kotlinx.coroutines.flow.flowOf(emptyList())
+    }
+
+    override suspend fun getActiveServerByType(
+        type: String
+    ): com.mimiral.app.data.local.entity.ServerEntity? = null
+
+    override suspend fun insertServer(
+        server: com.mimiral.app.data.local.entity.ServerEntity
+    ): Long = 0L
+
+    override suspend fun updateServer(server: com.mimiral.app.data.local.entity.ServerEntity) {}
+}
