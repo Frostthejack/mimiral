@@ -556,29 +556,63 @@ fun EpubReaderScreen(
                                         }
                                     },
                                     onTap = { offset ->
-                                        val tapZoneWidth = size.width / 3f
+                                        val zoneFraction = settings.tapZoneSize / 100f
+                                        val tapZoneWidth = size.width * zoneFraction
+                                        val inverted = settings.tapZonesInverted
+
+                                        // Determine which zones are active
+                                        val leftActive = settings.tapZoneLeftEnabled
+                                        val rightActive = settings.tapZoneRightEnabled
+                                        val centerActive = settings.tapZoneCenterEnabled
 
                                         when {
-                                            offset.x < tapZoneWidth -> {
-                                                if (pagerState.currentPage > 0) {
-                                                    coroutineScope.launch {
-                                                        pagerState.animateScrollToPage(
-                                                            pagerState.currentPage - 1
-                                                        )
+                                            // Left zone tap
+                                            offset.x < tapZoneWidth && leftActive -> {
+                                                val goNext = inverted
+                                                if (goNext) {
+                                                    if (pagerState.currentPage < pageCount - 1) {
+                                                        coroutineScope.launch {
+                                                            pagerState.animateScrollToPage(
+                                                                pagerState.currentPage + 1
+                                                            )
+                                                        }
+                                                    }
+                                                } else {
+                                                    if (pagerState.currentPage > 0) {
+                                                        coroutineScope.launch {
+                                                            pagerState.animateScrollToPage(
+                                                                pagerState.currentPage - 1
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
-                                            offset.x > (size.width * 2f / 3f) -> {
-                                                if (pagerState.currentPage < pageCount - 1) {
-                                                    coroutineScope.launch {
-                                                        pagerState.animateScrollToPage(
-                                                            pagerState.currentPage + 1
-                                                        )
+                                            // Right zone tap
+                                            offset.x > (size.width - tapZoneWidth) && rightActive -> {
+                                                val goPrev = inverted
+                                                if (goPrev) {
+                                                    if (pagerState.currentPage > 0) {
+                                                        coroutineScope.launch {
+                                                            pagerState.animateScrollToPage(
+                                                                pagerState.currentPage - 1
+                                                            )
+                                                        }
+                                                    }
+                                                } else {
+                                                    if (pagerState.currentPage < pageCount - 1) {
+                                                        coroutineScope.launch {
+                                                            pagerState.animateScrollToPage(
+                                                                pagerState.currentPage + 1
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
+                                            // Center zone tap
                                             else -> {
-                                                toolbarVisible = !toolbarVisible
+                                                if (centerActive) {
+                                                    toolbarVisible = !toolbarVisible
+                                                }
                                             }
                                         }
                                     }

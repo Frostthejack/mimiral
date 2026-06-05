@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
@@ -94,6 +95,7 @@ fun SettingsScreen(
     onNavigateToTTSSettings: () -> Unit = {},
     onNavigateToAccessibilitySettings: () -> Unit = {},
     onNavigateToLibraryPreferences: () -> Unit = {},
+    onNavigateToGestureSettings: () -> Unit = {},
     backupRestoreViewModel: BackupRestoreViewModel = viewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -268,6 +270,14 @@ fun SettingsScreen(
                 }
             }
 
+// ── Reading Section ───────────────────────────────
+            Text(
+                text = "Reading",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+                        )
+
             // ═══════════════════════════════════════════════════
             // SECTION: TTS Preferences
             // ═══════════════════════════════════════════════════
@@ -305,6 +315,48 @@ fun SettingsScreen(
                             )
                             Text(
                                 text = "Voice, speed, and pitch settings",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Gesture navigation card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToGestureSettings() }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.TouchApp,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Gesture Customization",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Tap zones, swipe sensitivity, haptic feedback",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -625,6 +677,7 @@ fun SettingsScreen(
             }
 
             // ── Library Section ───────────────────────────────
+            // ── Theme Preview Section ─────────────────────────
             Text(
                 text = "Library",
                 style = MaterialTheme.typography.titleMedium,

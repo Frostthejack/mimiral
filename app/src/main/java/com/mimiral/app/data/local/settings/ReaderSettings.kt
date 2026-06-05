@@ -29,7 +29,14 @@ data class ReaderSettings(
     val volumeKeyDirectionSwapped: Boolean = false,
     val themeName: String = "DAY",
     val pageTurnStyleName: String = "SLIDE",
-    val defaultFontFamilyName: String = "DEFAULT"
+    val defaultFontFamilyName: String = "DEFAULT",
+    val tapZoneSize: Int = 33,
+    val tapZoneLeftEnabled: Boolean = true,
+    val tapZoneRightEnabled: Boolean = true,
+    val tapZoneCenterEnabled: Boolean = true,
+    val tapZonesInverted: Boolean = false,
+    val hapticFeedbackEnabled: Boolean = true,
+    val swipeSensitivity: Int = 50
 )
 
 class ReaderSettingsRepository(private val context: Context) {
@@ -51,6 +58,15 @@ class ReaderSettingsRepository(private val context: Context) {
         val MARGIN_RIGHT = intPreferencesKey("text_margin_right")
         val FONT_FAMILY = stringPreferencesKey("text_font_family")
         val CUSTOM_FONT_PATH = stringPreferencesKey("text_custom_font_path")
+
+        // Gesture settings
+        val TAP_ZONE_SIZE = intPreferencesKey("gesture_tap_zone_size")
+        val TAP_ZONE_LEFT_ENABLED = booleanPreferencesKey("gesture_tap_zone_left_enabled")
+        val TAP_ZONE_RIGHT_ENABLED = booleanPreferencesKey("gesture_tap_zone_right_enabled")
+        val TAP_ZONE_CENTER_ENABLED = booleanPreferencesKey("gesture_tap_zone_center_enabled")
+        val TAP_ZONES_INVERTED = booleanPreferencesKey("gesture_tap_zones_inverted")
+        val HAPTIC_FEEDBACK_ENABLED = booleanPreferencesKey("gesture_haptic_feedback_enabled")
+        val SWIPE_SENSITIVITY = intPreferencesKey("gesture_swipe_sensitivity")
     }
 
     val settings: Flow<ReaderSettings> = context.dataStore.data.map { prefs ->
@@ -58,8 +74,15 @@ class ReaderSettingsRepository(private val context: Context) {
             volumeKeyNavigationEnabled = prefs[Keys.VOLUME_KEY_NAVIGATION] ?: true,
             volumeKeyDirectionSwapped = prefs[Keys.VOLUME_KEY_SWAPPED] ?: false,
             themeName = prefs[Keys.THEME] ?: "DAY",
-            pageTurnStyleName = prefs[Keys.PAGE_TURN_STYLE] ?: "SLIDE",
-            defaultFontFamilyName = prefs[Keys.DEFAULT_FONT_FAMILY] ?: "DEFAULT"
+pageTurnStyleName = prefs[Keys.PAGE_TURN_STYLE] ?: "SLIDE",
+                        defaultFontFamilyName = prefs[Keys.DEFAULT_FONT_FAMILY] ?: "DEFAULT",
+            tapZoneSize = prefs[Keys.TAP_ZONE_SIZE] ?: 33,
+            tapZoneLeftEnabled = prefs[Keys.TAP_ZONE_LEFT_ENABLED] ?: true,
+            tapZoneRightEnabled = prefs[Keys.TAP_ZONE_RIGHT_ENABLED] ?: true,
+            tapZoneCenterEnabled = prefs[Keys.TAP_ZONE_CENTER_ENABLED] ?: true,
+            tapZonesInverted = prefs[Keys.TAP_ZONES_INVERTED] ?: false,
+            hapticFeedbackEnabled = prefs[Keys.HAPTIC_FEEDBACK_ENABLED] ?: true,
+            swipeSensitivity = prefs[Keys.SWIPE_SENSITIVITY] ?: 50
         )
     }
 
@@ -164,6 +187,48 @@ class ReaderSettingsRepository(private val context: Context) {
     suspend fun setDefaultFontFamily(familyName: String) {
         context.dataStore.edit { prefs ->
             prefs[Keys.DEFAULT_FONT_FAMILY] = familyName
+        }
+    }
+
+    suspend fun setTapZoneSize(size: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.TAP_ZONE_SIZE] = size
+        }
+    }
+
+    suspend fun setTapZoneLeftEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.TAP_ZONE_LEFT_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setTapZoneRightEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.TAP_ZONE_RIGHT_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setTapZoneCenterEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.TAP_ZONE_CENTER_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setTapZonesInverted(inverted: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.TAP_ZONES_INVERTED] = inverted
+        }
+    }
+
+    suspend fun setHapticFeedbackEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.HAPTIC_FEEDBACK_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSwipeSensitivity(sensitivity: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SWIPE_SENSITIVITY] = sensitivity
         }
     }
 }

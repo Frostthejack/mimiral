@@ -33,6 +33,7 @@ import com.mimiral.app.ui.reader.TxtRtfReaderScreen
 import com.mimiral.app.ui.readinglists.ReadingListDetailScreen
 import com.mimiral.app.ui.readinglists.ReadingListsScreen
 import com.mimiral.app.ui.settings.AccessibilitySettingsScreen
+import com.mimiral.app.ui.settings.GestureSettingsScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
 import com.mimiral.app.ui.settings.LibraryPreferencesScreen
@@ -183,6 +184,9 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onNavigateToLibraryPreferences = {
                         navController.navigate(Screen.LibraryPreferences.route)
                     },
+                    onNavigateToGestureSettings = {
+                        navController.navigate(Screen.GestureSettings.route)
+                    },
                     onExportLibrary = { exportImportViewModel.exportLibrary() },
                     onImportLibrary = { importLauncher.launch("application/json") },
                     isExporting = exportImportState.isExporting,
@@ -224,9 +228,18 @@ fun MimiralNavGraph(navController: NavHostController) {
                 )
             }
 
+            composable(Screen.GestureSettings.route) {
+                GestureSettingsScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
             composable(Screen.AccessibilitySettings.route) {
                 AccessibilitySettingsScreen()
             }
+
+            composable(Screen.Statistics.route) {
+                StatisticsScreen()
 
             composable(Screen.KavitaSetup.route) {
                 val kavitaViewModel: KavitaSetupViewModel = hiltViewModel()
