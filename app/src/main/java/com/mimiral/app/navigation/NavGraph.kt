@@ -28,6 +28,7 @@ import com.mimiral.app.ui.reader.TxtRtfReaderScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
 import com.mimiral.app.ui.settings.SettingsScreen
+import com.mimiral.app.ui.settings.TTSSettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
 
 /**
@@ -67,7 +68,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     route != Screen.NowReading.route &&
                     route != Screen.Discover.route &&
                     route != Screen.Settings.route &&
-                    route != Screen.Statistics.route
+                    route != Screen.Statistics.route &&
+                    route != Screen.TTSSettings.route
                 )
             ) {
                 // Don't show bottom bar
@@ -113,12 +115,21 @@ fun MimiralNavGraph(navController: NavHostController) {
                 SettingsScreen(
                     onNavigateToKavitaSetup = {
                         navController.navigate(Screen.KavitaSetup.route)
+                    },
+                    onNavigateToTTSSettings = {
+                        navController.navigate(Screen.TTSSettings.route)
                     }
                 )
             }
 
             composable(Screen.Statistics.route) {
                 StatisticsScreen()
+            }
+
+            composable(Screen.TTSSettings.route) {
+                TTSSettingsScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
 
             composable(Screen.KavitaSetup.route) {

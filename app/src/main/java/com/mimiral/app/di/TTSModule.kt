@@ -1,6 +1,7 @@
 package com.mimiral.app.di
 
 import android.content.Context
+import com.mimiral.app.data.local.settings.TTSSettingsRepository
 import com.mimiral.app.tts.TTSManager
 import dagger.Module
 import dagger.Provides
@@ -17,5 +18,11 @@ object TTSModule {
     @Singleton
     fun provideTTSManager(@ApplicationContext context: Context): TTSManager {
         return TTSManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTTSSettingsRepository(@ApplicationContext context: Context): TTSSettingsRepository {
+        return TTSSettingsRepository(context)
     }
 }
