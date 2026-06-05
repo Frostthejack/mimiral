@@ -492,8 +492,10 @@ class ApiIntegrationTest {
 
     @Test
     fun kavitaLoginResponse_deserialization() {
-        val json = """{"username":"testuser","token":"abc123",""""" +
-            """"refreshToken":"def456","tokenDuration":"7.00:00:00","apiKey":"key123"}"""
+        val json = """
+            {"username":"testuser","token":"abc123",
+            "refreshToken":"def456","tokenDuration":"7.00:00:00","apiKey":"key123"}
+        """.trimIndent()
         val response = gson.fromJson(json, KavitaClientLoginResponse::class.java)
         assertEquals("testuser", response.username)
         assertEquals("abc123", response.token)
@@ -633,8 +635,10 @@ class ApiIntegrationTest {
 
     @Test
     fun kavitaProgressData_deserialization() {
-        val json = """{"seriesId":10,"libraryId":1,"chapterId":5,"pageNumber":42,""""" +
-            """"lastModified":"2024-01-01T00:00:00.000Z","volumeId":1}"""
+        val json = """
+            {"seriesId":10,"libraryId":1,"chapterId":5,"pageNumber":42,
+            "lastModified":"2024-01-01T00:00:00.000Z","volumeId":1}
+        """.trimIndent()
         val data = gson.fromJson(json, KavitaProgressData::class.java)
         assertEquals(10, data.seriesId)
         assertEquals(1, data.libraryId)
@@ -644,8 +648,10 @@ class ApiIntegrationTest {
 
     @Test
     fun kavitaServerInfo_retrofit_deserialization() {
-        val json = """{"installId":"abc-123","version":"0.8.1.0",""""" +
-            """"totalLibraries":3,"isDocker":true}"""
+        val json = """
+            {"installId":"abc-123","version":"0.8.1.0",
+            "totalLibraries":3,"isDocker":true}
+        """.trimIndent()
         val info = gson.fromJson(json, KavitaServerInfo::class.java)
         assertEquals("abc-123", info.installId)
         assertEquals("0.8.1.0", info.version)
