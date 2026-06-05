@@ -14,6 +14,7 @@ sealed class Screen(val route: String) {
     object KavitaSetup : Screen("kavita_setup")
     object ReadingPreferences : Screen("reading_preferences")
     object AccessibilitySettings : Screen("accessibility_settings")
+    object LibraryPreferences : Screen("library_preferences")
     object EpubReader : Screen("epub_reader/{bookId}") {
         fun createRoute(bookId: Int): String = "epub_reader/$bookId"
     }

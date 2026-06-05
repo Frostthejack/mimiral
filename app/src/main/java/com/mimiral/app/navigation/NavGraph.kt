@@ -180,6 +180,9 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onNavigateToAccessibilitySettings = {
                         navController.navigate(Screen.AccessibilitySettings.route)
                     },
+                    onNavigateToLibraryPreferences = {
+                        navController.navigate(Screen.LibraryPreferences.route)
+                    },
                     onExportLibrary = { exportImportViewModel.exportLibrary() },
                     onImportLibrary = { importLauncher.launch("application/json") },
                     isExporting = exportImportState.isExporting,

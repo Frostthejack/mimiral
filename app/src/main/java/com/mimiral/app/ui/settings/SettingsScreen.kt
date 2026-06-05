@@ -93,6 +93,7 @@ fun SettingsScreen(
     onNavigateToReadingPreferences: () -> Unit = {},
     onNavigateToTTSSettings: () -> Unit = {},
     onNavigateToAccessibilitySettings: () -> Unit = {},
+    onNavigateToLibraryPreferences: () -> Unit = {},
     backupRestoreViewModel: BackupRestoreViewModel = viewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -267,7 +268,7 @@ fun SettingsScreen(
                 }
             }
 
-// ═══════════════════════════════════════════════════
+            // ═══════════════════════════════════════════════════
             // SECTION: TTS Preferences
             // ═══════════════════════════════════════════════════
             SectionHeader(
@@ -579,7 +580,7 @@ fun SettingsScreen(
             // ═══════════════════════════════════════════════════
             SectionHeader(
                 title = "Reading Preferences",
-                icon = Icons.Default.Book
+                icon = Icons.Default.FormatSize
             )
 
             Card(
@@ -598,7 +599,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Icon(
-                            Icons.Default.Book,
+                            Icons.Default.FormatSize,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -610,6 +611,55 @@ fun SettingsScreen(
                             )
                             Text(
                                 text = "Default font, theme, and page turn animation",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // ── Library Section ───────────────────────────────
+            Text(
+                text = "Library",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateToLibraryPreferences() }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Scan Folders & Formats",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Configure which folders to scan and file formats to include",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -752,7 +802,6 @@ fun SettingsScreen(
                     }
                 }
             }
-
             // ═══════════════════════════════════════════════════
             // SECTION: Cloud & Sync (Kavita)
             // ═══════════════════════════════════════════════════
@@ -802,7 +851,7 @@ fun SettingsScreen(
                 }
             }
 
-// ═══════════════════════════════════════════════════
+            // ═══════════════════════════════════════════════════
             // SECTION: Sync Preferences (Enhanced)
             // ═══════════════════════════════════════════════════
             SectionHeader(
