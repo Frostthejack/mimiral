@@ -6,7 +6,6 @@ import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -24,8 +23,6 @@ class ReadingStatsRepositoryTest {
     private lateinit var readingProgressDao: ReadingProgressDao
     private lateinit var bookDao: BookDao
     private lateinit var repository: ReadingStatsRepository
-
-    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
     @Before
     fun setup() {
@@ -65,7 +62,7 @@ class ReadingStatsRepositoryTest {
         )
 
         assertEquals(1, captured.size)
-        assertEquals(120L, captured[0].durationSeconds)
+        assertEquals(120000L, captured[0].durationMs)
         assertEquals(2, captured[0].bookId)
         assertEquals(5, captured[0].pagesRead)
     }
@@ -85,8 +82,8 @@ class ReadingStatsRepositoryTest {
             pagesRead = 1
         )
 
-        val today = LocalDate.now().format(dateFormatter)
-        assertEquals(today, captured[0].date)
+        val todayEpochDay = LocalDate.now().toEpochDay()
+        assertEquals(todayEpochDay, captured[0].sessionDate)
     }
 
     // ---- getAllSessions ----
@@ -96,19 +93,15 @@ class ReadingStatsRepositoryTest {
         val sessions = listOf(
             ReadingSessionEntity(
                 bookId = 1,
-                startTime = 0,
-                endTime = 60000,
-                durationSeconds = 60,
-                pagesRead = 5,
-                date = "2026-06-01"
+                sessionDate = 20605L,
+                durationMs = 60000L,
+                pagesRead = 5
             ),
             ReadingSessionEntity(
                 bookId = 1,
-                startTime = 120000,
-                endTime = 180000,
-                durationSeconds = 60,
-                pagesRead = 3,
-                date = "2026-06-02"
+                sessionDate = 20606L,
+                durationMs = 60000L,
+                pagesRead = 3
             )
         )
         whenever(readingSessionDao.getAllSessions()).thenReturn(flowOf(sessions))
@@ -121,57 +114,57 @@ class ReadingStatsRepositoryTest {
 
     @Test
     fun `getReadingStreak - empty dates returns zero`() = runTest {
-        whenever(readingSessionDao.getDistinctDatesDesc()).thenReturn(emptyList())
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(emptyList())
         assertEquals(0, repository.getReadingStreak())
     }
 
     @Test
     fun `getReadingStreak - single day streak`() = runTest {
-        val today = LocalDate.now().format(dateFormatter)
-        whenever(readingSessionDao.getDistinctDatesDesc()).thenReturn(listOf(today))
+        val today = LocalDate.now().toEpochDay()
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(listOf(today))
         assertEquals(1, repository.getReadingStreak())
     }
 
     @Test
     fun `getReadingStreak - three day streak`() = runTest {
-        val today = LocalDate.now()
-        val dates = (0..2).map { today.minusDays(it.toLong()).format(dateFormatter) }
-        whenever(readingSessionDao.getDistinctDatesDesc()).thenReturn(dates)
+        val today = LocalDate.now().toEpochDay()
+        val dates = (0..2).map { today - it }
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(dates)
         assertEquals(3, repository.getReadingStreak())
     }
 
     @Test
     fun `getReadingStreak - streak broken returns partial`() = runTest {
-        val today = LocalDate.now()
+        val today = LocalDate.now().toEpochDay()
         val dates = listOf(
-            today.format(dateFormatter),
-            today.minusDays(1).format(dateFormatter),
+            today,
+            today - 1,
             // gap at minusDays(2)
-            today.minusDays(3).format(dateFormatter)
+            today - 3
         )
-        whenever(readingSessionDao.getDistinctDatesDesc()).thenReturn(dates)
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(dates)
         assertEquals(2, repository.getReadingStreak())
     }
 
     @Test
     fun `getReadingStreak - yesterday only counts as streak of 1`() = runTest {
-        val yesterday = LocalDate.now().minusDays(1).format(dateFormatter)
-        whenever(readingSessionDao.getDistinctDatesDesc()).thenReturn(listOf(yesterday))
+        val yesterday = LocalDate.now().minusDays(1).toEpochDay()
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(listOf(yesterday))
         assertEquals(1, repository.getReadingStreak())
     }
 
     @Test
     fun `getReadingStreak - two days ago only returns zero`() = runTest {
-        val twoDaysAgo = LocalDate.now().minusDays(2).format(dateFormatter)
-        whenever(readingSessionDao.getDistinctDatesDesc()).thenReturn(listOf(twoDaysAgo))
+        val twoDaysAgo = LocalDate.now().minusDays(2).toEpochDay()
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(listOf(twoDaysAgo))
         assertEquals(0, repository.getReadingStreak())
     }
 
     @Test
     fun `getReadingStreak - five day streak`() = runTest {
-        val today = LocalDate.now()
-        val dates = (0..4).map { today.minusDays(it.toLong()).format(dateFormatter) }
-        whenever(readingSessionDao.getDistinctDatesDesc()).thenReturn(dates)
+        val today = LocalDate.now().toEpochDay()
+        val dates = (0..4).map { today - it }
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(dates)
         assertEquals(5, repository.getReadingStreak())
     }
 
@@ -200,19 +193,19 @@ class ReadingStatsRepositoryTest {
 
     @Test
     fun `todayString - returns today in ISO format`() {
-        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val today = LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
         assertEquals(today, ReadingStatsRepository.todayString())
     }
 
     @Test
     fun `daysAgoString - returns correct date`() {
-        val expected = LocalDate.now().minusDays(7).format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val expected = LocalDate.now().minusDays(7).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
         assertEquals(expected, ReadingStatsRepository.daysAgoString(7))
     }
 
     @Test
     fun `daysAgoString - zero days returns today`() {
-        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val today = LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
         assertEquals(today, ReadingStatsRepository.daysAgoString(0))
     }
 
@@ -220,14 +213,14 @@ class ReadingStatsRepositoryTest {
     fun `thisWeekStart - returns Monday of current week`() {
         val expected = LocalDate.now().minusDays(
             (LocalDate.now().dayOfWeek.value - 1).toLong()
-        ).format(DateTimeFormatter.ISO_LOCAL_DATE)
+        ).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
         assertEquals(expected, ReadingStatsRepository.thisWeekStart())
     }
 
     @Test
     fun `thisMonthStart - returns first day of current month`() {
         val expected = LocalDate.now().withDayOfMonth(1)
-            .format(DateTimeFormatter.ISO_LOCAL_DATE)
+            .format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
         assertEquals(expected, ReadingStatsRepository.thisMonthStart())
     }
 }

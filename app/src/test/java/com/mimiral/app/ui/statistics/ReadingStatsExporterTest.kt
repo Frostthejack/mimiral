@@ -46,29 +46,23 @@ class ReadingStatsExporterTest {
             ReadingSessionEntity(
                 id = 1,
                 bookId = 10,
-                startTime = 1717200000000L,
-                endTime = 1717203600000L,
-                durationSeconds = 3600,
-                pagesRead = 30,
-                date = "2026-06-01"
+                sessionDate = 20605L,
+                durationMs = 3600000L,
+                pagesRead = 30
             ),
             ReadingSessionEntity(
                 id = 2,
                 bookId = 10,
-                startTime = 1717286400000L,
-                endTime = 1717290000000L,
-                durationSeconds = 3600,
-                pagesRead = 25,
-                date = "2026-06-02"
+                sessionDate = 20606L,
+                durationMs = 3600000L,
+                pagesRead = 25
             ),
             ReadingSessionEntity(
                 id = 3,
                 bookId = 20,
-                startTime = 1717372800000L,
-                endTime = 1717374600000L,
-                durationSeconds = 1800,
-                pagesRead = 15,
-                date = "2026-06-03"
+                sessionDate = 20607L,
+                durationMs = 1800000L,
+                pagesRead = 15
             )
         )
 
@@ -89,30 +83,30 @@ class ReadingStatsExporterTest {
         assertTrue("Should contain header comment", content.contains(headerComment))
         assertTrue("Should contain total sessions", content.contains("# Total sessions: 3"))
         assertTrue("Should contain total pages", content.contains("# Total pages read: 70"))
-        val timeStr = "# Total reading time (seconds): 9000"
+        val timeStr = "# Total reading time (ms): 9000000"
         assertTrue("Should contain total reading time", content.contains(timeStr))
         assertTrue("Should contain books completed", content.contains("# Books completed: 2"))
         assertTrue("Should contain current streak", content.contains("# Current streak (days): 3"))
 
         // Check CSV header
-        val csvHeader = "date,book_id,start_time,end_time,duration_seconds,pages_read"
+        val csvHeader = "session_date,book_id,duration_ms,pages_read"
         assertTrue("Should contain CSV header", content.contains(csvHeader))
 
-        // Check CSV data rows (sorted by startTime ascending)
+        // Check CSV data rows (sorted by sessionDate ascending)
         val lines = content.lines().filter { line ->
-            line.isNotBlank() && !line.startsWith("#") && !line.startsWith("date")
+            line.isNotBlank() && !line.startsWith("#") && !line.startsWith("session_date")
         }
         assertEquals("Should have 3 data rows", 3, lines.size)
 
-        // First row: 2026-06-01, book 10
-        val row1Prefix = "2026-06-01,10,"
-        assertTrue("First row should contain 2026-06-01 data", lines[0].startsWith(row1Prefix))
-        // Second row: 2026-06-02, book 10
-        val row2Prefix = "2026-06-02,10,"
-        assertTrue("Second row should contain 2026-06-02 data", lines[1].startsWith(row2Prefix))
-        // Third row: 2026-06-03, book 20
-        val row3Prefix = "2026-06-03,20,"
-        assertTrue("Third row should contain 2026-06-03 data", lines[2].startsWith(row3Prefix))
+        // First row: epoch day 20605, book 10
+        val row1Prefix = "20605,10,"
+        assertTrue("First row should contain epoch day 20605 data", lines[0].startsWith(row1Prefix))
+        // Second row: epoch day 20606, book 10
+        val row2Prefix = "20606,10,"
+        assertTrue("Second row should contain epoch day 20606 data", lines[1].startsWith(row2Prefix))
+        // Third row: epoch day 20607, book 20
+        val row3Prefix = "20607,20,"
+        assertTrue("Third row should contain epoch day 20607 data", lines[2].startsWith(row3Prefix))
     }
 
     @Test
@@ -121,11 +115,9 @@ class ReadingStatsExporterTest {
             ReadingSessionEntity(
                 id = 1,
                 bookId = 1,
-                startTime = 1717200000000L,
-                endTime = 1717203600000L,
-                durationSeconds = 3600,
-                pagesRead = 10,
-                date = "2026-06-01"
+                sessionDate = 20605L,
+                durationMs = 3600000L,
+                pagesRead = 10
             )
         )
 
@@ -147,11 +139,9 @@ class ReadingStatsExporterTest {
             ReadingSessionEntity(
                 id = 1,
                 bookId = 1,
-                startTime = 1717200000000L,
-                endTime = 1717203600000L,
-                durationSeconds = 3600,
-                pagesRead = 10,
-                date = "2026-06-01"
+                sessionDate = 20605L,
+                durationMs = 3600000L,
+                pagesRead = 10
             )
         )
 
@@ -174,29 +164,23 @@ class ReadingStatsExporterTest {
             ReadingSessionEntity(
                 id = 3,
                 bookId = 1,
-                startTime = 1717372800000L, // June 3
-                endTime = 1717374600000L,
-                durationSeconds = 1800,
-                pagesRead = 5,
-                date = "2026-06-03"
+                sessionDate = 20607L, // June 3
+                durationMs = 1800000L,
+                pagesRead = 5
             ),
             ReadingSessionEntity(
                 id = 1,
                 bookId = 1,
-                startTime = 1717200000000L, // June 1
-                endTime = 1717203600000L,
-                durationSeconds = 3600,
-                pagesRead = 10,
-                date = "2026-06-01"
+                sessionDate = 20605L, // June 1
+                durationMs = 3600000L,
+                pagesRead = 10
             ),
             ReadingSessionEntity(
                 id = 2,
                 bookId = 1,
-                startTime = 1717286400000L, // June 2
-                endTime = 1717290000000L,
-                durationSeconds = 3600,
-                pagesRead = 8,
-                date = "2026-06-02"
+                sessionDate = 20606L, // June 2
+                durationMs = 3600000L,
+                pagesRead = 8
             )
         )
 
@@ -209,13 +193,13 @@ class ReadingStatsExporterTest {
         assertNotNull(file)
         val content = file!!.readText()
         val lines = content.lines().filter {
-            it.isNotBlank() && !it.startsWith("#") && !it.startsWith("date")
+            it.isNotBlank() && !it.startsWith("#") && !it.startsWith("session_date")
         }
 
-        // Should be sorted by start_time ascending: June 1, June 2, June 3
-        assertTrue("First row should be June 1", lines[0].startsWith("2026-06-01"))
-        assertTrue("Second row should be June 2", lines[1].startsWith("2026-06-02"))
-        assertTrue("Third row should be June 3", lines[2].startsWith("2026-06-03"))
+        // Should be sorted by sessionDate ascending: June 1, June 2, June 3
+        assertTrue("First row should be epoch day 20605", lines[0].startsWith("20605"))
+        assertTrue("Second row should be epoch day 20606", lines[1].startsWith("20606"))
+        assertTrue("Third row should be epoch day 20607", lines[2].startsWith("20607"))
     }
 
     @Test
@@ -224,11 +208,9 @@ class ReadingStatsExporterTest {
             ReadingSessionEntity(
                 id = 1,
                 bookId = 42,
-                startTime = 1717200000000L,
-                endTime = 1717201800000L,
-                durationSeconds = 1800,
-                pagesRead = 15,
-                date = "2026-06-01"
+                sessionDate = 20605L,
+                durationMs = 1800000L,
+                pagesRead = 15
             )
         )
 
@@ -248,12 +230,10 @@ class ReadingStatsExporterTest {
         val dataLine = lines[1]
         val parts = dataLine.split(",")
 
-        assertEquals("Should have 6 CSV columns", 6, parts.size)
-        assertEquals("Date should match", "2026-06-01", parts[0])
+        assertEquals("Should have 4 CSV columns", 4, parts.size)
+        assertEquals("Session date should match", "20605", parts[0])
         assertEquals("Book ID should match", "42", parts[1])
-        assertEquals("Start time should match", "1717200000000", parts[2])
-        assertEquals("End time should match", "1717201800000", parts[3])
-        assertEquals("Duration should match", "1800", parts[4])
-        assertEquals("Pages read should match", "15", parts[5])
+        assertEquals("Duration should match", "1800000", parts[2])
+        assertEquals("Pages read should match", "15", parts[3])
     }
 }
