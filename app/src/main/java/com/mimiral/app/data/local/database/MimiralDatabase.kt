@@ -13,6 +13,7 @@ import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
+import com.mimiral.app.data.local.dao.ReadingGoalDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
@@ -26,6 +27,7 @@ import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
+import com.mimiral.app.data.local.entity.ReadingGoalEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
 
@@ -44,9 +46,10 @@ import com.mimiral.app.data.local.entity.TagEntity
         PdfSettingsEntity::class,
         ChapterEntity::class,
         ChapterFtsEntity::class,
-        ReadingSessionEntity::class
+        ReadingSessionEntity::class,
+        ReadingGoalEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -60,6 +63,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun pdfSettingsDao(): PdfSettingsDao
     abstract fun chapterDao(): ChapterDao
     abstract fun readingSessionDao(): ReadingSessionDao
+    abstract fun readingGoalDao(): ReadingGoalDao
 
     companion object {
         /**
@@ -261,6 +265,24 @@ abstract class MimiralDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS " +
                         "`index_reading_sessions_start_time` ON `reading_sessions` (`start_time`)"
+                )
+            }
+        }
+
+        /**
+         * Migration from v6 to v7:
+         * - Create reading_goals table for daily/weekly/yearly reading goals
+         */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `reading_goals` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`goal_type` TEXT NOT NULL, " +
+                        "`target_type` TEXT NOT NULL, " +
+                        "`target_value` INTEGER NOT NULL, " +
+                        "`is_active` INTEGER NOT NULL, " +
+                        "`created_at` INTEGER NOT NULL)"
                 )
             }
         }
