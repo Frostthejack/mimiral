@@ -181,3 +181,36 @@ data class ChapterFtsEntity(
     val title: String? = null,
     val content: String = ""
 )
+
+/**
+ * Tracks individual reading sessions for streak calculation and statistics.
+ * Each row represents one continuous reading session for a book on a given date.
+ */
+@Entity(
+    tableName = "reading_sessions",
+    foreignKeys = [
+        ForeignKey(
+            entity = BookEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["book_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index(value = ["book_id"]), Index(value = ["session_date"])]
+)
+data class ReadingSessionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(name = "book_id") val bookId: Int,
+    /** Date of the reading session as epoch day (days since 1970-01-01). */
+    @ColumnInfo(name = "session_date") val sessionDate: Long,
+    /** Reading duration in milliseconds for this session. */
+    @ColumnInfo(name = "duration_ms") val durationMs: Long = 0,
+    /** Pages read during this session. */
+    @ColumnInfo(name = "pages_read") val pagesRead: Int = 0,
+    /** Starting page number for this session. */
+    @ColumnInfo(name = "start_page") val startPage: Int = 0,
+    /** Ending page number for this session. */
+    @ColumnInfo(name = "end_page") val endPage: Int = 0,
+    /** Timestamp when the session was recorded. */
+    @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis()
+)
