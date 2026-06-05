@@ -17,7 +17,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.LibraryScreen
-import com.mimiral.app.ui.opds.OpdsCatalogScreen
+import com.mimiral.app.ui.opds.OpdsCatalogBrowserScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
@@ -64,7 +64,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
                     route != Screen.Settings.route &&
-                    route != Screen.OpdsCatalog.route
+                    route != Screen.OpdsBrowser.route
                 )
             ) {
                 // Don't show bottom bar
@@ -97,6 +97,9 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
             composable(Screen.Settings.route) {
                 SettingsScreen()
+            }
+            composable(Screen.OpdsBrowser.route) {
+                OpdsCatalogBrowserScreen()
             }
 
             // Reader routes
@@ -140,12 +143,6 @@ fun MimiralNavGraph(navController: NavHostController) {
                 val bookId = backStackEntry.arguments?.getInt("bookId") ?: return@composable
                 TxtRtfReaderScreen(
                     bookId = bookId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Screen.OpdsCatalog.route) {
-                OpdsCatalogScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

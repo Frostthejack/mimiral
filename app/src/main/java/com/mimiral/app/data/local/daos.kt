@@ -210,20 +210,14 @@ interface ServerDao {
 
 @Dao
 interface OpdsCatalogDao {
-    @Query("SELECT * FROM opds_catalogs ORDER BY name ASC")
-    fun getAllCatalogs(): Flow<List<OpdsCatalogEntity>>
-
     @Query("SELECT * FROM opds_catalogs WHERE is_active = 1")
     fun getActiveCatalogs(): Flow<List<OpdsCatalogEntity>>
 
-    @Query("SELECT * FROM opds_catalogs WHERE id = :id")
-    suspend fun getCatalogById(id: Int): OpdsCatalogEntity?
+    @Query("SELECT COUNT(*) FROM opds_catalogs WHERE is_active = 1")
+    suspend fun getActiveCatalogCount(): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCatalog(catalog: OpdsCatalogEntity): Long
-
-    @Update
-    suspend fun updateCatalog(catalog: OpdsCatalogEntity)
 
     @Delete
     suspend fun deleteCatalog(catalog: OpdsCatalogEntity)

@@ -2,6 +2,7 @@ package com.mimiral.app.ui.opds
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mimiral.app.data.local.GutenbergCatalogSeeder
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.remote.opds.OpdsEntry
 import com.mimiral.app.data.remote.opds.OpdsFeed
@@ -20,12 +21,15 @@ data class OpdsBrowserUiState(
     val selectedCatalog: OpdsCatalogEntity? = null,
     val isLoadingCatalogs: Boolean = true,
     val isLoadingFeed: Boolean = false,
+    val isLoadingNextPage: Boolean = false,
     val isDownloading: Boolean = false,
     val downloadProgress: String? = null,
     val breadcrumbs: List<BreadcrumbItem> = emptyList(),
     val errorMessage: String? = null,
     val showAddCatalogDialog: Boolean = false,
-    val showCatalogList: Boolean = true
+    val showCatalogList: Boolean = true,
+    val hasNextPage: Boolean = false,
+    val nextPageUrl: String? = null
 )
 
 data class BreadcrumbItem(
@@ -35,7 +39,8 @@ data class BreadcrumbItem(
 
 @HiltViewModel
 class OpdsCatalogBrowserViewModel @Inject constructor(
-    private val opdsRepository: OpdsRepository
+    private val opdsRepository: OpdsRepository,
+    private val gutenbergSeeder: GutenbergCatalogSeeder
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OpdsBrowserUiState())
@@ -50,6 +55,9 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
     private fun loadCatalogs() {
         viewModelScope.launch {
             try {
+                // Seed Gutenberg as default if no catalogs exist
+                gutenbergSeeder.seedIfEmpty()
+
                 opdsRepository.getActiveCatalogs().collect { catalogs ->
                     _uiState.value = _uiState.value.copy(
                         catalogs = catalogs,
@@ -87,10 +95,8 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
             errorMessage = null
         )
 
-        // Add to breadcrumbs if not going back
         val existingIdx = feedHistory.indexOfFirst { it.feedUrl == url }
         if (existingIdx >= 0) {
-            // Going back — trim history
             while (feedHistory.size > existingIdx + 1) {
                 feedHistory.removeAt(feedHistory.lastIndex)
             }
@@ -102,10 +108,15 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
             val result = opdsRepository.fetchFeed(url, username, password)
             result.fold(
                 onSuccess = { feed ->
+                    val nextLink = feed.links.firstOrNull {
+                        it.rel == OpdsLink.REL_NEXT
+                    }
                     _uiState.value = _uiState.value.copy(
                         currentFeed = feed,
                         isLoadingFeed = false,
-                        breadcrumbs = feedHistory.toList()
+                        breadcrumbs = feedHistory.toList(),
+                        hasNextPage = nextLink != null,
+                        nextPageUrl = nextLink?.href
                     )
                 },
                 onFailure = { e ->
@@ -118,12 +129,66 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Load the next page of results (pagination).
+     * Appends new entries to the current feed.
+     */
+    fun loadNextPage() {
+        val nextUrl = _uiState.value.nextPageUrl ?: return
+        val catalog = _uiState.value.selectedCatalog
+
+        _uiState.value = _uiState.value.copy(
+            isLoadingNextPage = true,
+            errorMessage = null
+        )
+
+        viewModelScope.launch {
+            val result = opdsRepository.fetchFeed(
+                nextUrl,
+                catalog?.username,
+                catalog?.password
+            )
+            result.fold(
+                onSuccess = { nextFeed ->
+                    val currentFeed = _uiState.value.currentFeed
+                    if (currentFeed != null) {
+                        val mergedEntries =
+                            currentFeed.entries + nextFeed.entries
+                        val mergedFeed = currentFeed.copy(
+                            entries = mergedEntries,
+                            links = nextFeed.links
+                        )
+                        val nextLink = nextFeed.links.firstOrNull {
+                            it.rel == OpdsLink.REL_NEXT
+                        }
+                        _uiState.value = _uiState.value.copy(
+                            currentFeed = mergedFeed,
+                            isLoadingNextPage = false,
+                            hasNextPage = nextLink != null,
+                            nextPageUrl = nextLink?.href
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingNextPage = false,
+                        errorMessage = "Failed to load next page: ${e.message}"
+                    )
+                }
+            )
+        }
+    }
+
     fun navigateToEntry(entry: OpdsEntry) {
-        if (entry.isNavigationEntry) {
-            val navUrl = entry.navigationLink?.href ?: return
+        if (!entry.isAcquisition) {
+            val navLink = entry.links.firstOrNull { it.isNavigation }
+                ?: entry.links.firstOrNull {
+                    it.rel == OpdsLink.REL_SUBSECTION
+                }
+                ?: return
             val catalog = _uiState.value.selectedCatalog
             browseFeed(
-                url = navUrl,
+                url = navLink.href,
                 title = entry.title,
                 username = catalog?.username,
                 password = catalog?.password
@@ -132,7 +197,8 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
     }
 
     fun downloadEntry(entry: OpdsEntry) {
-        val downloadLink = entry.downloadLinks.firstOrNull()
+        val downloadLink = entry.preferredAcquisitionLink
+            ?: entry.acquisitionLinks.firstOrNull()
         if (downloadLink == null) {
             _uiState.value = _uiState.value.copy(
                 errorMessage = "No download link available for \"${entry.title}\""
@@ -142,12 +208,14 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
 
         val catalog = _uiState.value.selectedCatalog ?: return
         val extension = downloadLink.fileExtension ?: ".epub"
-        val fileName = entry.title.replace(Regex("[^a-zA-Z0-9._-]"), "_") + extension
-        val destPath = "${android.os.Environment.DIRECTORY_DOWNLOADS}/$fileName"
+        val fileName =
+            entry.title.replace(Regex("[^a-zA-Z0-9._-]"), "_") + extension
+        val destPath =
+            "${android.os.Environment.DIRECTORY_DOWNLOADS}/$fileName"
 
         _uiState.value = _uiState.value.copy(
             isDownloading = true,
-            downloadProgress = "Downloading \"${entry.title}\"...",
+            downloadProgress = "Downloading \"${entry.title}\"...\"",
             errorMessage = null
         )
 
@@ -188,7 +256,6 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
                 password = catalog?.password
             )
         } else {
-            // Back to catalog list
             showCatalogList()
         }
     }
@@ -200,7 +267,9 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
             currentFeed = null,
             selectedCatalog = null,
             breadcrumbs = emptyList(),
-            errorMessage = null
+            errorMessage = null,
+            hasNextPage = false,
+            nextPageUrl = null
         )
     }
 
@@ -223,7 +292,8 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
                     isActive = true
                 )
                 opdsRepository.insertCatalog(catalog)
-                _uiState.value = _uiState.value.copy(showAddCatalogDialog = false)
+                _uiState.value =
+                    _uiState.value.copy(showAddCatalogDialog = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     errorMessage = "Failed to add catalog: ${e.message}",
@@ -252,3 +322,14 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 }
+
+private val OpdsLink.fileExtension: String?
+    get() {
+        val cleanType = type ?: return null
+        return when {
+            cleanType.contains("epub") -> ".epub"
+            cleanType.contains("pdf") -> ".pdf"
+            cleanType.contains("mobi") -> ".mobi"
+            else -> null
+        }
+    }
