@@ -12,6 +12,7 @@ import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
+import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
@@ -24,6 +25,7 @@ import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
 
@@ -41,9 +43,10 @@ import com.mimiral.app.data.local.entity.TagEntity
         OpdsCatalogEntity::class,
         PdfSettingsEntity::class,
         ChapterEntity::class,
-        ChapterFtsEntity::class
+        ChapterFtsEntity::class,
+        ReadingSessionEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -56,6 +59,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun opdsCatalogDao(): OpdsCatalogDao
     abstract fun pdfSettingsDao(): PdfSettingsDao
     abstract fun chapterDao(): ChapterDao
+    abstract fun readingSessionDao(): ReadingSessionDao
 
     companion object {
         /**
@@ -228,6 +232,35 @@ abstract class MimiralDatabase : RoomDatabase() {
                         "`crop_right` INTEGER NOT NULL, " +
                         "`crop_bottom` INTEGER NOT NULL, " +
                         "`auto_detected` INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        /**
+         * Migration from v5 to v6:
+         * - Create reading_sessions table for reading statistics tracking
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `reading_sessions` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`book_id` INTEGER NOT NULL, " +
+                        "`start_time` INTEGER NOT NULL, " +
+                        "`end_time` INTEGER NOT NULL, " +
+                        "`duration_seconds` INTEGER NOT NULL, " +
+                        "`pages_read` INTEGER NOT NULL, " +
+                        "`date` TEXT NOT NULL, " +
+                        "FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) " +
+                        "ON DELETE CASCADE)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_reading_sessions_book_id` ON `reading_sessions` (`book_id`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_reading_sessions_start_time` ON `reading_sessions` (`start_time`)"
                 )
             }
         }
