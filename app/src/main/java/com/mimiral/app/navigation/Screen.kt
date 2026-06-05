@@ -5,6 +5,7 @@ sealed class Screen(val route: String) {
     object FreeSources : Screen("free_sources")
     object AddBooks : Screen("add_books")
     object NowReading : Screen("now_reading")
+    object Discover : Screen("discover")
     object Settings : Screen("settings")
     object OpdsBrowser : Screen("opds_browser")
     object EpubReader : Screen("epub_reader/{bookId}") {
