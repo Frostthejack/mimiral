@@ -32,7 +32,7 @@ sealed class OpdsResult<out T> {
  * - Timeout configuration
  * - Error handling and status code reporting
  */
-class OpdsClient @Inject constructor(
+class OpdsClient(
     private val client: OkHttpClient = defaultClient()
 ) {
     companion object {

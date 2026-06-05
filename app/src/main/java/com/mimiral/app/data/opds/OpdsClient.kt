@@ -12,7 +12,7 @@ import okhttp3.Request
  * HTTP client for fetching OPDS feeds.
  * Uses OkHttp with reasonable timeouts for mobile network conditions.
  */
-class OpdsClient @Inject constructor(
+class OpdsClient(
     private val okHttpClient: OkHttpClient = defaultClient()
 ) {
 
