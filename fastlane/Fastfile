@@ -1,0 +1,58 @@
+# Fastfile for Mimiral
+# 
+# This file defines Fastlane lanes for automating Play Store publishing.
+#
+# Prerequisites:
+#   gem install fastlane
+#   json_key_file: Google Play service account JSON key
+#
+# Usage:
+#   fastlane deploy       # Build release AAB and upload to Play Store
+#   fastlane metadata     # Push metadata (text + images) to Play Store
+#   fastlane screenshots  # Push screenshots to Play Store
+
+default_platform(:android)
+
+platform :android do
+
+  desc "Deploy a new version to Google Play (internal track)"
+  lane :deploy do
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      project_dir: "."
+    )
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft",
+      aab: "app/build/outputs/bundle/release/app-release.aab"
+    )
+  end
+
+  desc "Push metadata and assets to Play Store"
+  lane :metadata do
+    supply(
+      metadata_path: "fastlane/metadata/android",
+      skip_upload_apk: true,
+      skip_upload_aab: true
+    )
+  end
+
+  desc "Build release APK locally for testing"
+  lane :build_release do
+    gradle(
+      task: "assembleRelease",
+      project_dir: "."
+    )
+  end
+
+  desc "Build release AAB for Play Store upload"
+  lane :build_bundle do
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      project_dir: "."
+    )
+  end
+
+end
