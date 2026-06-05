@@ -15,6 +15,7 @@ import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.dao.ReadingListDao
+import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookReadingListCrossRef
@@ -51,7 +52,7 @@ import com.mimiral.app.data.local.entity.ReadingListEntity
         ReadingListEntity::class,
         BookReadingListCrossRef::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -66,6 +67,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun chapterDao(): ChapterDao
     abstract fun readingSessionDao(): ReadingSessionDao
     abstract fun readingListDao(): ReadingListDao
+    abstract fun tagDao(): TagDao
 
     companion object {
         /**
@@ -330,6 +332,19 @@ abstract class MimiralDatabase : RoomDatabase() {
                 db.execSQL(
                     "INSERT OR IGNORE INTO `reading_lists`(`name`, `list_type`, `created_time`, `sort_order`) " +
                         "VALUES('Finished', 'FINISHED', $now, 2)"
+                )
+            }
+        }
+
+        /**
+         * Migration from v7 to v8:
+         * - Add rating column to books table
+         */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `books` " +
+                        "ADD COLUMN `rating` INTEGER"
                 )
             }
         }

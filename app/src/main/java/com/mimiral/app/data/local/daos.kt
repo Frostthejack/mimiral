@@ -9,6 +9,7 @@ import androidx.room.Update
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookReadingListCrossRef
+import com.mimiral.app.data.local.entity.BookTagCrossRef
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.CollectionEntity
@@ -18,6 +19,7 @@ import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingListEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ServerEntity
+import com.mimiral.app.data.local.entity.TagEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -98,6 +100,33 @@ interface BookDao {
 
     @Query("SELECT file_path FROM books")
     suspend fun getAllFilePaths(): List<String>
+}
+
+@Dao
+interface TagDao {
+    @Query("SELECT * FROM tags ORDER BY name ASC")
+    fun getAllTags(): Flow<List<TagEntity>>
+
+    @Query("SELECT t.* FROM tags t INNER JOIN book_tags bt ON t.id = bt.tag_id WHERE bt.book_id = :bookId ORDER BY t.name ASC")
+    fun getTagsForBook(bookId: Int): Flow<List<TagEntity>>
+
+    @Query("SELECT t.* FROM tags t INNER JOIN book_tags bt ON t.id = bt.tag_id WHERE bt.book_id = :bookId ORDER BY t.name ASC")
+    suspend fun getTagsForBookList(bookId: Int): List<TagEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertTag(tag: TagEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addTagToBook(crossRef: BookTagCrossRef)
+
+    @Query("DELETE FROM book_tags WHERE book_id = :bookId AND tag_id = :tagId")
+    suspend fun removeTagFromBook(bookId: Int, tagId: Int)
+
+    @Query("DELETE FROM book_tags WHERE book_id = :bookId")
+    suspend fun removeAllTagsFromBook(bookId: Int)
+
+    @Query("SELECT * FROM tags WHERE name = :name LIMIT 1")
+    suspend fun getTagByName(name: String): TagEntity?
 }
 
 @Dao

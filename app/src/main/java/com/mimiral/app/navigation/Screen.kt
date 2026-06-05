@@ -32,4 +32,9 @@ sealed class Screen(val route: String) {
     object ReadingListDetail : Screen("reading_list_detail/{listId}") {
         fun createRoute(listId: Int): String = "reading_list_detail/$listId"
     }
+
+    // Book metadata editing
+    object EditBookMetadata : Screen("edit_book_metadata/{bookId}") {
+        fun createRoute(bookId: Int): String = "edit_book_metadata/$bookId"
+    }
 }
