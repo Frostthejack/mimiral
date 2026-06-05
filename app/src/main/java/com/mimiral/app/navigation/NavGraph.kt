@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +29,7 @@ import com.mimiral.app.ui.reader.PdfReaderScreen
 import com.mimiral.app.ui.reader.TxtRtfReaderScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
+import com.mimiral.app.ui.settings.LibraryExportImportViewModel
 import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
 
@@ -110,11 +113,40 @@ fun MimiralNavGraph(navController: NavHostController) {
                 DiscoverScreen()
             }
             composable(Screen.Settings.route) {
+                val exportImportViewModel: LibraryExportImportViewModel = hiltViewModel()
+                val exportImportState by exportImportViewModel.uiState.collectAsState()
+
+                val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                    contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+                ) { uri: android.net.Uri? ->
+                    uri?.let { exportImportViewModel.importLibraryFromUri(it) }
+                }
+
                 SettingsScreen(
                     onNavigateToKavitaSetup = {
                         navController.navigate(Screen.KavitaSetup.route)
-                    }
+                    },
+                    onExportLibrary = { exportImportViewModel.exportLibrary() },
+                    onImportLibrary = { importLauncher.launch("application/json") },
+                    isExporting = exportImportState.isExporting,
+                    isImporting = exportImportState.isImporting
                 )
+
+                // Show snackbar for export/import results
+                exportImportState.errorMessage?.let { error ->
+                    LaunchedEffect(error) {
+                        // Clear error after showing
+                        exportImportViewModel.clearError()
+                    }
+                }
+
+                // Auto-share exported file on success
+                if (exportImportState.exportSuccess) {
+                    LaunchedEffect(exportImportState.exportSuccess) {
+                        exportImportViewModel.shareExportedFile()
+                        exportImportViewModel.clearExportSuccess()
+                    }
+                }
             }
 
             composable(Screen.Statistics.route) {

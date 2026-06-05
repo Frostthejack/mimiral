@@ -8,6 +8,7 @@ import androidx.room.Query
 import androidx.room.Update
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
+import com.mimiral.app.data.local.entity.BookTagCrossRef
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.CollectionEntity
@@ -16,6 +17,7 @@ import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ServerEntity
+import com.mimiral.app.data.local.entity.TagEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -228,6 +230,36 @@ interface CollectionDao {
 
     @Query("DELETE FROM book_collections WHERE book_id = :bookId AND collection_id = :collectionId")
     suspend fun removeBookFromCollection(bookId: Int, collectionId: Int)
+
+    @Query("SELECT * FROM book_collections")
+    suspend fun getAllBookCollections(): List<BookCollectionCrossRef>
+}
+
+@Dao
+interface TagDao {
+    @Query("SELECT * FROM tags")
+    suspend fun getAllTags(): List<TagEntity>
+
+    @Query("SELECT * FROM tags WHERE id = :tagId")
+    suspend fun getTagById(tagId: Int): TagEntity?
+
+    @Query("SELECT * FROM tags WHERE name = :name LIMIT 1")
+    suspend fun getTagByName(name: String): TagEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTag(tag: TagEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertTags(tags: List<TagEntity>): List<Long>
+
+    @Query("SELECT * FROM book_tags")
+    suspend fun getAllBookTags(): List<BookTagCrossRef>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addBookTag(crossRef: BookTagCrossRef)
+
+    @Query("DELETE FROM book_tags WHERE book_id = :bookId AND tag_id = :tagId")
+    suspend fun removeBookTag(bookId: Int, tagId: Int)
 }
 
 @Dao

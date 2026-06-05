@@ -62,4 +62,7 @@ object DatabaseModule {
 
     @Provides
     fun provideReadingSessionDao(database: MimiralDatabase) = database.readingSessionDao()
+
+    @Provides
+    fun provideTagDao(database: MimiralDatabase) = database.tagDao()
 }

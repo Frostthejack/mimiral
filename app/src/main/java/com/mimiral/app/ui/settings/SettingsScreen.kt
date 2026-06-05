@@ -17,13 +17,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,7 +49,11 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateToKavitaSetup: () -> Unit = {}
+    onNavigateToKavitaSetup: () -> Unit = {},
+    onExportLibrary: () -> Unit = {},
+    onImportLibrary: () -> Unit = {},
+    isExporting: Boolean = false,
+    isImporting: Boolean = false
 ) {
     val context = LocalContext.current
     val settingsRepository = remember { ReaderSettingsRepository(context) }
@@ -218,6 +225,71 @@ fun SettingsScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+            }
+
+            // ── Data Import/Export Section ────────────────────
+            Text(
+                text = "Library Data",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Export button
+                    androidx.compose.material3.Button(
+                        onClick = onExportLibrary,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isExporting && !isImporting
+                    ) {
+                        if (isExporting) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                        Text(
+                            text = if (isExporting) "Exporting..." else "Export Library"
+                        )
+                    }
+
+                    // Import button
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = onImportLibrary,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isExporting && !isImporting
+                    ) {
+                        if (isImporting) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.size(8.dp))
+                        }
+                        Text(
+                            text = if (isImporting) "Importing..." else "Import Library"
+                        )
+                    }
+
+                    Text(
+                        text = "Export includes books, reading progress, bookmarks, " +
+                            "highlights, notes, collections, tags, and settings. " +
+                            "Import merges with existing data.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 

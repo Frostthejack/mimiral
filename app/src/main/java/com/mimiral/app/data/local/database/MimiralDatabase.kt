@@ -14,6 +14,7 @@ import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.dao.ServerDao
+import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookTagCrossRef
@@ -60,6 +61,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun pdfSettingsDao(): PdfSettingsDao
     abstract fun chapterDao(): ChapterDao
     abstract fun readingSessionDao(): ReadingSessionDao
+    abstract fun tagDao(): TagDao
 
     companion object {
         /**
