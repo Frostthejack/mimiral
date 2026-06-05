@@ -175,6 +175,64 @@ interface ReadingProgressDao {
 
     @Query("SELECT * FROM reading_progress")
     fun getAllProgress(): Flow<List<ReadingProgressEntity>>
+
+    // -- Completed books tracking --
+
+    /**
+     * Get all completed books (completed_at IS NOT NULL), ordered by completion date descending.
+     * Joins with books table to return BookEntity rows.
+     */
+    @Query(
+        "SELECT books.* FROM books " +
+            "INNER JOIN reading_progress ON books.id = reading_progress.book_id " +
+            "WHERE reading_progress.completed_at IS NOT NULL " +
+            "ORDER BY reading_progress.completed_at DESC"
+    )
+    fun getCompletedBooks(): Flow<List<BookEntity>>
+
+    /**
+     * Mark a book as completed. Sets completed_at to the given timestamp
+     * and increments times_completed by 1.
+     */
+    @Query(
+        "UPDATE reading_progress " +
+            "SET completed_at = :completedAt, " +
+            "times_completed = times_completed + 1, " +
+            "progress_percent = 100 " +
+            "WHERE book_id = :bookId"
+    )
+    suspend fun markCompleted(bookId: Int, completedAt: Long)
+
+    /**
+     * Get completion info for a specific book.
+     */
+    @Query("SELECT completed_at FROM reading_progress WHERE book_id = :bookId")
+    suspend fun getCompletedAt(bookId: Int): Long?
+
+    /**
+     * Get times completed for a specific book.
+     */
+    @Query("SELECT times_completed FROM reading_progress WHERE book_id = :bookId")
+    suspend fun getTimesCompleted(bookId: Int): Int?
+
+    /**
+     * Count total completed books.
+     */
+    @Query(
+        "SELECT COUNT(*) FROM reading_progress " +
+            "WHERE completed_at IS NOT NULL"
+    )
+    suspend fun getCompletedCount(): Int
+
+    /**
+     * Count completed books within a time range (for stats).
+     */
+    @Query(
+        "SELECT COUNT(*) FROM reading_progress " +
+            "WHERE completed_at IS NOT NULL " +
+            "AND completed_at >= :startTime AND completed_at <= :endTime"
+    )
+    suspend fun getCompletedCountInRange(startTime: Long, endTime: Long): Int
 }
 
 @Dao

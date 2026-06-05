@@ -140,10 +140,58 @@ class BookRepository @Inject constructor(
         readingProgressDao.getRecentProgress()
 
     /**
-     * Save reading progress for a book.
-     * Calculates progressPercent from characterOffset / totalCharacters (EPUB)
-     * or from pageNumber / totalPages (PDF) when character data is unavailable.
+     * Mark a book as completed.
+     * Sets completed_at timestamp and increments times_completed.
+     * If no progress row exists, creates one with 100% progress.
      */
+    suspend fun markCompleted(bookId: Int) {
+        val existing = readingProgressDao.getProgressForBook(bookId)
+        if (existing == null) {
+            // No progress row yet — create one marked as completed
+            readingProgressDao.saveProgress(
+                ReadingProgressEntity(
+                    bookId = bookId,
+                    progressPercent = 100f,
+                    completedAt = System.currentTimeMillis(),
+                    timesCompleted = 1
+                )
+            )
+        } else {
+            readingProgressDao.markCompleted(bookId, System.currentTimeMillis())
+        }
+    }
+
+    /**
+     * Get all books that have been completed, ordered by completion date descending.
+     */
+    fun getCompletedBooks(): Flow<List<BookEntity>> =
+        readingProgressDao.getCompletedBooks()
+
+    /**
+     * Get the completion timestamp for a book, or null if not completed.
+     */
+    suspend fun getCompletedAt(bookId: Int): Long? =
+        readingProgressDao.getCompletedAt(bookId)
+
+    /**
+     * Get the number of times a book has been completed (re-reads).
+     */
+    suspend fun getTimesCompleted(bookId: Int): Int =
+        readingProgressDao.getTimesCompleted(bookId) ?: 0
+
+    /**
+     * Count total completed books.
+     */
+    suspend fun getCompletedCount(): Int =
+        readingProgressDao.getCompletedCount()
+
+    /**
+     * Count completed books within a time range (e.g. this week, this month).
+     */
+    suspend fun getCompletedCountInRange(startTime: Long, endTime: Long): Int =
+        readingProgressDao.getCompletedCountInRange(startTime, endTime)
+
+    // ---- Reading progress (updated) ----
     suspend fun saveProgress(
         bookId: Int,
         chapterIndex: Int,
@@ -164,6 +212,8 @@ class BookRepository @Inject constructor(
         }
 
         val existing = readingProgressDao.getProgressForBook(bookId)
+        val wasCompleted = existing?.completedAt != null
+        val isNowCompleted = progressPercent >= 100f
         val entity = ReadingProgressEntity(
             id = existing?.id ?: 0,
             bookId = bookId,
@@ -175,7 +225,16 @@ class BookRepository @Inject constructor(
             progressPercent = progressPercent,
             lastReadPosition = lastReadPosition,
             lastReadTime = System.currentTimeMillis(),
-            totalTimeRead = existing?.totalTimeRead ?: 0
+            totalTimeRead = existing?.totalTimeRead ?: 0,
+            kavitaSynced = existing?.kavitaSynced ?: false,
+            completedAt = when {
+                isNowCompleted && !wasCompleted -> System.currentTimeMillis()
+                else -> existing?.completedAt
+            },
+            timesCompleted = when {
+                isNowCompleted && !wasCompleted -> (existing?.timesCompleted ?: 0) + 1
+                else -> existing?.timesCompleted ?: 0
+            }
         )
         readingProgressDao.saveProgress(entity)
     }

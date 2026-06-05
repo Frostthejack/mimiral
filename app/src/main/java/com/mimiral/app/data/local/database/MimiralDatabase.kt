@@ -247,6 +247,8 @@ abstract class MimiralDatabase : RoomDatabase() {
         /**
          * Migration from v5 to v6:
          * - Create reading_sessions table for reading statistics tracking
+         * - Add completed_at column to reading_progress
+         * - Add times_completed column to reading_progress
          */
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -269,6 +271,14 @@ abstract class MimiralDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS " +
                         "`index_reading_sessions_start_time` ON `reading_sessions` (`start_time`)"
+                )
+                db.execSQL(
+                    "ALTER TABLE `reading_progress` " +
+                        "ADD COLUMN `completed_at` INTEGER"
+                )
+                db.execSQL(
+                    "ALTER TABLE `reading_progress` " +
+                        "ADD COLUMN `times_completed` INTEGER NOT NULL DEFAULT 0"
                 )
             }
         }

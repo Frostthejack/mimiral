@@ -42,7 +42,9 @@ data class ReadingProgressEntity(
     @ColumnInfo(name = "last_read_position") val lastReadPosition: String? = null,
     @ColumnInfo(name = "last_read_time") val lastReadTime: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "total_time_read") val totalTimeRead: Long = 0,
-    @ColumnInfo(name = "kavita_synced") val kavitaSynced: Boolean = false
+    @ColumnInfo(name = "kavita_synced") val kavitaSynced: Boolean = false,
+    @ColumnInfo(name = "completed_at") val completedAt: Long? = null,
+    @ColumnInfo(name = "times_completed") val timesCompleted: Int = 0
 )
 
 @Entity(tableName = "bookmarks")
