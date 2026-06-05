@@ -17,6 +17,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.mimiral.app.ui.collections.CollectionsScreen
+import com.mimiral.app.ui.readinglists.ReadingListDetailScreen
+import com.mimiral.app.ui.readinglists.ReadingListsScreen
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.discover.KavitaSeriesScreen
 import com.mimiral.app.ui.library.AddBooksScreen
@@ -62,6 +64,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             if (route == null || (
                 route != Screen.Library.route &&
                     route != Screen.Collections.route &&
+                    route != Screen.ReadingLists.route &&
                     route != Screen.AddBooks.route &&
                     route != Screen.NowReading.route &&
                     route != Screen.Discover.route &&
@@ -96,6 +99,29 @@ fun MimiralNavGraph(navController: NavHostController) {
                         val route = routeForBookFormat(bookId, format)
                         navController.navigate(route)
                     }
+                )
+            }
+            composable(Screen.ReadingLists.route) {
+                ReadingListsScreen(
+                    onBookClick = { bookId, format ->
+                        val route = routeForBookFormat(bookId, format)
+                        navController.navigate(route)
+                    }
+                )
+            }
+            composable(
+                route = Screen.ReadingListDetail.route,
+                arguments = listOf(navArgument("listId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val listId = backStackEntry.arguments?.getInt("listId")
+                    ?: return@composable
+                ReadingListDetailScreen(
+                    listId = listId,
+                    onBookClick = { bookId, format ->
+                        val route = routeForBookFormat(bookId, format)
+                        navController.navigate(route)
+                    },
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             composable(Screen.AddBooks.route) {

@@ -8,12 +8,14 @@ import androidx.room.Query
 import androidx.room.Update
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
+import com.mimiral.app.data.local.entity.BookReadingListCrossRef
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.CollectionEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
+import com.mimiral.app.data.local.entity.ReadingListEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import kotlinx.coroutines.flow.Flow
@@ -312,4 +314,48 @@ interface ChapterDao {
             "WHERE chapters_fts MATCH :query AND chapters.book_id = :bookId"
     )
     fun searchChaptersInBook(bookId: Int, query: String): Flow<List<ChapterEntity>>
+}
+
+@Dao
+interface ReadingListDao {
+    @Query("SELECT * FROM reading_lists ORDER BY sort_order")
+    fun getAllReadingLists(): Flow<List<ReadingListEntity>>
+
+    @Query("SELECT * FROM reading_lists WHERE id = :listId")
+    suspend fun getReadingListById(listId: Int): ReadingListEntity?
+
+    @Query("SELECT * FROM reading_lists WHERE list_type = :listType LIMIT 1")
+    suspend fun getReadingListByType(listType: String): ReadingListEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertReadingList(list: ReadingListEntity): Long
+
+    @Update
+    suspend fun updateReadingList(list: ReadingListEntity)
+
+    @Delete
+    suspend fun deleteReadingList(list: ReadingListEntity)
+
+    @Query("SELECT COUNT(*) FROM reading_lists")
+    suspend fun getReadingListCount(): Int
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addBookToReadingList(crossRef: BookReadingListCrossRef)
+
+    @Query("DELETE FROM book_reading_lists WHERE book_id = :bookId AND reading_list_id = :listId")
+    suspend fun removeBookFromReadingList(bookId: Int, listId: Int)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM book_reading_lists WHERE book_id = :bookId AND reading_list_id = :listId)")
+    suspend fun isBookInReadingList(bookId: Int, listId: Int): Boolean
+
+    @Query("SELECT COUNT(*) FROM book_reading_lists WHERE reading_list_id = :listId")
+    suspend fun getBookCountInReadingList(listId: Int): Int
+
+    @Query(
+        "SELECT books.* FROM books " +
+            "INNER JOIN book_reading_lists ON books.id = book_reading_lists.book_id " +
+            "WHERE book_reading_lists.reading_list_id = :listId " +
+            "ORDER BY book_reading_lists.added_time DESC"
+    )
+    fun getBooksInReadingList(listId: Int): Flow<List<BookEntity>>
 }

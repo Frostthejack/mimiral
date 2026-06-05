@@ -3,6 +3,7 @@ package com.mimiral.app.navigation
 sealed class Screen(val route: String) {
     object Library : Screen("library")
     object Collections : Screen("collections")
+    object ReadingLists : Screen("reading_lists")
     object Discover : Screen("discover")
     object AddBooks : Screen("add_books")
     object NowReading : Screen("now_reading")
@@ -24,5 +25,10 @@ sealed class Screen(val route: String) {
     // Kavita series/volume browsing
     object KavitaSeries : Screen("kavita_series/{seriesId}") {
         fun createRoute(seriesId: Int): String = "kavita_series/$seriesId"
+    }
+
+    // Reading list detail
+    object ReadingListDetail : Screen("reading_list_detail/{listId}") {
+        fun createRoute(listId: Int): String = "reading_list_detail/$listId"
     }
 }

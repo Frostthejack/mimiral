@@ -13,8 +13,10 @@ import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ServerDao
+import com.mimiral.app.data.local.dao.ReadingListDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
+import com.mimiral.app.data.local.entity.BookReadingListCrossRef
 import com.mimiral.app.data.local.entity.BookTagCrossRef
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
@@ -26,6 +28,7 @@ import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
+import com.mimiral.app.data.local.entity.ReadingListEntity
 
 @Database(
     entities = [
@@ -41,9 +44,11 @@ import com.mimiral.app.data.local.entity.TagEntity
         OpdsCatalogEntity::class,
         PdfSettingsEntity::class,
         ChapterEntity::class,
-        ChapterFtsEntity::class
+        ChapterFtsEntity::class,
+        ReadingListEntity::class,
+        BookReadingListCrossRef::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -56,6 +61,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun opdsCatalogDao(): OpdsCatalogDao
     abstract fun pdfSettingsDao(): PdfSettingsDao
     abstract fun chapterDao(): ChapterDao
+    abstract fun readingListDao(): ReadingListDao
 
     companion object {
         /**
@@ -228,6 +234,69 @@ abstract class MimiralDatabase : RoomDatabase() {
                         "`crop_right` INTEGER NOT NULL, " +
                         "`crop_bottom` INTEGER NOT NULL, " +
                         "`auto_detected` INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        /**
+         * Migration from v5 to v6:
+         * - Create reading_lists table (named reading lists: To Read, Reading, Finished, custom)
+         * - Create book_reading_lists cross-reference table
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Create reading_lists table
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `reading_lists` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`list_type` TEXT NOT NULL, " +
+                        "`created_time` INTEGER NOT NULL, " +
+                        "`sort_order` INTEGER NOT NULL)"
+                )
+
+                // Create book_reading_lists cross-reference table
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `book_reading_lists` (" +
+                        "`book_id` INTEGER NOT NULL, " +
+                        "`reading_list_id` INTEGER NOT NULL, " +
+                        "`added_time` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`book_id`, `reading_list_id`))"
+                )
+
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_book_reading_lists_book_id` ON `book_reading_lists` (`book_id`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_book_reading_lists_reading_list_id` " +
+                        "ON `book_reading_lists` (`reading_list_id`)"
+                )
+
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_book_reading_lists_book_id` ON `book_reading_lists` (`book_id`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_book_reading_lists_reading_list_id` " +
+                        "ON `book_reading_lists` (`reading_list_id`)"
+                )
+
+                // Seed the three built-in system reading lists
+                val now = System.currentTimeMillis()
+                db.execSQL(
+                    "INSERT OR IGNORE INTO `reading_lists`(`name`, `list_type`, `created_time`, `sort_order`) " +
+                        "VALUES('To Read', 'TO_READ', $now, 0)"
+                )
+                db.execSQL(
+                    "INSERT OR IGNORE INTO `reading_lists`(`name`, `list_type`, `created_time`, `sort_order`) " +
+                        "VALUES('Reading', 'READING', $now, 1)"
+                )
+                db.execSQL(
+                    "INSERT OR IGNORE INTO `reading_lists`(`name`, `list_type`, `created_time`, `sort_order`) " +
+                        "VALUES('Finished', 'FINISHED', $now, 2)"
                 )
             }
         }
