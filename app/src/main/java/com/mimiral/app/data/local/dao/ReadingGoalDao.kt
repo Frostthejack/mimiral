@@ -22,10 +22,16 @@ interface ReadingGoalDao {
     @Query("SELECT * FROM reading_goals WHERE is_active = 1 ORDER BY created_at DESC")
     fun getActiveGoals(): Flow<List<ReadingGoalEntity>>
 
-    @Query("SELECT * FROM reading_goals WHERE is_active = 1 AND goal_type = :goalType ORDER BY created_at DESC")
+    @Query(
+        "SELECT * FROM reading_goals WHERE is_active = 1 " +
+            "AND goal_type = :goalType ORDER BY created_at DESC"
+    )
     fun getActiveGoalsByType(goalType: String): Flow<List<ReadingGoalEntity>>
 
-    @Query("SELECT * FROM reading_goals WHERE goal_type = :goalType AND target_type = :targetType AND is_active = 1 LIMIT 1")
+    @Query(
+        "SELECT * FROM reading_goals WHERE goal_type = :goalType " +
+            "AND target_type = :targetType AND is_active = 1 LIMIT 1"
+    )
     suspend fun getActiveGoal(goalType: String, targetType: String): ReadingGoalEntity?
 
     @Query("SELECT * FROM reading_goals ORDER BY created_at DESC")

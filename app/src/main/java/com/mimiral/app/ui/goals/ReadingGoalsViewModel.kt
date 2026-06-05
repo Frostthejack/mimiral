@@ -5,14 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.ReadingGoalEntity
 import com.mimiral.app.data.repository.ReadingGoalsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class GoalWithProgress(
     val goal: ReadingGoalEntity,
@@ -21,7 +19,9 @@ data class GoalWithProgress(
     val progressPercent: Float
         get() = if (goal.targetValue > 0) {
             (currentValue.toFloat() / goal.targetValue).coerceIn(0f, 1f)
-        } else 0f
+        } else {
+            0f
+        }
 
     val isComplete: Boolean
         get() = currentValue >= goal.targetValue

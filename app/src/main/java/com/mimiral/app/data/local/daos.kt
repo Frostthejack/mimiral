@@ -158,6 +158,23 @@ interface TagDao {
 
     @Query("SELECT * FROM tags WHERE name = :name LIMIT 1")
     suspend fun getTagByName(name: String): TagEntity?
+
+    // -- Additional methods from import/export branch --
+
+    @Query("SELECT * FROM tags WHERE id = :tagId")
+    suspend fun getTagById(tagId: Int): TagEntity?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertTags(tags: List<TagEntity>): List<Long>
+
+    @Query("SELECT * FROM book_tags")
+    suspend fun getAllBookTags(): List<BookTagCrossRef>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addBookTag(crossRef: BookTagCrossRef)
+
+    @Query("DELETE FROM book_tags WHERE book_id = :bookId AND tag_id = :tagId")
+    suspend fun removeBookTag(bookId: Int, tagId: Int)
 }
 
 @Dao
@@ -365,6 +382,9 @@ interface CollectionDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addBooksToCollections(crossRefs: List<BookCollectionCrossRef>)
+
+    @Query("SELECT * FROM book_collections")
+    suspend fun getAllBookCollections(): List<BookCollectionCrossRef>
 }
 
 @Dao

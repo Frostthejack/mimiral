@@ -11,11 +11,11 @@ import com.mimiral.app.data.local.dao.CollectionDao
 import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
+import com.mimiral.app.data.local.dao.ReadingGoalDao
 import com.mimiral.app.data.local.dao.ReadingListDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.dao.ReadingTimeDao
-import com.mimiral.app.data.local.dao.ReadingGoalDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.dao.TagDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
@@ -29,11 +29,11 @@ import com.mimiral.app.data.local.entity.CollectionEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
+import com.mimiral.app.data.local.entity.ReadingGoalEntity
 import com.mimiral.app.data.local.entity.ReadingListEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ReadingTimeEntity
-import com.mimiral.app.data.local.entity.ReadingGoalEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
 

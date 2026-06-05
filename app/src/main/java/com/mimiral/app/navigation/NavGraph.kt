@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +21,7 @@ import androidx.navigation.navArgument
 import com.mimiral.app.ui.collections.CollectionsScreen
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.discover.KavitaSeriesScreen
+import com.mimiral.app.ui.goals.ReadingGoalsScreen
 import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.BookMetadataEditScreen
 import com.mimiral.app.ui.library.CollectionPickerScreen
@@ -29,14 +32,14 @@ import com.mimiral.app.ui.reader.PdfReaderScreen
 import com.mimiral.app.ui.reader.TxtRtfReaderScreen
 import com.mimiral.app.ui.readinglists.ReadingListDetailScreen
 import com.mimiral.app.ui.readinglists.ReadingListsScreen
+import com.mimiral.app.ui.settings.AccessibilitySettingsScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
+import com.mimiral.app.ui.settings.LibraryPreferencesScreen
 import com.mimiral.app.ui.settings.ReadingPreferencesScreen
-import com.mimiral.app.ui.settings.AccessibilitySettingsScreen
 import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.settings.TTSSettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
-import com.mimiral.app.ui.goals.ReadingGoalsScreen
 
 /**
  * Format-aware navigation: routes to the correct reader based on the book's format.
@@ -154,6 +157,16 @@ fun MimiralNavGraph(navController: NavHostController) {
                 DiscoverScreen()
             }
             composable(Screen.Settings.route) {
+                val exportImportViewModel: LibraryExportImportViewModel = hiltViewModel()
+                val exportImportState by exportImportViewModel.uiState.collectAsState()
+
+                val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                    contract =
+                    androidx.activity.result.contract.ActivityResultContracts.GetContent()
+                ) { uri: android.net.Uri? ->
+                    uri?.let { exportImportViewModel.importLibraryFromUri(it) }
+                }
+
                 SettingsScreen(
                     onNavigateToKavitaSetup = {
                         navController.navigate(Screen.KavitaSetup.route)
@@ -166,8 +179,28 @@ fun MimiralNavGraph(navController: NavHostController) {
                     },
                     onNavigateToAccessibilitySettings = {
                         navController.navigate(Screen.AccessibilitySettings.route)
-                    }
+                    },
+                    onExportLibrary = { exportImportViewModel.exportLibrary() },
+                    onImportLibrary = { importLauncher.launch("application/json") },
+                    isExporting = exportImportState.isExporting,
+                    isImporting = exportImportState.isImporting
                 )
+
+                // Show snackbar for export/import results
+                exportImportState.errorMessage?.let { error ->
+                    LaunchedEffect(error) {
+                        // Clear error after showing
+                        exportImportViewModel.clearError()
+                    }
+                }
+
+                // Auto-share exported file on success
+                if (exportImportState.exportSuccess) {
+                    LaunchedEffect(exportImportState.exportSuccess) {
+                        exportImportViewModel.shareExportedFile()
+                        exportImportViewModel.clearExportSuccess()
+                    }
+                }
             }
 
             composable(Screen.Statistics.route) {
@@ -202,6 +235,12 @@ fun MimiralNavGraph(navController: NavHostController) {
 
             composable(Screen.ReadingPreferences.route) {
                 ReadingPreferencesScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.LibraryPreferences.route) {
+                LibraryPreferencesScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

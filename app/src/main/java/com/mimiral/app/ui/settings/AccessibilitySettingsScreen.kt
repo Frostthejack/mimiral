@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatSize
@@ -61,7 +60,9 @@ fun AccessibilitySettingsScreen() {
                 title = {
                     Text(
                         "Accessibility",
-                        modifier = Modifier.semantics { contentDescription = "Accessibility settings" }
+                        modifier = Modifier.semantics {
+                            contentDescription = "Accessibility settings"
+                        }
                     )
                 }
             )
@@ -93,7 +94,8 @@ fun AccessibilitySettingsScreen() {
                     // High contrast mode
                     AccessibilityToggleRow(
                         title = "High Contrast",
-                        description = "Increase contrast between text and background for better readability",
+                        description = "Increase contrast between text and " +
+                            "background for better readability",
                         icon = Icons.Default.Contrast,
                         checked = settings.highContrastEnabled,
                         onCheckedChange = { enabled ->
@@ -195,7 +197,8 @@ fun AccessibilitySettingsScreen() {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Choose a theme. High contrast themes are recommended for users with low vision.",
+                        text = "Choose a theme. High contrast themes " +
+                            "are recommended for users with low vision.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -342,9 +345,12 @@ private fun FontScaleSlider(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text("75%", style = MaterialTheme.typography.labelSmall)
-        Text("$scalePercent%", style = MaterialTheme.typography.labelMedium,
+        Text(
+            "$scalePercent%",
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary)
+            color = MaterialTheme.colorScheme.primary
+        )
         Text("200%", style = MaterialTheme.typography.labelSmall)
     }
 }

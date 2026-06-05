@@ -4,24 +4,24 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonSyntaxException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 /**
  * Handles exporting all app settings to a JSON backup file and restoring from it.
@@ -175,7 +175,10 @@ class SettingsBackupExporter(private val context: Context) {
      * Apply values from a JsonObject into DataStore preferences.
      * Uses the known key names to construct the correct Preferences.Key types.
      */
-    private fun applyJsonToPrefs(json: JsonObject, prefs: androidx.datastore.preferences.core.MutablePreferences) {
+    private fun applyJsonToPrefs(
+        json: JsonObject,
+        prefs: androidx.datastore.preferences.core.MutablePreferences
+    ) {
         for ((keyName, element) in json.entrySet()) {
             if (element.isJsonNull) continue
             if (!element.isJsonPrimitive) continue

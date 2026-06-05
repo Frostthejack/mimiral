@@ -2,9 +2,9 @@ package com.mimiral.app.data.repository
 
 import com.mimiral.app.data.local.dao.ReadingGoalDao
 import com.mimiral.app.data.local.entity.ReadingGoalEntity
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
 
 @Singleton
 class ReadingGoalsRepository @Inject constructor(

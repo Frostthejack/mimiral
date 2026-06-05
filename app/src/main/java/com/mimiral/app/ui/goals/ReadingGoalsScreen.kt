@@ -300,7 +300,8 @@ private fun GoalCard(
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "${goalWithProgress.currentValue} / ${goal.targetValue} ${goal.targetType}",
+                            text = "${goalWithProgress.currentValue} / " +
+                                "${goal.targetValue} ${goal.targetType}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
