@@ -31,6 +31,7 @@ import com.mimiral.app.ui.readinglists.ReadingListDetailScreen
 import com.mimiral.app.ui.readinglists.ReadingListsScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
+import com.mimiral.app.ui.settings.ReadingPreferencesScreen
 import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
 
@@ -150,6 +151,9 @@ fun MimiralNavGraph(navController: NavHostController) {
                 SettingsScreen(
                     onNavigateToKavitaSetup = {
                         navController.navigate(Screen.KavitaSetup.route)
+                    },
+                    onNavigateToReadingPreferences = {
+                        navController.navigate(Screen.ReadingPreferences.route)
                     }
                 )
             }
@@ -162,6 +166,12 @@ fun MimiralNavGraph(navController: NavHostController) {
                 val kavitaViewModel: KavitaSetupViewModel = hiltViewModel()
                 KavitaSetupScreen(
                     viewModel = kavitaViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(Screen.ReadingPreferences.route) {
+                ReadingPreferencesScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

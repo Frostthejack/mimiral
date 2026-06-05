@@ -18,10 +18,18 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "reader_settings"
 )
 
+enum class PageTurnStyle(val displayName: String) {
+    SLIDE("Slide"),
+    CURL("Page Curl"),
+    NONE("None (Instant)")
+}
+
 data class ReaderSettings(
     val volumeKeyNavigationEnabled: Boolean = true,
     val volumeKeyDirectionSwapped: Boolean = false,
-    val themeName: String = "DAY"
+    val themeName: String = "DAY",
+    val pageTurnStyleName: String = "SLIDE",
+    val defaultFontFamilyName: String = "DEFAULT"
 )
 
 class ReaderSettingsRepository(private val context: Context) {
@@ -30,6 +38,8 @@ class ReaderSettingsRepository(private val context: Context) {
         val VOLUME_KEY_NAVIGATION = booleanPreferencesKey("volume_key_navigation_enabled")
         val VOLUME_KEY_SWAPPED = booleanPreferencesKey("volume_key_direction_swapped")
         val THEME = stringPreferencesKey("theme_name")
+        val PAGE_TURN_STYLE = stringPreferencesKey("page_turn_style")
+        val DEFAULT_FONT_FAMILY = stringPreferencesKey("default_font_family")
 
         // Text rendering settings
         val FONT_SIZE = intPreferencesKey("text_font_size")
@@ -47,7 +57,9 @@ class ReaderSettingsRepository(private val context: Context) {
         ReaderSettings(
             volumeKeyNavigationEnabled = prefs[Keys.VOLUME_KEY_NAVIGATION] ?: true,
             volumeKeyDirectionSwapped = prefs[Keys.VOLUME_KEY_SWAPPED] ?: false,
-            themeName = prefs[Keys.THEME] ?: "DAY"
+            themeName = prefs[Keys.THEME] ?: "DAY",
+            pageTurnStyleName = prefs[Keys.PAGE_TURN_STYLE] ?: "SLIDE",
+            defaultFontFamilyName = prefs[Keys.DEFAULT_FONT_FAMILY] ?: "DEFAULT"
         )
     }
 
@@ -140,6 +152,18 @@ class ReaderSettingsRepository(private val context: Context) {
     suspend fun setTheme(themeName: String) {
         context.dataStore.edit { prefs ->
             prefs[Keys.THEME] = themeName
+        }
+    }
+
+    suspend fun setPageTurnStyle(styleName: String) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.PAGE_TURN_STYLE] = styleName
+        }
+    }
+
+    suspend fun setDefaultFontFamily(familyName: String) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.DEFAULT_FONT_FAMILY] = familyName
         }
     }
 }

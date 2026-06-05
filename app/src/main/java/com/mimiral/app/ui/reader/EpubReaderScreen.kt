@@ -70,6 +70,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mimiral.app.data.local.settings.PageTurnStyle
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.data.reader.Sentence
@@ -90,6 +91,12 @@ fun EpubReaderScreen(
     val textSettings by settingsRepository.textSettings.collectAsState(initial = TextSettings())
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+
+    val currentPageTurnStyle = try {
+        PageTurnStyle.valueOf(settings.pageTurnStyleName)
+    } catch (_: IllegalArgumentException) {
+        PageTurnStyle.SLIDE
+    }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -151,6 +158,24 @@ fun EpubReaderScreen(
             screenWidthPx = screenWidthPx,
             screenHeightPx = screenHeightPx
         )
+    }
+
+    // Apply default font family from preferences on first load
+    val defaultFontApplied = remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!defaultFontApplied.value) {
+            val defaultFamilyName = settings.defaultFontFamilyName
+            val defaultFamily = try {
+                ReaderFontFamily.valueOf(defaultFamilyName)
+            } catch (_: IllegalArgumentException) {
+                ReaderFontFamily.DEFAULT
+            }
+            if (defaultFamily != ReaderFontFamily.DEFAULT) {
+                val updated = textSettings.copy(selectedFontFamily = defaultFamily)
+                settingsRepository.setTextSettings(updated)
+            }
+            defaultFontApplied.value = true
+        }
     }
 
     val pages = paginationResult?.pages ?: emptyList()
@@ -439,27 +464,67 @@ fun EpubReaderScreen(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     beyondViewportPageCount = 1,
-                    key = { index -> index }
+                    key = { index -> index },
+                    pageSpacing = when (currentPageTurnStyle) {
+                        PageTurnStyle.CURL -> 8.dp
+                        else -> 0.dp
+                    }
                 ) { pageIndex ->
                     val pageOffset = (
                         (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction
                         )
 
+                    val useEffects = currentPageTurnStyle != PageTurnStyle.NONE
+
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .graphicsLayer {
-                                alpha = if (abs(pageOffset) < 1f) {
-                                    1f - (abs(pageOffset) * 0.3f)
+                            .then(
+                                if (useEffects) {
+                                    when (currentPageTurnStyle) {
+                                        PageTurnStyle.CURL -> {
+                                            Modifier.graphicsLayer {
+                                                alpha = if (abs(pageOffset) < 1f) {
+                                                    1f - (abs(pageOffset) * 0.15f)
+                                                } else {
+                                                    0.85f
+                                                }
+                                                val scale =
+                                                    1f - (abs(pageOffset) * 0.08f).coerceIn(0f, 0.15f)
+                                                scaleX = scale
+                                                scaleY = scale
+                                                translationX =
+                                                    pageOffset * size.width * -0.12f
+                                                rotationY = pageOffset.coerceIn(-1f, 1f) * -15f
+                                                cameraDistance = 33f
+                                                clip = true
+                                            }
+                                        }
+                                        PageTurnStyle.SLIDE -> {
+                                            Modifier.graphicsLayer {
+                                                alpha = if (abs(pageOffset) < 1f) {
+                                                    1f - (abs(pageOffset) * 0.3f)
+                                                } else {
+                                                    0.7f
+                                                }
+                                                val scale =
+                                                    1f - (abs(pageOffset) * 0.03f).coerceIn(
+                                                        0f,
+                                                        0.1f
+                                                    )
+                                                scaleX = scale
+                                                scaleY = scale
+                                                translationX =
+                                                    pageOffset * size.width * -0.05f
+                                                clip = true
+                                            }
+                                        }
+                                        else -> Modifier
+                                    }
                                 } else {
-                                    0.7f
+                                    Modifier
                                 }
-                                val scale = 1f - (abs(pageOffset) * 0.03f).coerceIn(0f, 0.1f)
-                                scaleX = scale
-                                scaleY = scale
-                                translationX = pageOffset * size.width * -0.05f
-                                clip = true
-                            }
+                            )
                             .pointerInput(Unit) {
                                 detectTapGestures(
                                     onLongPress = { offset ->
