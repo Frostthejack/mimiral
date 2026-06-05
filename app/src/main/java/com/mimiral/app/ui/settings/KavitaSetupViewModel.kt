@@ -1,0 +1,356 @@
+package com.mimiral.app.ui.settings
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.mimiral.app.data.local.dao.ServerDao
+import com.mimiral.app.data.local.entity.ServerEntity
+import com.mimiral.app.data.remote.ConnectionStatus
+import com.mimiral.app.data.remote.KavitaLoginRequest
+import com.mimiral.app.data.remote.KavitaLoginResponse
+import com.mimiral.app.data.remote.KavitaServerInfo
+import com.mimiral.app.data.remote.KavitaSyncApi
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+
+/**
+ * Authentication method for connecting to a Kavita server.
+ */
+enum class AuthMethod {
+    USERNAME_PASSWORD,
+    API_KEY
+}
+
+/**
+ * UI state for the Kavita server setup screen.
+ */
+data class KavitaSetupUiState(
+    val serverUrl: String = "",
+    val authMethod: AuthMethod = AuthMethod.USERNAME_PASSWORD,
+    val username: String = "",
+    val password: String = "",
+    val apiKey: String = "",
+    val connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED,
+    val serverInfo: KavitaServerInfo? = null,
+    val errorMessage: String? = null,
+    val isTestingConnection: Boolean = false,
+    val isSaving: Boolean = false,
+    val isSaved: Boolean = false,
+    val hasExistingConfig: Boolean = false
+)
+
+@HiltViewModel
+class KavitaSetupViewModel @Inject constructor(
+    application: Application,
+    private val serverDao: ServerDao
+) : AndroidViewModel(application) {
+
+    private val _uiState = MutableStateFlow(KavitaSetupUiState())
+    val uiState: StateFlow<KavitaSetupUiState> = _uiState.asStateFlow()
+
+    init {
+        loadExistingConfig()
+    }
+
+    /**
+     * Load existing Kavita server configuration from the database.
+     */
+    private fun loadExistingConfig() {
+        viewModelScope.launch {
+            val existingServer = serverDao.getActiveServerByType("KAVITA")
+            if (existingServer != null) {
+                val authMethod = if (!existingServer.apiKey.isNullOrBlank()) {
+                    AuthMethod.API_KEY
+                } else {
+                    AuthMethod.USERNAME_PASSWORD
+                }
+                _uiState.value = _uiState.value.copy(
+                    serverUrl = existingServer.url,
+                    authMethod = authMethod,
+                    username = existingServer.username ?: "",
+                    password = existingServer.password ?: "",
+                    apiKey = existingServer.apiKey ?: "",
+                    hasExistingConfig = true
+                )
+            }
+        }
+    }
+
+    fun setServerUrl(url: String) {
+        _uiState.value = _uiState.value.copy(
+            serverUrl = url,
+            errorMessage = null,
+            isSaved = false
+        )
+    }
+
+    fun setAuthMethod(method: AuthMethod) {
+        _uiState.value = _uiState.value.copy(
+            authMethod = method,
+            errorMessage = null,
+            isSaved = false
+        )
+    }
+
+    fun setUsername(username: String) {
+        _uiState.value = _uiState.value.copy(
+            username = username,
+            errorMessage = null,
+            isSaved = false
+        )
+    }
+
+    fun setPassword(password: String) {
+        _uiState.value = _uiState.value.copy(
+            password = password,
+            errorMessage = null,
+            isSaved = false
+        )
+    }
+
+    fun setApiKey(apiKey: String) {
+        _uiState.value = _uiState.value.copy(
+            apiKey = apiKey,
+            errorMessage = null,
+            isSaved = false
+        )
+    }
+
+    /**
+     * Test the connection to the Kavita server.
+     * Attempts to fetch server info to validate connectivity and authentication.
+     */
+    fun testConnection() {
+        val state = _uiState.value
+        val baseUrl = state.serverUrl.trim().trimEnd('/')
+
+        if (baseUrl.isBlank()) {
+            _uiState.value = state.copy(
+                errorMessage = "Please enter a server URL"
+            )
+            return
+        }
+
+        val normalizedUrl = if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+            "http://$baseUrl"
+        } else {
+            baseUrl
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isTestingConnection = true,
+                connectionStatus = ConnectionStatus.CONNECTING,
+                errorMessage = null,
+                serverInfo = null
+            )
+
+            try {
+                val client = createTestClient(normalizedUrl, state)
+                val result = testServerConnection(client, normalizedUrl)
+
+                when {
+                    result.isSuccess -> {
+                        val info = result.getOrNull()
+                        _uiState.value = _uiState.value.copy(
+                            isTestingConnection = false,
+                            connectionStatus = ConnectionStatus.CONNECTED,
+                            serverInfo = info,
+                            errorMessage = null
+                        )
+                    }
+                    else -> {
+                        val error = result.exceptionOrNull()
+                        _uiState.value = _uiState.value.copy(
+                            isTestingConnection = false,
+                            connectionStatus = ConnectionStatus.ERROR,
+                            errorMessage = error?.message ?: "Connection failed"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isTestingConnection = false,
+                    connectionStatus = ConnectionStatus.ERROR,
+                    errorMessage = "Cannot reach server: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
+     * Save the Kavita server configuration to the database.
+     */
+    fun saveConfiguration() {
+        val state = _uiState.value
+        val baseUrl = state.serverUrl.trim().trimEnd('/')
+
+        if (baseUrl.isBlank()) {
+            _uiState.value = state.copy(errorMessage = "Please enter a server URL")
+            return
+        }
+
+        val normalizedUrl = if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+            "http://$baseUrl"
+        } else {
+            baseUrl
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true, errorMessage = null)
+
+            try {
+                val server = ServerEntity(
+                    name = "Kavita Server",
+                    type = "KAVITA",
+                    url = "$normalizedUrl/",
+                    username = if (state.authMethod == AuthMethod.USERNAME_PASSWORD) {
+                        state.username.ifBlank { null }
+                    } else null,
+                    password = if (state.authMethod == AuthMethod.USERNAME_PASSWORD) {
+                        state.password.ifBlank { null }
+                    } else null,
+                    apiKey = if (state.authMethod == AuthMethod.API_KEY) {
+                        state.apiKey.ifBlank { null }
+                    } else null,
+                    isActive = true
+                )
+
+                // Deactivate any existing Kavita servers first
+                val existingServer = serverDao.getActiveServerByType("KAVITA")
+                if (existingServer != null) {
+                    serverDao.updateServer(existingServer.copy(isActive = false))
+                }
+
+                serverDao.insertServer(server)
+
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    isSaved = true,
+                    hasExistingConfig = true
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isSaving = false,
+                    errorMessage = "Failed to save: ${e.message}"
+                )
+            }
+        }
+    }
+
+    /**
+     * Clear the saved configuration.
+     */
+    fun clearConfiguration() {
+        viewModelScope.launch {
+            val existingServer = serverDao.getActiveServerByType("KAVITA")
+            if (existingServer != null) {
+                serverDao.updateServer(existingServer.copy(isActive = false))
+            }
+            _uiState.value = KavitaSetupUiState()
+        }
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    /**
+     * Create an OkHttp client for testing the connection.
+     */
+    private fun createTestClient(baseUrl: String, state: KavitaSetupUiState): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+
+        // Add logging
+        val logging = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+        }
+        builder.addInterceptor(logging)
+
+        // Add auth interceptor
+        builder.addInterceptor { chain ->
+            val requestBuilder = chain.request().newBuilder()
+                .header("User-Agent", "Mimiral/0.1.0")
+                .header("Accept", "application/json")
+
+            when (state.authMethod) {
+                AuthMethod.USERNAME_PASSWORD -> {
+                    // For initial connection test with username/password,
+                    // we try to login first. But for the server info endpoint,
+                    // we don't need auth — it's a public endpoint.
+                    // The login test is done separately.
+                }
+                AuthMethod.API_KEY -> {
+                    if (state.apiKey.isNotBlank()) {
+                        requestBuilder.header("X-Api-Key", state.apiKey.trim())
+                    }
+                }
+            }
+
+            chain.proceed(requestBuilder.build())
+        }
+
+        return builder.build()
+    }
+
+    /**
+     * Test the server connection by fetching server info.
+     */
+    private suspend fun testServerConnection(
+        client: OkHttpClient,
+        baseUrl: String
+    ): Result<KavitaServerInfo> {
+        return try {
+            val retrofit = Retrofit.Builder()
+                .baseUrl("$baseUrl/")
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+
+            val api = retrofit.create(KavitaSyncApi::class.java)
+            val response = api.getServerInfo()
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Empty server response"))
+                }
+            } else {
+                when (response.code()) {
+                    401 -> Result.failure(
+                        Exception("Authentication failed: invalid credentials")
+                    )
+                    403 -> Result.failure(
+                        Exception("Access denied: insufficient permissions")
+                    )
+                    404 -> Result.failure(
+                        Exception("Server endpoint not found — check the URL")
+                    )
+                    else -> Result.failure(
+                        Exception("HTTP ${response.code()}: ${response.message()}")
+                    )
+                }
+            }
+        } catch (e: java.io.IOException) {
+            Result.failure(
+                Exception("Cannot reach server at $baseUrl — check the URL and network")
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}

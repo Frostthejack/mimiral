@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -22,6 +23,8 @@ import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
 import com.mimiral.app.ui.reader.TxtRtfReaderScreen
+import com.mimiral.app.ui.settings.KavitaSetupScreen
+import com.mimiral.app.ui.settings.KavitaSetupViewModel
 import com.mimiral.app.ui.settings.SettingsScreen
 
 /**
@@ -94,7 +97,19 @@ fun MimiralNavGraph(navController: NavHostController) {
                 DiscoverScreen()
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onNavigateToKavitaSetup = {
+                        navController.navigate(Screen.KavitaSetup.route)
+                    }
+                )
+            }
+
+            composable(Screen.KavitaSetup.route) {
+                val kavitaViewModel: KavitaSetupViewModel = hiltViewModel()
+                KavitaSetupScreen(
+                    viewModel = kavitaViewModel,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
 
             // Reader routes

@@ -2,12 +2,11 @@ package com.mimiral.app.navigation
 
 sealed class Screen(val route: String) {
     object Library : Screen("library")
-    object FreeSources : Screen("free_sources")
+    object Discover : Screen("discover")
     object AddBooks : Screen("add_books")
     object NowReading : Screen("now_reading")
-    object Discover : Screen("discover")
     object Settings : Screen("settings")
-    object OpdsBrowser : Screen("opds_browser")
+    object KavitaSetup : Screen("kavita_setup")
     object EpubReader : Screen("epub_reader/{bookId}") {
         fun createRoute(bookId: Int): String = "epub_reader/$bookId"
     }
@@ -20,5 +19,4 @@ sealed class Screen(val route: String) {
     object TxtRtfReader : Screen("txt_rtf_reader/{bookId}") {
         fun createRoute(bookId: Int): String = "txt_rtf_reader/$bookId"
     }
-    object OpdsCatalog : Screen("opds_catalog")
 }
