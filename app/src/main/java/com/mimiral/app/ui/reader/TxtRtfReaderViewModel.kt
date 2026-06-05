@@ -9,6 +9,7 @@ import com.mimiral.app.data.reader.RtfParser
 import com.mimiral.app.data.reader.TxtParseResult
 import com.mimiral.app.data.reader.TxtParser
 import com.mimiral.app.data.repository.BookRepository
+import com.mimiral.app.data.repository.ReadingTimeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
@@ -55,6 +56,7 @@ data class TxtRtfUiState(
 @HiltViewModel
 class TxtRtfReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
+    private val readingTimeRepository: ReadingTimeRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -75,8 +77,12 @@ class TxtRtfReaderViewModel @Inject constructor(
     private var chapterBreaks: List<Int> = listOf(0)
     private var chapterTexts: MutableList<String> = mutableListOf()
 
+    // Reading time tracker — accumulates time across pause/resume cycles
+    private val readingTimeTracker = com.mimiral.app.data.local.entity.ReadingTimeTracker()
+
     init {
         loadBook()
+        readingTimeTracker.startSession()
     }
 
     private fun loadBook() {
@@ -281,7 +287,8 @@ class TxtRtfReaderViewModel @Inject constructor(
             characterOffset,
             totalCharacters,
             pageNumber,
-            lastReadPosition
+            lastReadPosition,
+            readingTimeTracker.accumulatedMs()
         )
     }
 
@@ -394,6 +401,20 @@ class TxtRtfReaderViewModel @Inject constructor(
     fun saveCurrentProgress() {
         val state = _uiState.value
         if (bookId == -1) return
+
+        // Pause the timer and record elapsed time
+        readingTimeTracker.stopSession()
+        val elapsedMs = readingTimeTracker.accumulatedMs()
+        if (elapsedMs > 0) {
+            viewModelScope.launch {
+                try {
+                    readingTimeRepository.recordReadingTime(bookId, elapsedMs)
+                } catch (_: Exception) {
+                    // Non-critical
+                }
+            }
+        }
+
         saveProgress(
             bookId,
             state.progress.chapterIndex,
@@ -402,6 +423,10 @@ class TxtRtfReaderViewModel @Inject constructor(
             state.progress.pageNumber,
             state.progress.lastReadPosition
         )
+
+        // Resume timer for next session segment
+        readingTimeTracker.reset()
+        readingTimeTracker.startSession()
     }
 
     private fun calculateProgress(characterOffset: Long, totalCharacters: Long): Float {
@@ -418,7 +443,8 @@ class TxtRtfReaderViewModel @Inject constructor(
         characterOffset: Long,
         totalCharacters: Long,
         pageNumber: Int,
-        lastReadPosition: String?
+        lastReadPosition: String?,
+        sessionTimeDeltaMs: Long = 0L
     ) {
         viewModelScope.launch {
             try {
@@ -428,7 +454,8 @@ class TxtRtfReaderViewModel @Inject constructor(
                     characterOffset = characterOffset,
                     totalCharacters = totalCharacters,
                     pageNumber = pageNumber,
-                    lastReadPosition = lastReadPosition
+                    lastReadPosition = lastReadPosition,
+                    sessionTimeDeltaMs = sessionTimeDeltaMs
                 )
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to save progress: " + e.message) }

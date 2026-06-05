@@ -8,6 +8,7 @@ import com.mimiral.app.data.reader.MarkdownElement
 import com.mimiral.app.data.reader.MarkdownParser
 import com.mimiral.app.data.reader.TocHeading
 import com.mimiral.app.data.repository.BookRepository
+import com.mimiral.app.data.repository.ReadingTimeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
@@ -36,6 +37,7 @@ data class MarkdownReaderUiState(
 @HiltViewModel
 class MarkdownReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
+    private val readingTimeRepository: ReadingTimeRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -48,10 +50,14 @@ class MarkdownReaderViewModel @Inject constructor(
     private var currentScrollIndex = 0
     private var currentPosition: String? = null
 
+    // Reading time tracker — accumulates time across pause/resume cycles
+    private val readingTimeTracker = com.mimiral.app.data.local.entity.ReadingTimeTracker()
+
     init {
         if (bookId == -1) {
             _uiState.update { it.copy(isLoading = false, error = "Invalid book ID") }
         }
+        readingTimeTracker.startSession()
     }
 
     /**
@@ -255,10 +261,24 @@ class MarkdownReaderViewModel @Inject constructor(
                     characterOffset = scrollIndex.toLong() * 500L,
                     totalCharacters = _uiState.value.elements.size.toLong() * 500L,
                     pageNumber = scrollIndex,
-                    lastReadPosition = "index:$scrollIndex"
+                    lastReadPosition = "index:$scrollIndex",
+                    sessionTimeDeltaMs = readingTimeTracker.accumulatedMs()
                 )
             } catch (_: Exception) {
                 // Silently fail
+            }
+        }
+    }
+
+    /** Called when the reader is closed. Persists reading time. */
+    fun onReaderClosed() {
+        readingTimeTracker.stopSession()
+        val totalMs = readingTimeTracker.accumulatedMs()
+        if (totalMs > 0) {
+            viewModelScope.launch {
+                try {
+                    readingTimeRepository.recordReadingTime(bookId, totalMs)
+                } catch (_: Exception) {}
             }
         }
     }

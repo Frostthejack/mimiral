@@ -12,6 +12,7 @@ import com.mimiral.app.data.local.dao.HighlightDao
 import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.dao.PdfSettingsDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
+import com.mimiral.app.data.local.dao.ReadingTimeDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
@@ -24,6 +25,7 @@ import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.local.entity.ReadingTimeEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
 
@@ -41,9 +43,10 @@ import com.mimiral.app.data.local.entity.TagEntity
         OpdsCatalogEntity::class,
         PdfSettingsEntity::class,
         ChapterEntity::class,
-        ChapterFtsEntity::class
+        ChapterFtsEntity::class,
+        ReadingTimeEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -56,6 +59,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun opdsCatalogDao(): OpdsCatalogDao
     abstract fun pdfSettingsDao(): PdfSettingsDao
     abstract fun chapterDao(): ChapterDao
+    abstract fun readingTimeDao(): ReadingTimeDao
 
     companion object {
         /**
@@ -228,6 +232,31 @@ abstract class MimiralDatabase : RoomDatabase() {
                         "`crop_right` INTEGER NOT NULL, " +
                         "`crop_bottom` INTEGER NOT NULL, " +
                         "`auto_detected` INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        /**
+         * Migration from v5 to v6:
+         * - Create reading_time table for per-book daily reading duration tracking
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `reading_time` (" +
+                        "`book_id` INTEGER NOT NULL, " +
+                        "`date` INTEGER NOT NULL, " +
+                        "`time_read_ms` INTEGER NOT NULL, " +
+                        "`last_session_start` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`book_id`, `date`))"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_reading_time_book_id` ON `reading_time` (`book_id`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_reading_time_date` ON `reading_time` (`date`)"
                 )
             }
         }
