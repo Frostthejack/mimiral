@@ -276,7 +276,7 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
-                        )
+            )
 
             // ═══════════════════════════════════════════════════
             // SECTION: TTS Preferences
@@ -712,7 +712,8 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "Configure which folders to scan and file formats to include",
+                                text = "Configure which folders to scan " +
+                                    "and file formats to include",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

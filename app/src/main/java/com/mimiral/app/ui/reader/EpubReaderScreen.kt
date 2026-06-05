@@ -588,7 +588,8 @@ fun EpubReaderScreen(
                                                 }
                                             }
                                             // Right zone tap
-                                            offset.x > (size.width - tapZoneWidth) && rightActive -> {
+                                            offset.x > (size.width - tapZoneWidth) &&
+                                                rightActive -> {
                                                 val goPrev = inverted
                                                 if (goPrev) {
                                                     if (pagerState.currentPage > 0) {
