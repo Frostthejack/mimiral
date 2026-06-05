@@ -200,7 +200,9 @@ class ReadingStatsRepositoryTest {
 
     @Test
     fun `daysAgoString - returns correct date`() {
-        val expected = LocalDate.now().minusDays(7).format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+        val expected = LocalDate.now().minusDays(7).format(
+            java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+        )
         assertEquals(expected, ReadingStatsRepository.daysAgoString(7))
     }
 

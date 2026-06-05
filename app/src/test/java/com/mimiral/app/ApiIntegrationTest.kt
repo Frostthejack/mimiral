@@ -22,7 +22,6 @@ import com.mimiral.app.data.remote.kavita.KavitaProgress
 import com.mimiral.app.data.remote.kavita.KavitaResult
 import com.mimiral.app.data.remote.kavita.KavitaSeries
 import com.mimiral.app.data.remote.kavita.KavitaServerInfo as KavitaClientServerInfo
-import com.mimiral.app.data.remote.kavita.KavitaVolume
 import com.mimiral.app.data.remote.opds.OpdsCategory
 import com.mimiral.app.data.remote.opds.OpdsClient
 import com.mimiral.app.data.remote.opds.OpdsConstants
@@ -31,7 +30,6 @@ import com.mimiral.app.data.remote.opds.OpdsFeed
 import com.mimiral.app.data.remote.opds.OpdsLink
 import com.mimiral.app.data.remote.opds.OpdsResult
 import kotlinx.coroutines.runBlocking
-import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -316,7 +314,10 @@ class ApiIntegrationTest {
         client.configure(url = mockServer.url("/").toString(), token = "my-jwt-token")
 
         val request = KavitaBookmarkRequest(
-            page = 1, chapterId = 1, seriesId = 1, libraryId = 1
+            page = 1,
+            chapterId = 1,
+            seriesId = 1,
+            libraryId = 1
         )
         client.pushBookmark(request)
 
@@ -332,7 +333,10 @@ class ApiIntegrationTest {
         client.configure(url = mockServer.url("/").toString(), user = "admin", pass = "secret")
 
         val request = KavitaBookmarkRequest(
-            page = 1, chapterId = 1, seriesId = 1, libraryId = 1
+            page = 1,
+            chapterId = 1,
+            seriesId = 1,
+            libraryId = 1
         )
         client.pushBookmark(request)
 
@@ -356,13 +360,19 @@ class ApiIntegrationTest {
         )
 
         val request = KavitaBookmarkRequest(
-            page = 1, chapterId = 1, seriesId = 1, libraryId = 1
+            page = 1,
+            chapterId = 1,
+            seriesId = 1,
+            libraryId = 1
         )
         client.pushBookmark(request)
 
         val recorded = mockServer.takeRequest()
         assertEquals("api-key-wins", recorded.getHeader("X-Api-Key"))
-        assertNull("JWT should not be set when API key is present", recorded.getHeader("Authorization"))
+        assertNull(
+            "JWT should not be set when API key is present",
+            recorded.getHeader("Authorization")
+        )
     }
 
     // ==================== OpdsClient Tests ====================
@@ -482,7 +492,8 @@ class ApiIntegrationTest {
 
     @Test
     fun kavitaLoginResponse_deserialization() {
-        val json = """{"username":"testuser","token":"abc123","refreshToken":"def456","tokenDuration":"7.00:00:00","apiKey":"key123"}"""
+        val json = """{"username":"testuser","token":"abc123",""""" +
+            """"refreshToken":"def456","tokenDuration":"7.00:00:00","apiKey":"key123"}"""
         val response = gson.fromJson(json, KavitaClientLoginResponse::class.java)
         assertEquals("testuser", response.username)
         assertEquals("abc123", response.token)
@@ -622,7 +633,8 @@ class ApiIntegrationTest {
 
     @Test
     fun kavitaProgressData_deserialization() {
-        val json = """{"seriesId":10,"libraryId":1,"chapterId":5,"pageNumber":42,"lastModified":"2024-01-01T00:00:00.000Z","volumeId":1}"""
+        val json = """{"seriesId":10,"libraryId":1,"chapterId":5,"pageNumber":42,""""" +
+            """"lastModified":"2024-01-01T00:00:00.000Z","volumeId":1}"""
         val data = gson.fromJson(json, KavitaProgressData::class.java)
         assertEquals(10, data.seriesId)
         assertEquals(1, data.libraryId)
@@ -632,7 +644,8 @@ class ApiIntegrationTest {
 
     @Test
     fun kavitaServerInfo_retrofit_deserialization() {
-        val json = """{"installId":"abc-123","version":"0.8.1.0","totalLibraries":3,"isDocker":true}"""
+        val json = """{"installId":"abc-123","version":"0.8.1.0",""""" +
+            """"totalLibraries":3,"isDocker":true}"""
         val info = gson.fromJson(json, KavitaServerInfo::class.java)
         assertEquals("abc-123", info.installId)
         assertEquals("0.8.1.0", info.version)
@@ -840,7 +853,10 @@ class ApiIntegrationTest {
     fun opdsLink_fileExtension() {
         assertEquals(".epub", OpdsLink(href = "/", type = "application/epub+zip").fileExtension)
         assertEquals(".pdf", OpdsLink(href = "/", type = "application/pdf").fileExtension)
-        assertEquals(".mobi", OpdsLink(href = "/", type = "application/x-mobipocket-ebook").fileExtension)
+        assertEquals(
+            ".mobi",
+            OpdsLink(href = "/", type = "application/x-mobipocket-ebook").fileExtension
+        )
         assertEquals("", OpdsLink(href = "/", type = "application/atom+xml").fileExtension)
     }
 
@@ -848,7 +864,10 @@ class ApiIntegrationTest {
     fun opdsLink_formatName() {
         assertEquals("EPUB", OpdsLink(href = "/", type = "application/epub+zip").formatName)
         assertEquals("PDF", OpdsLink(href = "/", type = "application/pdf").formatName)
-        assertEquals("MOBI", OpdsLink(href = "/", type = "application/x-mobipocket-ebook").formatName)
+        assertEquals(
+            "MOBI",
+            OpdsLink(href = "/", type = "application/x-mobipocket-ebook").formatName
+        )
         assertNull(OpdsLink(href = "/", type = "application/atom+xml").formatName)
     }
 
