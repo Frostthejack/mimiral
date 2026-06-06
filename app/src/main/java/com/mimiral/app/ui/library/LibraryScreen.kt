@@ -31,12 +31,14 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +46,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -80,11 +83,20 @@ fun LibraryScreen(
     onBookClick: (Int, String) -> Unit,
     onEditBookMetadata: (Int) -> Unit = {},
     onNavigateToCollections: ((List<Int>) -> Unit)? = null,
+    onNavigateToAddBooks: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val recentBooks by viewModel.recentBooks.collectAsState()
     var sortMenuExpanded by remember { mutableStateOf(false) }
+
+    // True when library is genuinely empty (not just filtered to nothing)
+    val isLibraryEmpty = uiState.books.isEmpty() &&
+        recentBooks.isEmpty() &&
+        uiState.searchQuery.isBlank() &&
+        uiState.filterOption == FilterOption.ALL &&
+        uiState.error == null &&
+        !uiState.isLoading
 
     Scaffold(
         topBar = {
@@ -108,6 +120,18 @@ fun LibraryScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            if (isLibraryEmpty) {
+                FloatingActionButton(
+                    onClick = onNavigateToAddBooks
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FolderOpen,
+                        contentDescription = "Add books"
+                    )
+                }
+            }
         }
     ) { padding ->
         PullToRefreshBox(
@@ -304,6 +328,29 @@ fun LibraryScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
                                             alpha = 0.7f
+                                        )
+                                    )
+                                }
+                                // CTA button when library is genuinely empty
+                                if (isLibraryEmpty) {
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                    Button(
+                                        onClick = onNavigateToAddBooks
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.FolderOpen,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Add your first book")
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Scan a folder on your device for ebooks",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = 0.6f
                                         )
                                     )
                                 }

@@ -112,6 +112,9 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onNavigateToCollections = { bookIds ->
                         val route = Screen.CollectionPicker.createRoute(bookIds)
                         navController.navigate(route)
+                    },
+                    onNavigateToAddBooks = {
+                        navController.navigate(Screen.AddBooks.route)
                     }
                 )
             }
