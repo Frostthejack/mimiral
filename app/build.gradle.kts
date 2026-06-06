@@ -5,6 +5,7 @@ plugins {
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
     id("org.jlleitschuh.gradle.ktlint")
+    id("androidx.baselineprofile")
 }
 
 ktlint {
@@ -41,6 +42,7 @@ android {
             )
         }
     }
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
@@ -115,6 +117,9 @@ dependencies {
 
     // Security (EncryptedSharedPreferences for secure credential storage)
     implementation("androidx.security:security-crypto:1.0.0")
+
+    // Baseline Profile (consumes generated profile from :baseline-profile module)
+    baselineProfile(project(":baseline-profile"))
 
     // Testing
     testImplementation("junit:junit:4.13.2")

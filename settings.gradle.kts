@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Mimiral"
 include(":app")
+include(":baseline-profile")

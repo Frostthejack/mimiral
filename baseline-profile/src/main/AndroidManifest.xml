@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- This module is a test module — it does not need launcher activity or permissions.
+         The AndroidManifest is required by the build system but can be minimal. -->
+</manifest>

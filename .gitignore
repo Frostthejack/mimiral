@@ -1,6 +1,7 @@
 # Default ignored files
 /sap
 /app/build
+/baseline-profile/build
 /app/.cxx
 *.iml
 /local.properties
