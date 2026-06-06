@@ -365,7 +365,9 @@ fun EpubReaderScreen(
                     },
                     actions = {
                         // Read Aloud button — shows when TTS is not actively playing/paused
-                        if (uiState.ttsState == TTSState.IDLE || uiState.ttsState == TTSState.READY) {
+                        val isTtsIdle = uiState.ttsState == TTSState.IDLE
+                        val isTtsReady = uiState.ttsState == TTSState.READY
+                        if (isTtsIdle || isTtsReady) {
                             IconButton(onClick = {
                                 val textToRead = if (pages.isNotEmpty()) {
                                     pages.joinToString("\n\n") { it.text }

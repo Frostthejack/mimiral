@@ -2,7 +2,6 @@ package com.mimiral.app.ui.library
 
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
@@ -85,7 +84,9 @@ fun AddBooksScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
         // Returning from Settings — check if permission was granted
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            Environment.isExternalStorageManager()
+        ) {
             viewModel.startFullScan()
         } else {
             showPermissionRationale = true
@@ -209,14 +210,15 @@ fun AddBooksScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
+                        val msg = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            "To scan your device for books, Mimiral needs access to all files. " +
+                                "Please grant 'Allow access to manage all files' in Settings."
+                        } else {
+                            "To scan your device for books, Mimiral needs storage permission. " +
+                                "Please grant the permission when prompted."
+                        }
                         Text(
-                            text = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                "To scan your device for books, Mimiral needs access to all files. " +
-                                    "Please grant 'Allow access to manage all files' in Settings."
-                            } else {
-                                "To scan your device for books, Mimiral needs storage permission. " +
-                                    "Please grant the permission when prompted."
-                            },
+                            text = msg,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -229,10 +231,11 @@ fun AddBooksScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                                     "Open Settings"
-                                else
+                                } else {
                                     "Grant Permission"
+                                }
                             )
                         }
                     }
@@ -310,7 +313,9 @@ fun AddBooksScreen(
             }
 
             uiState.errorMessage?.let { msg ->
-                if (uiState.scanState is ScanState.Idle || uiState.scanState is ScanState.Scanning) {
+                val isIdle = uiState.scanState is ScanState.Idle
+                val isScanning = uiState.scanState is ScanState.Scanning
+                if (isIdle || isScanning) {
                     Spacer(modifier = Modifier.height(12.dp))
                     ErrorMessage(message = msg)
                 }

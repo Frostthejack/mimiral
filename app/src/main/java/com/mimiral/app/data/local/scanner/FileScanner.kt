@@ -325,7 +325,9 @@ class FileScanner @Inject constructor(
                 if (c.moveToFirst()) {
                     val idx = c.getColumnIndex(MediaStore.Files.FileColumns.DATA)
                     if (idx >= 0) c.getString(idx) else null
-                } else null
+                } else {
+                    null
+                }
             }
         } catch (_: Exception) {
             null
