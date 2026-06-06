@@ -45,6 +45,9 @@ class KavitaClient(
     private var jwtToken: String? = null,
     private val client: OkHttpClient = defaultClient()
 ) {
+    /** Exposes the configured base URL for validation by repositories. */
+    val serverUrl: String get() = baseUrl
+
     companion object {
         private const val TAG = "KavitaClient"
         private const val DEFAULT_TIMEOUT_SECONDS = 30L

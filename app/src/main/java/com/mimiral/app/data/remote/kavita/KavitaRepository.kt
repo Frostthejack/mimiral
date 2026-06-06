@@ -130,15 +130,35 @@ class KavitaRepository @Inject constructor(
         serverDao.getActiveServerByType("KAVITA")
 
     /**
+     * Ensure a Kavita server is configured and the client has a valid base URL.
+     * Returns a [KavitaResult.Error] if no server is configured or the URL is blank,
+     * or `null` if the client is ready to use.
+     */
+    private fun ensureServerConfigured(): KavitaResult.Error? {
+        val url = kavitaClient.serverUrl
+        if (url.isBlank()) {
+            return KavitaResult.Error(
+                message = "No Kavita server configured. Please add a Kavita server in Settings."
+            )
+        }
+        return null
+    }
+
+    /**
      * List all Kavita libraries.
      */
-    suspend fun getLibraries(): KavitaResult<List<KavitaLibrary>> =
-        kavitaClient.getLibraries()
+    suspend fun getLibraries(): KavitaResult<List<KavitaLibrary>> {
+        val error = ensureServerConfigured()
+        if (error != null) return error
+        return kavitaClient.getLibraries()
+    }
 
     /**
      * Get all series in a library.
      */
     suspend fun getSeriesForLibrary(libraryId: Int): KavitaResult<List<KavitaSeries>> {
+        val error = ensureServerConfigured()
+        if (error != null) return error
         val result = kavitaClient.getSeries(libraryId = libraryId)
         return when (result) {
             is KavitaResult.Success -> KavitaResult.Success(result.data.items)
@@ -150,6 +170,8 @@ class KavitaRepository @Inject constructor(
      * Get detailed series metadata including volumes.
      */
     suspend fun getSeriesMetadata(seriesId: Int): KavitaResult<KavitaSeries> {
+        val error = ensureServerConfigured()
+        if (error != null) return error
         // Get volumes for the series
         val volumesResult = kavitaClient.getVolumes(seriesId)
         if (volumesResult is KavitaResult.Error) return volumesResult
@@ -232,6 +254,11 @@ class KavitaRepository @Inject constructor(
         seriesId: Int? = null,
         author: String? = null
     ): KavitaResult<String> = withContext(Dispatchers.IO) {
+        val serverError = ensureServerConfigured()
+        if (serverError != null) {
+            _downloadState.value = DownloadState.Failed(title, serverError.message)
+            return@withContext serverError
+        }
         _downloadState.value = DownloadState.Downloading(bookTitle = title)
 
         try {
@@ -432,29 +459,39 @@ class KavitaRepository @Inject constructor(
         seriesId: Int,
         volumeId: Int,
         libraryId: Int
-    ): KavitaResult<Unit> = kavitaClient.pushProgress(
-        chapterId = chapterId,
-        pageNum = pageNum,
-        seriesId = seriesId,
-        volumeId = volumeId,
-        libraryId = libraryId
-    )
+    ): KavitaResult<Unit> {
+        val error = ensureServerConfigured()
+        if (error != null) return error
+        return kavitaClient.pushProgress(
+            chapterId = chapterId,
+            pageNum = pageNum,
+            seriesId = seriesId,
+            volumeId = volumeId,
+            libraryId = libraryId
+        )
+    }
 
     /**
      * Pull reading progress from Kavita for a series.
      */
     suspend fun pullProgress(
         seriesId: Int
-    ): KavitaResult<List<KavitaProgress>> =
-        kavitaClient.pullProgress(seriesId)
+    ): KavitaResult<List<KavitaProgress>> {
+        val error = ensureServerConfigured()
+        if (error != null) return error
+        return kavitaClient.pullProgress(seriesId)
+    }
 
     /**
      * Get bookmarks for a series from Kavita.
      */
     suspend fun getBookmarks(
         seriesId: Int
-    ): KavitaResult<List<KavitaBookmark>> =
-        kavitaClient.getBookmarks(seriesId)
+    ): KavitaResult<List<KavitaBookmark>> {
+        val error = ensureServerConfigured()
+        if (error != null) return error
+        return kavitaClient.getBookmarks(seriesId)
+    }
 
     /**
      * Reset download state to Idle.
