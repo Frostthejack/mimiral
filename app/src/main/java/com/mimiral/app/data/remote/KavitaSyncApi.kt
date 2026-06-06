@@ -9,7 +9,7 @@ import retrofit2.http.Query
 
 /**
  * Retrofit interface for Kavita Reader API endpoints.
- * Base URL should be the Kavita server URL (e.g., http://localhost:5000).
+ * Base URL should be the Kavita server URL (resolved from active server config).
  */
 interface KavitaSyncApi {
 

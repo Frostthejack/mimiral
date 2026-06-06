@@ -52,7 +52,7 @@ class KavitaBookmarkClient(
     /**
      * Configure the client with server connection details.
      *
-     * @param url The Kavita server base URL (e.g. "http://localhost:5000")
+     * @param url The Kavita server base URL (resolved from active server config)
      * @param key Optional API key for authentication
      * @param token Optional JWT token for authentication
      * @param user Optional username for HTTP Basic auth

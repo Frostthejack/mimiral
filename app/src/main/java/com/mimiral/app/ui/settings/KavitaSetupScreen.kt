@@ -122,7 +122,7 @@ fun KavitaSetupScreen(
                         value = uiState.serverUrl,
                         onValueChange = { viewModel.setServerUrl(it) },
                         label = { Text("Server URL") },
-                        placeholder = { Text("http://192.168.1.100:5000") },
+                        placeholder = { Text("http://192.168.1.100:5555") },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Link,
