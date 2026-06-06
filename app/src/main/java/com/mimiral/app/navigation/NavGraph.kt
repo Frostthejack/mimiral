@@ -24,8 +24,13 @@ import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.BookMetadataEditScreen
 import com.mimiral.app.ui.library.CollectionPickerScreen
 import com.mimiral.app.ui.library.LibraryScreen
+import com.mimiral.app.ui.reader.ComicReaderScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
+import com.mimiral.app.ui.reader.DocReaderScreen
 import com.mimiral.app.ui.reader.EpubReaderScreen
+import com.mimiral.app.ui.reader.Fb2ReaderScreen
+import com.mimiral.app.ui.reader.MarkdownReaderScreen
+import com.mimiral.app.ui.reader.MobiReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
 import com.mimiral.app.ui.reader.TxtRtfReaderScreen
 import com.mimiral.app.ui.readinglists.ReadingListDetailScreen
@@ -58,6 +63,11 @@ fun routeForBookFormat(bookId: Int, format: String): String {
         "EPUB" -> "epub_reader/$bookId"
         "TXT", "RTF" -> "txt_rtf_reader/$bookId"
         "PDF" -> "pdf_reader/$bookId"
+        "MOBI", "AZW3" -> "mobi_reader/$bookId"
+        "FB2" -> "fb2_reader/$bookId"
+        "CBZ", "CBR" -> "comic_reader/$bookId"
+        "DOC", "DOCX" -> "doc_reader/$bookId"
+        "MD" -> "markdown_reader/$bookId"
         else -> "pdf_reader/$bookId"
     }
 }
@@ -273,6 +283,66 @@ fun MimiralNavGraph(navController: NavHostController) {
                 val bookId = backStackEntry.arguments?.getInt("bookId")
                     ?: return@composable
                 TxtRtfReaderScreen(
+                    bookId = bookId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "mobi_reader/{bookId}",
+                arguments = listOf(navArgument("bookId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
+                MobiReaderScreen(
+                    bookId = bookId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "fb2_reader/{bookId}",
+                arguments = listOf(navArgument("bookId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
+                Fb2ReaderScreen(
+                    bookId = bookId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "comic_reader/{bookId}",
+                arguments = listOf(navArgument("bookId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
+                ComicReaderScreen(
+                    bookId = bookId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "doc_reader/{bookId}",
+                arguments = listOf(navArgument("bookId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
+                DocReaderScreen(
+                    bookId = bookId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "markdown_reader/{bookId}",
+                arguments = listOf(navArgument("bookId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
+                MarkdownReaderScreen(
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() }
                 )

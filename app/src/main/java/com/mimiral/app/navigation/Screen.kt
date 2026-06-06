@@ -28,6 +28,21 @@ sealed class Screen(val route: String) {
     object TxtRtfReader : Screen("txt_rtf_reader/{bookId}") {
         fun createRoute(bookId: Int): String = "txt_rtf_reader/$bookId"
     }
+    object MobiReader : Screen("mobi_reader/{bookId}") {
+        fun createRoute(bookId: Int): String = "mobi_reader/$bookId"
+    }
+    object Fb2Reader : Screen("fb2_reader/{bookId}") {
+        fun createRoute(bookId: Int): String = "fb2_reader/$bookId"
+    }
+    object ComicReader : Screen("comic_reader/{bookId}") {
+        fun createRoute(bookId: Int): String = "comic_reader/$bookId"
+    }
+    object DocReader : Screen("doc_reader/{bookId}") {
+        fun createRoute(bookId: Int): String = "doc_reader/$bookId"
+    }
+    object MarkdownReader : Screen("markdown_reader/{bookId}") {
+        fun createRoute(bookId: Int): String = "markdown_reader/$bookId"
+    }
 
     // TTS settings
     object TTSSettings : Screen("tts_settings")
