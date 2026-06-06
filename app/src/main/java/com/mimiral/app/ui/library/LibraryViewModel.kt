@@ -14,6 +14,7 @@ import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.LibraryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -151,13 +153,23 @@ class LibraryViewModel @Inject constructor(
     private fun loadRecentBooks() {
         viewModelScope.launch {
             try {
-                bookRepository.getRecentProgress().collect { recentProgress ->
-                    val recent = recentProgress.mapNotNull { progress ->
-                        val book = bookRepository.getBookById(progress.bookId)
-                        book?.let { BookWithProgress(book = it, progress = progress) }
+                // Combine recent progress with all books to avoid N+1 queries.
+                // flowOn(IO) ensures the collection and mapping happen off the main thread,
+                // preventing ANR during drawer animation.
+                combine(
+                    bookRepository.getRecentProgress(),
+                    bookRepository.getAllBooks()
+                ) { recentProgress, allBooks ->
+                    val bookMap = allBooks.associateBy { it.id }
+                    recentProgress.mapNotNull { progress ->
+                        bookMap[progress.bookId]?.let { book ->
+                            BookWithProgress(book = book, progress = progress)
+                        }
                     }
-                    _recentBooks.value = recent
-                }
+                }.flowOn(Dispatchers.IO)
+                    .collect { recent ->
+                        _recentBooks.value = recent
+                    }
             } catch (_: Exception) {
                 // Non-critical
             }

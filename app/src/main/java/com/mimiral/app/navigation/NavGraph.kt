@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,7 +78,9 @@ fun routeForBookFormat(bookId: Int, format: String): String {
 fun MimiralNavGraph(navController: NavHostController) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val openDrawer: () -> Unit = { scope.launch { drawerState.open() } }
+    val openDrawer: () -> Unit = remember(scope, drawerState) {
+        { scope.launch { drawerState.open() } }
+    }
 
     MimiralNavigationDrawer(
         drawerState = drawerState,

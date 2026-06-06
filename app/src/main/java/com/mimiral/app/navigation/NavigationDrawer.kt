@@ -101,6 +101,10 @@ fun DrawerSheetContent(
     navController: NavController,
     onNavigate: () -> Unit = {}
 ) {
+    // Read current destination once per recomposition, not per-item
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = currentBackStackEntry?.destination
+
     Column(
         modifier = Modifier.padding(horizontal = 12.dp)
     ) {
@@ -117,8 +121,6 @@ fun DrawerSheetContent(
                     top = if (sectionIndex == 0) 8.dp else 16.dp,
                     bottom = 4.dp
                 )
-            )
-
             // Items in this section
             section.items.forEach { item ->
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -132,12 +134,12 @@ fun DrawerSheetContent(
                     label = { Text(item.label) },
                     selected = selected,
                     onClick = {
-                        navController.navigate(item.screen.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
+                        // Skip if already on this destination
+                        if (currentDestination?.route != item.screen.route) {
+                            navController.navigate(item.screen.route) {
+                                popUpTo(navController.graph.startDestinationId)
+                                launchSingleTop = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
                         }
                         onNavigate()
                     },
