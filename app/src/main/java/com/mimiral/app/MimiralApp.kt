@@ -2,6 +2,7 @@ package com.mimiral.app
 
 import android.app.Application
 import android.util.Log
+import com.mimiral.app.data.local.scanner.ExternalBookHandler
 import com.mimiral.app.tts.TTSManager
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -11,6 +12,9 @@ class MimiralApp : Application() {
 
     @Inject
     lateinit var ttsManager: TTSManager
+
+    @Inject
+    lateinit var externalBookHandler: ExternalBookHandler
 
     override fun onCreate() {
         super.onCreate()
