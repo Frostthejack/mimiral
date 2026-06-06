@@ -40,48 +40,33 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mimiral.app.data.local.settings.LibrarySettingsRepository
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.SupportedFormat
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun LibraryPreferencesScreen(
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    viewModel: LibraryPreferencesViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val settingsRepository = remember { LibrarySettingsRepository(context) }
-    val scope = rememberCoroutineScope()
-    val settings by settingsRepository.settings.collectAsState(
-        initial = com.mimiral.app.data.local.settings.LibrarySettings()
-    )
-
-    val scanDirs by settingsRepository.scanDirectories.collectAsState(initial = emptySet())
-    val enabledFormats by settingsRepository.enabledFormats.collectAsState(
-        initial = SupportedFormat.ALL_EXTENSIONS
-    )
-
-    var showFormatInfo by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
 
     // SAF directory picker launcher
     val directoryPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
         uri?.let {
-            val path = it.path ?: return@let
-            scope.launch {
-                settingsRepository.addScanDirectory(path)
-            }
+            // Delegate all processing (takePersistableUriPermission + path resolution + save)
+            // to the ViewModel. The callback runs on main thread but the ViewModel
+            // dispatches heavy work to Dispatchers.IO.
+            viewModel.addScanDirectoryFromSafUri(it, context)
         }
     }
 
@@ -108,7 +93,7 @@ fun LibraryPreferencesScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // ── Scan Folders Section ──────────────────────────
+            // -- Scan Folders Section --
             Text(
                 text = "Scan Folders",
                 style = MaterialTheme.typography.titleMedium,
@@ -152,7 +137,7 @@ fun LibraryPreferencesScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    if (scanDirs.isEmpty()) {
+                    if (uiState.scanDirectories.isEmpty()) {
                         Text(
                             text = "No folders added yet. Tap + to add a folder.",
                             style = MaterialTheme.typography.bodySmall,
@@ -162,7 +147,7 @@ fun LibraryPreferencesScreen(
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            scanDirs.forEach { dirPath ->
+                            uiState.scanDirectories.forEach { dirPath ->
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(
@@ -191,9 +176,7 @@ fun LibraryPreferencesScreen(
                                         )
                                         IconButton(
                                             onClick = {
-                                                scope.launch {
-                                                    settingsRepository.removeScanDirectory(dirPath)
-                                                }
+                                                viewModel.removeScanDirectory(dirPath)
                                             },
                                             modifier = Modifier.size(32.dp)
                                         ) {
@@ -210,27 +193,40 @@ fun LibraryPreferencesScreen(
                         }
                     }
 
+                    // Error message from folder add operation
+                    uiState.errorMessage?.let { error ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(12.dp))
 
                     AssistChip(
                         onClick = {
+                            // Launch the SAF folder picker.
+                            // This is non-blocking — it starts a system Activity.
                             directoryPickerLauncher.launch(null)
                         },
-                        label = { Text("Add Folder") },
+                        label = { Text(if (uiState.isAddingFolder) "Adding..." else "Add Folder") },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Add,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
-                        }
+                        },
+                        enabled = !uiState.isAddingFolder
                     )
                 }
             }
 
             HorizontalDivider()
 
-            // ── File Formats Section ──────────────────────────
+            // -- File Formats Section --
             Text(
                 text = "File Formats",
                 style = MaterialTheme.typography.titleMedium,
@@ -280,7 +276,7 @@ fun LibraryPreferencesScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         SupportedFormat.entries.forEach { format ->
-                            val isSelected = format.extension in enabledFormats
+                            val isSelected = format.extension in uiState.enabledFormats
                             val chipColors = if (isSelected) {
                                 SuggestionChipDefaults.suggestionChipColors(
                                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -292,23 +288,18 @@ fun LibraryPreferencesScreen(
 
                             SuggestionChip(
                                 onClick = {
-                                    scope.launch {
-                                        val newFormats = if (isSelected) {
-                                            enabledFormats - format.extension
-                                        } else {
-                                            enabledFormats + format.extension
-                                        }
-                                        // Don't allow empty selection
-                                        if (newFormats.isNotEmpty()) {
-                                            settingsRepository.setEnabledFormats(newFormats)
-                                        }
+                                    val newFormats = if (isSelected) {
+                                        uiState.enabledFormats - format.extension
+                                    } else {
+                                        uiState.enabledFormats + format.extension
+                                    }
+                                    // Don't allow empty selection
+                                    if (newFormats.isNotEmpty()) {
+                                        viewModel.setEnabledFormats(newFormats)
                                     }
                                 },
                                 label = { Text(format.displayName) },
-                                colors = chipColors,
-                                modifier = Modifier.then(
-                                    if (isSelected) Modifier else Modifier
-                                )
+                                colors = chipColors
                             )
                         }
                     }
@@ -321,11 +312,7 @@ fun LibraryPreferencesScreen(
                     ) {
                         AssistChip(
                             onClick = {
-                                scope.launch {
-                                    settingsRepository.setEnabledFormats(
-                                        SupportedFormat.ALL_EXTENSIONS
-                                    )
-                                }
+                                viewModel.setEnabledFormats(SupportedFormat.ALL_EXTENSIONS)
                             },
                             label = { Text("Select All") },
                             leadingIcon = {
@@ -339,12 +326,8 @@ fun LibraryPreferencesScreen(
                         AssistChip(
                             onClick = {
                                 // Toggle off all but the first one (need at least 1)
-                                scope.launch {
-                                    val firstFormat = SupportedFormat.entries.first()
-                                    settingsRepository.setEnabledFormats(
-                                        setOf(firstFormat.extension)
-                                    )
-                                }
+                                val firstFormat = SupportedFormat.entries.first()
+                                viewModel.setEnabledFormats(setOf(firstFormat.extension))
                             },
                             label = { Text("Minimal Set") },
                             leadingIcon = {
