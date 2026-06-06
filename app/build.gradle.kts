@@ -23,7 +23,7 @@ android {
         applicationId = "com.mimiral.app"
         minSdk = 31
         targetSdk = 34
-versionCode = 100
+        versionCode = 100
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -51,6 +51,7 @@ versionCode = 100
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {

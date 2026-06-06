@@ -14,10 +14,8 @@ import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.CollectionEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -128,7 +126,15 @@ class LibraryPerformanceTest {
         val result = block()
         val elapsed = System.currentTimeMillis() - start
         val status = if (elapsed <= thresholdMs) "PASS" else "FAIL"
-        report.appendLine(String.format("  [%s] %s: %d ms (threshold: %d ms)", status, label, elapsed, thresholdMs))
+        report.appendLine(
+            String.format(
+                "  [%s] %s: %d ms (threshold: %d ms)",
+                status,
+                label,
+                elapsed,
+                thresholdMs
+            )
+        )
         assertTrue(
             "$label took $elapsed ms, exceeding threshold of $thresholdMs ms",
             elapsed <= thresholdMs
@@ -159,8 +165,14 @@ class LibraryPerformanceTest {
         }
 
         val insertTime = System.currentTimeMillis() - insertStart
-        report.appendLine(String.format("  Inserted %d books in %d ms (%.1f books/sec)",
-            inserted, insertTime, inserted * 1000.0 / insertTime))
+        report.appendLine(
+            String.format(
+                "  Inserted %d books in %d ms (%.1f books/sec)",
+                inserted,
+                insertTime,
+                inserted * 1000.0 / insertTime
+            )
+        )
         // Threshold: 30s for 10K individual inserts on emulator
         assertTrue("Bulk insert took $insertTime ms, exceeding 60s threshold", insertTime < 60_000L)
 
@@ -177,7 +189,10 @@ class LibraryPerformanceTest {
 
         measureMs("Get all books (first Flow emit)", 2000L) {
             val allBooks = bookDao.getAllBooks().first()
-            assertTrue("Expected $bookCount books, got ${allBooks.size}", allBooks.size == bookCount)
+            assertTrue(
+                "Expected $bookCount books, got ${allBooks.size}",
+                allBooks.size == bookCount
+            )
         }
 
         measureMs("Search books LIKE '%Garden%'", 1000L) {
@@ -241,7 +256,10 @@ class LibraryPerformanceTest {
             val toDelete = bookDao.getBookByFilePath("/storage/books/perf_test_book.epub")
             if (toDelete != null) {
                 bookDao.deleteBook(toDelete)
-                assertTrue("Deleted book should not exist", bookDao.getBookById(toDelete.id) == null)
+                assertTrue(
+                    "Deleted book should not exist",
+                    bookDao.getBookById(toDelete.id) == null
+                )
             }
         }
 
@@ -277,7 +295,10 @@ class LibraryPerformanceTest {
 
         measureMs("Bulk insert $totalChapters chapters (5 per book, 1000 books)", 30_000L) {
             for (batchStart in 1..booksWithChapters step chapterBatchSize / chaptersPerBook) {
-                val batchEnd = minOf(batchStart + chapterBatchSize / chaptersPerBook - 1, booksWithChapters)
+                val batchEnd = minOf(
+                    batchStart + chapterBatchSize / chaptersPerBook - 1,
+                    booksWithChapters
+                )
                 val batch = mutableListOf<ChapterEntity>()
                 var chId = (batchStart - 1) * chaptersPerBook + 1
                 for (bookId in batchStart..batchEnd) {
@@ -398,7 +419,12 @@ class LibraryPerformanceTest {
     }
 
     // ---- Data class for search results ----
-    private data class SearchResult(val term: String, val description: String, val count: Int, val timeMs: Long)
+    private data class SearchResult(
+        val term: String,
+        val description: String,
+        val count: Int,
+        val timeMs: Long
+    )
 
     // =========================================================================
     // TEST 2: Search performance at scale (different search selectivity)
@@ -425,17 +451,27 @@ class LibraryPerformanceTest {
         )
 
         for (r in results) {
-            report.appendLine(String.format("  Search '%s' (%s): %d results in %d ms",
-                r.term, r.description, r.count, r.timeMs))
+            report.appendLine(
+                String.format(
+                    "  Search '%s' (%s): %d results in %d ms",
+                    r.term,
+                    r.description,
+                    r.count,
+                    r.timeMs
+                )
+            )
         }
 
         val sortedStart = System.currentTimeMillis()
         val sortedResults = bookDao.searchBooksSortedByTitle("The").first()
         val sortedElapsed = System.currentTimeMillis() - sortedStart
-        report.appendLine(String.format(
-            "  Search 'The' + sort by title: %d results in %d ms",
-            sortedResults.size, sortedElapsed
-        ))
+        report.appendLine(
+            String.format(
+                "  Search 'The' + sort by title: %d results in %d ms",
+                sortedResults.size,
+                sortedElapsed
+            )
+        )
 
         println(report.toString())
     }
@@ -477,8 +513,13 @@ class LibraryPerformanceTest {
         for (bookId in 1..200) {
             for (chIdx in 0 until 5) {
                 chapters.add(
-                    ChapterEntity(id = chId++, bookId = bookId, chapterIndex = chIdx,
-                        title = "Ch ${chIdx + 1}", content = "Chapter content for FTS testing.")
+                    ChapterEntity(
+                        id = chId++,
+                        bookId = bookId,
+                        chapterIndex = chIdx,
+                        title = "Ch ${chIdx + 1}",
+                        content = "Chapter content for FTS testing."
+                    )
                 )
             }
         }
@@ -494,8 +535,13 @@ class LibraryPerformanceTest {
         for (bookId in 201..400) {
             for (chIdx in 0 until 5) {
                 chapters2.add(
-                    ChapterEntity(id = chId++, bookId = bookId, chapterIndex = chIdx,
-                        title = "Ch ${chIdx + 1}", content = "Chapter content for FTS testing.")
+                    ChapterEntity(
+                        id = chId++,
+                        bookId = bookId,
+                        chapterIndex = chIdx,
+                        title = "Ch ${chIdx + 1}",
+                        content = "Chapter content for FTS testing."
+                    )
                 )
             }
         }
@@ -507,7 +553,9 @@ class LibraryPerformanceTest {
         report.appendLine()
 
         if (batchTime < indChTime) {
-            report.appendLine("  >> Batch insert is ${indChTime - batchTime} ms faster for chapters")
+            report.appendLine(
+                "  >> Batch insert is ${indChTime - batchTime} ms faster for chapters"
+            )
             report.appendLine("  >> Speedup: ${"%.1f".format(indChTime.toFloat() / batchTime)}x")
         } else {
             report.appendLine("  >> Individual insert was faster (unexpected)")

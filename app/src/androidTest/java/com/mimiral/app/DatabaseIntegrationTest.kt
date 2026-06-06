@@ -15,9 +15,7 @@ import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.database.MimiralDatabase
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
-import com.mimiral.app.data.local.entity.BookTagCrossRef
 import com.mimiral.app.data.local.entity.BookmarkEntity
-import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.CollectionEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
@@ -25,7 +23,6 @@ import com.mimiral.app.data.local.entity.PdfSettingsEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ServerEntity
-import com.mimiral.app.data.local.entity.TagEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -180,9 +177,30 @@ class DatabaseIntegrationTest {
 
     @Test
     fun bookDao_searchBooks() = runBlocking {
-        bookDao.insertBook(BookEntity(filePath = "/a.epub", title = "Kotlin in Action", format = "EPUB", author = "JetBrains"))
-        bookDao.insertBook(BookEntity(filePath = "/b.epub", title = "Android Development", format = "EPUB", author = "Google"))
-        bookDao.insertBook(BookEntity(filePath = "/c.pdf", title = "Kotlin Cookbook", format = "PDF", author = "O'Reilly"))
+        bookDao.insertBook(
+            BookEntity(
+                filePath = "/a.epub",
+                title = "Kotlin in Action",
+                format = "EPUB",
+                author = "JetBrains"
+            )
+        )
+        bookDao.insertBook(
+            BookEntity(
+                filePath = "/b.epub",
+                title = "Android Development",
+                format = "EPUB",
+                author = "Google"
+            )
+        )
+        bookDao.insertBook(
+            BookEntity(
+                filePath = "/c.pdf",
+                title = "Kotlin Cookbook",
+                format = "PDF",
+                author = "O'Reilly"
+            )
+        )
 
         val kotlinBooks = bookDao.searchBooks("Kotlin").first()
         assertEquals(2, kotlinBooks.size)
@@ -266,8 +284,12 @@ class DatabaseIntegrationTest {
 
     @Test
     fun readingProgressDao_getRecentProgress() = runBlocking {
-        val book1 = bookDao.insertBook(BookEntity(filePath = "/r1.epub", title = "R1", format = "EPUB")).toInt()
-        val book2 = bookDao.insertBook(BookEntity(filePath = "/r2.epub", title = "R2", format = "EPUB")).toInt()
+        val book1 = bookDao.insertBook(
+            BookEntity(filePath = "/r1.epub", title = "R1", format = "EPUB")
+        ).toInt()
+        val book2 = bookDao.insertBook(
+            BookEntity(filePath = "/r2.epub", title = "R2", format = "EPUB")
+        ).toInt()
 
         readingProgressDao.saveProgress(
             ReadingProgressEntity(bookId = book1, pageNumber = 1, lastReadTime = 1000L)
@@ -612,7 +634,12 @@ class DatabaseIntegrationTest {
     @Test
     fun serverDao_update() = runBlocking {
         val id = serverDao.insertServer(
-            ServerEntity(name = "Original", type = "KAVITA", url = "http://old:5000", isActive = true)
+            ServerEntity(
+                name = "Original",
+                type = "KAVITA",
+                url = "http://old:5000",
+                isActive = true
+            )
         ).toInt()
 
         val server = serverDao.getActiveServerByType("KAVITA")!!
@@ -779,17 +806,36 @@ class DatabaseIntegrationTest {
 
     @Test
     fun readingSessionDao_getSessionsForBook() = runBlocking {
-        val book1 = bookDao.insertBook(BookEntity(filePath = "/s1.epub", title = "S1", format = "EPUB")).toInt()
-        val book2 = bookDao.insertBook(BookEntity(filePath = "/s2.epub", title = "S2", format = "EPUB")).toInt()
+        val book1 = bookDao.insertBook(
+            BookEntity(filePath = "/s1.epub", title = "S1", format = "EPUB")
+        ).toInt()
+        val book2 = bookDao.insertBook(
+            BookEntity(filePath = "/s2.epub", title = "S2", format = "EPUB")
+        ).toInt()
 
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = book1, startTime = 1000, endTime = 2000, date = "2024-01-01")
+            ReadingSessionEntity(
+                bookId = book1,
+                startTime = 1000,
+                endTime = 2000,
+                date = "2024-01-01"
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = book1, startTime = 3000, endTime = 4000, date = "2024-01-02")
+            ReadingSessionEntity(
+                bookId = book1,
+                startTime = 3000,
+                endTime = 4000,
+                date = "2024-01-02"
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = book2, startTime = 5000, endTime = 6000, date = "2024-01-01")
+            ReadingSessionEntity(
+                bookId = book2,
+                startTime = 5000,
+                endTime = 6000,
+                date = "2024-01-01"
+            )
         )
 
         val book1Sessions = readingSessionDao.getSessionsForBook(book1).first()
@@ -803,13 +849,28 @@ class DatabaseIntegrationTest {
         ).toInt()
 
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-03-15", startTime = 1000, endTime = 2000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-03-15",
+                startTime = 1000,
+                endTime = 2000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-03-15", startTime = 3000, endTime = 4000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-03-15",
+                startTime = 3000,
+                endTime = 4000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-03-16", startTime = 5000, endTime = 6000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-03-16",
+                startTime = 5000,
+                endTime = 6000
+            )
         )
 
         val march15 = readingSessionDao.getSessionsForDate("2024-03-15").first()
@@ -824,13 +885,28 @@ class DatabaseIntegrationTest {
         ).toInt()
 
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-01-01", startTime = 1000, endTime = 2000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-01-01",
+                startTime = 1000,
+                endTime = 2000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-01-15", startTime = 3000, endTime = 4000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-01-15",
+                startTime = 3000,
+                endTime = 4000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-02-01", startTime = 5000, endTime = 6000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-02-01",
+                startTime = 5000,
+                endTime = 6000
+            )
         )
 
         val jan = readingSessionDao.getSessionsBetweenDates("2024-01-01", "2024-01-31").first()
@@ -844,13 +920,31 @@ class DatabaseIntegrationTest {
         ).toInt()
 
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-06-01", startTime = 1000, endTime = 2000, durationSeconds = 1800)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-06-01",
+                startTime = 1000,
+                endTime = 2000,
+                durationSeconds = 1800
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-06-02", startTime = 3000, endTime = 4000, durationSeconds = 3600)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-06-02",
+                startTime = 3000,
+                endTime = 4000,
+                durationSeconds = 3600
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-07-01", startTime = 5000, endTime = 6000, durationSeconds = 7200)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-07-01",
+                startTime = 5000,
+                endTime = 6000,
+                durationSeconds = 7200
+            )
         )
 
         val juneTime = readingSessionDao.getTotalReadingTimeBetween("2024-06-01", "2024-06-30")
@@ -867,13 +961,31 @@ class DatabaseIntegrationTest {
         ).toInt()
 
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-04-01", startTime = 1000, endTime = 2000, pagesRead = 5)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-04-01",
+                startTime = 1000,
+                endTime = 2000,
+                pagesRead = 5
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-04-02", startTime = 3000, endTime = 4000, pagesRead = 12)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-04-02",
+                startTime = 3000,
+                endTime = 4000,
+                pagesRead = 12
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-05-01", startTime = 5000, endTime = 6000, pagesRead = 20)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-05-01",
+                startTime = 5000,
+                endTime = 6000,
+                pagesRead = 20
+            )
         )
 
         val aprilPages = readingSessionDao.getTotalPagesReadBetween("2024-04-01", "2024-04-30")
@@ -887,13 +999,28 @@ class DatabaseIntegrationTest {
         ).toInt()
 
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-08-01", startTime = 1000, endTime = 2000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-08-01",
+                startTime = 1000,
+                endTime = 2000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-08-01", startTime = 3000, endTime = 4000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-08-01",
+                startTime = 3000,
+                endTime = 4000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-08-02", startTime = 5000, endTime = 6000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-08-02",
+                startTime = 5000,
+                endTime = 6000
+            )
         )
 
         assertEquals(2, readingSessionDao.getSessionCountForDate("2024-08-01"))
@@ -908,13 +1035,28 @@ class DatabaseIntegrationTest {
         ).toInt()
 
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-01-01", startTime = 1000, endTime = 2000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-01-01",
+                startTime = 1000,
+                endTime = 2000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-01-01", startTime = 3000, endTime = 4000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-01-01",
+                startTime = 3000,
+                endTime = 4000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-01-03", startTime = 5000, endTime = 6000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-01-03",
+                startTime = 5000,
+                endTime = 6000
+            )
         )
 
         assertEquals(2, readingSessionDao.getTotalReadingDays())
@@ -927,13 +1069,28 @@ class DatabaseIntegrationTest {
         ).toInt()
 
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-01-01", startTime = 1000, endTime = 2000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-01-01",
+                startTime = 1000,
+                endTime = 2000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-03-01", startTime = 3000, endTime = 4000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-03-01",
+                startTime = 3000,
+                endTime = 4000
+            )
         )
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-02-01", startTime = 5000, endTime = 6000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-02-01",
+                startTime = 5000,
+                endTime = 6000
+            )
         )
 
         val dates = readingSessionDao.getDistinctDatesDesc()
@@ -1006,7 +1163,12 @@ class DatabaseIntegrationTest {
         ).toInt()
 
         readingSessionDao.insertSession(
-            ReadingSessionEntity(bookId = bookId, date = "2024-01-01", startTime = 1000, endTime = 2000)
+            ReadingSessionEntity(
+                bookId = bookId,
+                date = "2024-01-01",
+                startTime = 1000,
+                endTime = 2000
+            )
         )
         assertEquals(1, readingSessionDao.getSessionsForBook(bookId).first().size)
 
