@@ -171,7 +171,9 @@ class KavitaRepository @Inject constructor(
      */
     suspend fun resolveCoverImageUrl(coverImage: String?): String? {
         if (coverImage.isNullOrBlank()) return null
-        val server = withContext(Dispatchers.IO) { serverDao.getActiveServerByType("KAVITA") } ?: return null
+        val server = withContext(Dispatchers.IO) {
+            serverDao.getActiveServerByType("KAVITA")
+        } ?: return null
         val base = server.url.trimEnd('/')
         return "$base/api/image/cover?coverImage=$coverImage"
     }
