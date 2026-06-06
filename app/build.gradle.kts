@@ -69,6 +69,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.1")
 
+    // Splash Screen (AndroidX Core SplashScreen API — API 31+ native, backcompat to API 21)
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
     // Compose BOM
     implementation(platform("androidx.compose:compose-bom:2024.09.00"))
     implementation("androidx.compose.ui:ui")

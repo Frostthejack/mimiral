@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Main app theme (used by Application and post-splash Activity) -->
     <style name="Theme.Mimiral" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash screen theme — installed on MainActivity via AndroidManifest.
+         The AndroidX SplashScreen compat library will extract the icon/background
+         and show them while the OS/compat layer holds the splash window.
+         API 31+: maps to android:windowSplashScreenAnimatedIcon natively.
+         API 21-30: the library draws an Activity with this theme. -->
+    <style name="Theme.Mimiral.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Mimiral</item>
+    </style>
 </resources>

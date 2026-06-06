@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import com.mimiral.app.data.local.scanner.ExternalBookHandler
 import com.mimiral.app.data.local.scanner.ExternalBookResult
@@ -66,6 +67,15 @@ class MainActivity : ComponentActivity() {
     /** Error message from external book import, if any. */
     private val _externalBookError = MutableStateFlow<String?>(null)
     val externalBookError: StateFlow<String?> = _externalBookError.asStateFlow()
+
+    /**
+     * Flag to keep the splash screen visible until Compose content is ready.
+     * Set to false once the first frame of Compose content has been drawn.
+     * This prevents the splash from dismissing while DEX verification is still
+     * running on the main thread, which was causing the startup ANR.
+     */
+    @Volatile
+    private var isComposeReady = false
 
     fun setVolumeKeyEventCallback(callback: ((Int) -> Boolean)?) {
         volumeKeyEventCallback = callback
@@ -122,6 +132,13 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Install the splash screen BEFORE super.onCreate() — required by the API.
+        // keepOnScreenCondition holds the splash until isComposeReady == true,
+        // which is set after the first Compose frame renders. This keeps the
+        // splash visible during DEX verification, preventing the ANR.
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition { !isComposeReady }
+
         super.onCreate(savedInstanceState)
 
         // ExternalBookHandler is injected by Hilt, but we need to access it
@@ -138,7 +155,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainContent()
+                    MainContent(onComposeReady = { isComposeReady = true })
                 }
             }
         }
@@ -165,7 +182,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainContent() {
+fun MainContent(onComposeReady: () -> Unit = {}) {
     val context = LocalContext.current
     val activity = context as MainActivity
     val settingsRepository = remember { ReaderSettingsRepository(context) }
@@ -174,6 +191,11 @@ fun MainContent() {
 
     // Initialize theme from DataStore
     rememberMimiralThemeState()
+
+    // Signal that Compose content is ready — this dismisses the splash screen
+    LaunchedEffect(Unit) {
+        onComposeReady()
+    }
 
     // Register volume key callback with Activity
     LaunchedEffect(settings.volumeKeyNavigationEnabled) {
