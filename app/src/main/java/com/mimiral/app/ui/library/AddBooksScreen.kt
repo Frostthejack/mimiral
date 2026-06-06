@@ -1,6 +1,11 @@
 package com.mimiral.app.ui.library
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +26,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,12 +44,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.scanner.ScanState
 
@@ -55,6 +65,32 @@ fun AddBooksScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+
+    // Track whether we should show the permission rationale
+    var showPermissionRationale by remember { mutableStateOf(false) }
+
+    // Launcher for Android 10 and below: request READ_EXTERNAL_STORAGE
+    val readStoragePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.startFullScan()
+        } else {
+            showPermissionRationale = true
+        }
+    }
+
+    // Launcher for Android 11+: MANAGE_EXTERNAL_STORAGE via Settings
+    val manageStorageSettingsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        // Returning from Settings — check if permission was granted
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+            viewModel.startFullScan()
+        } else {
+            showPermissionRationale = true
+        }
+    }
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -70,6 +106,30 @@ fun AddBooksScreen(
                 // Some providers don't support persistable permissions
             }
             viewModel.scanFolder(it)
+        }
+    }
+
+    // Helper: check if we have storage permission
+    fun hasStoragePermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    // Helper: launch the appropriate permission request
+    fun requestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+            manageStorageSettingsLauncher.launch(intent)
+        } else {
+            readStoragePermissionLauncher.launch(
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            )
         }
     }
 
@@ -124,6 +184,62 @@ fun AddBooksScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            // Permission rationale card — shown when permission is denied
+            if (showPermissionRationale) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Storage permission required",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                "To scan your device for books, Mimiral needs access to all files. " +
+                                    "Please grant 'Allow access to manage all files' in Settings."
+                            } else {
+                                "To scan your device for books, Mimiral needs storage permission. " +
+                                    "Please grant the permission when prompted."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                showPermissionRationale = false
+                                requestStoragePermission()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                                    "Open Settings"
+                                else
+                                    "Grant Permission"
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -135,7 +251,13 @@ fun AddBooksScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
-                        onClick = { viewModel.startFullScan() },
+                        onClick = {
+                            if (hasStoragePermission()) {
+                                viewModel.startFullScan()
+                            } else {
+                                requestStoragePermission()
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = uiState.scanState !is ScanState.Scanning
                     ) {

@@ -1,5 +1,6 @@
 package com.mimiral.app.data.local.scanner
 
+import android.content.ContentUris
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
@@ -201,6 +202,11 @@ class FileScanner @Inject constructor(
     /**
      * Queries MediaStore for files matching supported MIME types in
      * Downloads and/or Documents directories.
+     *
+     * Note: On Android 10+ (API 29+), READ_EXTERNAL_STORAGE permission must be
+     * granted for MediaStore to return non-empty results. On Android 11+ (API 30+),
+     * MANAGE_EXTERNAL_STORAGE is required for broad file access. The caller is
+     * responsible for ensuring permissions are granted before invoking this method.
      */
     private fun queryMediaStore(
         includeDownloads: Boolean,
@@ -215,7 +221,8 @@ class FileScanner @Inject constructor(
             MediaStore.Files.FileColumns.DISPLAY_NAME,
             MediaStore.Files.FileColumns.MIME_TYPE,
             MediaStore.Files.FileColumns.SIZE,
-            MediaStore.Files.FileColumns.DATE_MODIFIED
+            MediaStore.Files.FileColumns.DATE_MODIFIED,
+            MediaStore.Files.FileColumns.RELATIVE_PATH
         )
 
         // Build selection: MIME type filter
@@ -227,11 +234,13 @@ class FileScanner @Inject constructor(
             addAll(SUPPORTED_MIME_TYPES)
         }
 
-        // Add relative path constraints if targeting specific directories
+        // Add relative path constraints if targeting specific directories.
+        // RELATIVE_PATH values on Android 10+ typically look like "Downloads/", "Documents/", "Books/"
+        // The trailing slash is part of the value, so "Download" matches "Downloads/" via %Download%
         val pathSelection = if (includeDownloads && includeDocuments) {
             // Both directories - use OR condition
             val col = MediaStore.Files.FileColumns.RELATIVE_PATH
-            " AND ($col LIKE ? OR $col LIKE ?)"
+            " AND ($col LIKE ? OR $col LIKE ? OR $col LIKE ?)"
         } else if (includeDownloads) {
             " AND ${MediaStore.Files.FileColumns.RELATIVE_PATH} LIKE ?"
         } else if (includeDocuments) {
@@ -248,6 +257,10 @@ class FileScanner @Inject constructor(
         if (includeDocuments) {
             selectionArgs.add("%Documents%")
         }
+        // Also match "Books/" directory when scanning both
+        if (includeDownloads && includeDocuments) {
+            selectionArgs.add("%Books%")
+        }
 
         var cursor: Cursor? = null
         try {
@@ -260,6 +273,7 @@ class FileScanner @Inject constructor(
             )
 
             cursor?.use { c ->
+                val idCol = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
                 val dataCol = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
                 val nameCol = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
                 val mimeCol = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
@@ -267,7 +281,12 @@ class FileScanner @Inject constructor(
                 val modCol = c.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
 
                 while (c.moveToNext()) {
-                    val filePath = c.getString(dataCol) ?: continue
+                    // DATA may be null/empty on scoped storage; fall back to content URI
+                    val filePath = c.getString(dataCol)?.takeIf { it.isNotBlank() }
+                        ?: contentResolver.getFilePathFromUri(
+                            ContentUris.withAppendedId(MEDIA_STORE_URI, c.getLong(idCol))
+                        )
+                        ?: continue
                     val fileName = c.getString(nameCol) ?: continue
                     val mimeType = c.getString(mimeCol) ?: continue
                     val fileSize = c.getLong(sizeCol)
@@ -292,6 +311,23 @@ class FileScanner @Inject constructor(
         }
 
         return results
+    }
+
+    /**
+     * Resolves a content:// URI to a filesystem path.
+     * Used as fallback when DATA column is null on scoped storage.
+     */
+    private fun ContentResolver.getFilePathFromUri(uri: Uri): String? {
+        return try {
+            query(uri, arrayOf(MediaStore.Files.FileColumns.DATA), null, null, null)?.use { c ->
+                if (c.moveToFirst()) {
+                    val idx = c.getColumnIndex(MediaStore.Files.FileColumns.DATA)
+                    if (idx >= 0) c.getString(idx) else null
+                } else null
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**
