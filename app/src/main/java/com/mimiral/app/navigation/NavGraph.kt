@@ -146,7 +146,9 @@ fun MimiralNavGraph(navController: NavHostController) {
                 )
             }
             composable(Screen.AddBooks.route) {
-                AddBooksScreen()
+                AddBooksScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
             composable(Screen.NowReading.route) {
                 NowReadingScreen(
