@@ -1,5 +1,6 @@
 package com.mimiral.app.data.local.scanner
 
+import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
 import android.database.Cursor
