@@ -35,20 +35,27 @@ class MimiralApp : Application() {
     }
 
     /**
-     * Enable StrictMode for debug builds to detect main-thread I/O and other
-     * violations that contribute to ANRs. Only runs in debug builds
-     * (BuildConfig.DEBUG is false in release).
+     * Enable StrictMode for debug builds to detect network-on-main-thread
+     * violations only. We intentionally avoid detectAll() because it enables
+     * disk-read/disk-write detection, which fires on every Room and Hilt
+     * call during cold start. On slow emulators or low-end devices the
+     * combined StrictMode penalty logging + JIT verification overhead exceeds
+     * the 10 s startup timeout and triggers an ANR.
+     *
+     * Baseline Profiles + R8 full mode already mitigate most startup I/O;
+     * StrictMode is kept only for network catches during development.
      */
     private fun enableStrictMode() {
         StrictMode.setThreadPolicy(
             StrictMode.ThreadPolicy.Builder()
-                .detectAll()
+                .detectNetwork()
                 .penaltyLog()
                 .build()
         )
         StrictMode.setVmPolicy(
             StrictMode.VmPolicy.Builder()
-                .detectAll()
+                .detectLeakedSqlLiteObjects()
+                .detectLeakedClosableObjects()
                 .penaltyLog()
                 .build()
         )
