@@ -34,6 +34,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -120,6 +127,9 @@ dependencies {
 
     // Baseline Profile (consumes generated profile from :baseline-profile module)
     baselineProfile(project(":baseline-profile"))
+
+    // Profile Installer — enables baseline profile in debug builds
+    debugImplementation("androidx.profileinstaller:profileinstaller:1.3.1")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
