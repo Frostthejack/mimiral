@@ -74,6 +74,10 @@ class TTSService : Service() {
         const val EXTRA_SENTENCE_TEXT = "extra_sentence_text"
         const val EXTRA_SENTENCE_ACTIVE = "extra_sentence_active"
 
+        /** Broadcast: TTS state change (PLAYING, PAUSED, READY, IDLE, etc.). */
+        const val ACTION_TTS_STATE = "com.mimiral.app.tts.ACTION_TTS_STATE"
+        const val EXTRA_TTS_STATE = "extra_tts_state"
+
         fun createPlayIntent(context: Context, text: String? = null): Intent {
             return Intent(context, TTSService::class.java).apply {
                 action = ACTION_PLAY
@@ -194,11 +198,12 @@ class TTSService : Service() {
             onInitialized = { success ->
                 if (success) {
                     Log.d(TAG, "TTS engine ready in service")
-                    // Load persisted preferences
+                    // Load persisted settings
                     val repo = com.mimiral.app.data.local.settings.TTSSettingsRepository(
                         applicationContext
                     )
                     loadPersistedSettings(repo)
+                    broadcastTTSState()
                 } else {
                     Log.e(TAG, "TTS engine failed to initialize in service")
                     stopSelf()
@@ -374,6 +379,14 @@ class TTSService : Service() {
         sendBroadcast(broadcastIntent)
     }
 
+    private fun broadcastTTSState() {
+        val broadcastIntent = Intent(ACTION_TTS_STATE).apply {
+            putExtra(EXTRA_TTS_STATE, ttsManager?.state?.name ?: TTSState.IDLE.name)
+            setPackage(packageName)
+        }
+        sendBroadcast(broadcastIntent)
+    }
+
     private fun updateNotificationWithSleepTimer() {
         if (sleepTimerActive) {
             notificationManager?.notify(NOTIFICATION_ID, buildNotification())
@@ -441,6 +454,7 @@ class TTSService : Service() {
         mgr.play(currentText)
         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING)
         showNotification()
+        broadcastTTSState()
     }
 
     private fun handlePause() {
@@ -448,6 +462,7 @@ class TTSService : Service() {
         mgr.pause()
         updatePlaybackState(PlaybackStateCompat.STATE_PAUSED)
         showNotification()
+        broadcastTTSState()
     }
 
     private fun handleResume() {
@@ -455,6 +470,7 @@ class TTSService : Service() {
         mgr.resume()
         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING)
         showNotification()
+        broadcastTTSState()
     }
 
     private fun handleStop() {
@@ -462,6 +478,7 @@ class TTSService : Service() {
         mgr.stop()
         updatePlaybackState(PlaybackStateCompat.STATE_STOPPED)
         stopForeground(STOP_FOREGROUND_REMOVE)
+        broadcastTTSState()
         stopSelf()
     }
 

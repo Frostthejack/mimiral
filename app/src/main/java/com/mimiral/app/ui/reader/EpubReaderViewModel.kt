@@ -9,6 +9,7 @@ import com.mimiral.app.data.local.entity.ReadingTimeTracker
 import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.ReadingTimeRepository
+import com.mimiral.app.tts.TTSState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow

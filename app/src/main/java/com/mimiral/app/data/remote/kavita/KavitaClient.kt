@@ -162,7 +162,7 @@ class KavitaClient(
      * Get server info to verify connectivity and check auth capabilities.
      */
     suspend fun getServerInfo(): KavitaResult<KavitaServerInfo> =
-        get("/api/server/info", KavitaServerInfo::class.java)
+        get("/api/server/info", object : TypeToken<KavitaServerInfo>() {})
 
     /**
      * List all libraries on the server.
