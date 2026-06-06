@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.documentfile.provider.DocumentFile
 import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.entity.BookEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -405,17 +406,50 @@ class FileScanner @Inject constructor(
      * @return List of PendingBook objects for discovered files
      */
     suspend fun scanDirectory(uri: Uri): List<PendingBook> = withContext(Dispatchers.IO) {
-        val path = uri.path ?: return@withContext emptyList()
-        // SAF Uris may not map directly to filesystem paths; attempt best-effort resolution
-        val file = try {
-            File(path)
+        val documentFile = DocumentFile.fromTreeUri(context, uri)
+            ?: return@withContext emptyList()
+        val results = mutableListOf<PendingBook>()
+        scanSafDirectory(documentFile, results, depth = 0)
+        results
+    }
+
+    /**
+     * Recursively traverse a SAF document tree using DocumentFile API.
+     * Limits depth to 3 to avoid deep traversal on large trees.
+     */
+    private fun scanSafDirectory(
+        dir: DocumentFile,
+        results: MutableList<PendingBook>,
+        depth: Int
+    ) {
+        if (depth > 3) return
+        if (!dir.isDirectory) return
+
+        try {
+            dir.listFiles().forEach { child ->
+                when {
+                    child.isDirectory -> scanSafDirectory(child, results, depth + 1)
+                    child.isFile -> {
+                        val name = child.name ?: return@forEach
+                        val extension = name.substringAfterLast('.', "").lowercase()
+                        if (extension in SUPPORTED_EXTENSIONS) {
+                            results.add(
+                                PendingBook(
+                                    filePath = child.uri.toString(),
+                                    fileName = name,
+                                    format = extension.uppercase(),
+                                    fileSize = child.length(),
+                                    dateModified = child.lastModified() / 1000
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (_: SecurityException) {
+            // Permission denied for this subtree; skip silently
         } catch (_: Exception) {
-            return@withContext emptyList()
-        }
-        if (file.exists() && file.isDirectory) {
-            scanDirectory(file)
-        } else {
-            emptyList()
+            // Other errors; skip this directory
         }
     }
 
