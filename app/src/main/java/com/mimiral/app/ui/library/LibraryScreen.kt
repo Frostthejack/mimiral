@@ -217,7 +217,7 @@ fun LibraryScreen(
                     }
                 }
 
-                // Sort and Filter row
+                // Sort row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -245,23 +245,23 @@ fun LibraryScreen(
                             }
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Filter chips (scrollable row)
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        FilterOption.entries.forEach { filter ->
-                            FilterChip(
-                                selected = uiState.filterOption == filter,
-                                onClick = { viewModel.setFilterOption(filter) },
-                                label = { Text(filter.displayName) }
-                            )
-                        }
+                // Filter chips — in their own full-width scrollable row
+                // so each chip has room for its full label text (no truncation)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterOption.entries.forEach { filter ->
+                        FilterChip(
+                            selected = uiState.filterOption == filter,
+                            onClick = { viewModel.setFilterOption(filter) },
+                            label = { Text(filter.displayName) }
+                        )
                     }
                 }
 
