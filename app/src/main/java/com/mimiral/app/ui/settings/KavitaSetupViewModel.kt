@@ -175,6 +175,24 @@ class KavitaSetupViewModel @Inject constructor(
                         )
                     }
                 }
+            } catch (e: java.net.ConnectException) {
+                _uiState.value = _uiState.value.copy(
+                    isTestingConnection = false,
+                    connectionStatus = ConnectionStatus.ERROR,
+                    errorMessage = "Cannot connect to server — check URL and network"
+                )
+            } catch (e: java.net.SocketTimeoutException) {
+                _uiState.value = _uiState.value.copy(
+                    isTestingConnection = false,
+                    connectionStatus = ConnectionStatus.ERROR,
+                    errorMessage = "Server timed out — try again later"
+                )
+            } catch (e: java.net.UnknownHostException) {
+                _uiState.value = _uiState.value.copy(
+                    isTestingConnection = false,
+                    connectionStatus = ConnectionStatus.ERROR,
+                    errorMessage = "Server not found — check the URL"
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isTestingConnection = false,

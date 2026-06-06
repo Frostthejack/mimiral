@@ -2,7 +2,6 @@ package com.mimiral.app.di
 
 import android.content.Context
 import com.mimiral.app.data.local.dao.ServerDao
-import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.remote.kavita.KavitaClient
 import com.mimiral.app.data.remote.kavita.KavitaRepository
 import com.mimiral.app.data.repository.BookRepository
@@ -15,36 +14,50 @@ import javax.inject.Singleton
 
 /**
  * Hilt DI module for Kavita client dependencies.
+ *
+ * The KavitaClient is created with a placeholder URL since the
+ * actual server URL is resolved at runtime from the active server
+ * configuration in the database. Repositories that need a properly
+ * configured client should resolve the active server via ServerDao
+ * and create a client with the resolved URL.
  */
 @Module
 @InstallIn(SingletonComponent::class)
 object KavitaModule {
 
     /**
-     * Provides a KavitaClient configured from the active server settings.
-     * The client will be created with the server's base URL and auth credentials.
+     * Provides a placeholder KavitaClient.
+     *
+     * The actual server URL is resolved per-request from the active
+     * server configuration. This placeholder avoids blocking the
+     * DI graph on a database read at creation time.
+     *
+     * Use [KavitaModule.provideKavitaClientForServer] to create a
+     * properly configured client for a specific server.
      */
     @Provides
     @Singleton
-    fun provideKavitaClient(serverDao: ServerDao): KavitaClient {
-        // Create a default client - the actual server URL will be resolved
-        // per-request from the active server configuration
-        return KavitaClient(
-            baseUrl = "http://localhost:5000",
-            apiKey = null,
-            jwtToken = null
-        )
+    fun provideKavitaClient(): KavitaClient {
+        // Placeholder client — the actual server URL will be resolved
+        // per-request from the active server configuration.
+        // See KavitaRepository.testConnection() for an example of
+        // creating a properly configured client.
+        return KavitaClient(baseUrl = "")
     }
 
     /**
      * Provides a KavitaClient for a specific server configuration.
      * Use this when connecting to a specific known server.
      */
-    fun provideKavitaClientForServer(server: ServerEntity): KavitaClient {
+    fun provideKavitaClientForServer(
+        url: String,
+        apiKey: String? = null,
+        jwtToken: String? = null
+    ): KavitaClient {
         return KavitaClient(
-            baseUrl = server.url,
-            apiKey = server.apiKey,
-            jwtToken = server.jwtToken
+            baseUrl = url,
+            apiKey = apiKey,
+            jwtToken = jwtToken
         )
     }
 

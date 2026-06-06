@@ -607,6 +607,15 @@ class EpubReaderViewModel @Inject constructor(
         if (bookId == -1) return
         viewModelScope.launch {
             try {
+                // Skip sync entirely if no Kavita server is configured
+                if (!kavitaSyncRepository.hasActiveServer()) {
+                    _uiState.update {
+                        it.copy(
+                            syncStatus = com.mimiral.app.data.remote.SyncStatus.IDLE
+                        )
+                    }
+                    return@launch
+                }
                 _uiState.update {
                     it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
                 }
@@ -665,6 +674,13 @@ class EpubReaderViewModel @Inject constructor(
         if (bookId == -1) return
         viewModelScope.launch {
             try {
+                // Skip if no Kavita server is configured
+                if (!kavitaSyncRepository.hasActiveServer()) {
+                    _uiState.update {
+                        it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.IDLE)
+                    }
+                    return@launch
+                }
                 _uiState.update {
                     it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
                 }
@@ -728,6 +744,13 @@ class EpubReaderViewModel @Inject constructor(
         val state = _uiState.value
         viewModelScope.launch {
             try {
+                // Skip if no Kavita server is configured
+                if (!kavitaSyncRepository.hasActiveServer()) {
+                    _uiState.update {
+                        it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.IDLE)
+                    }
+                    return@launch
+                }
                 _uiState.update {
                     it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
                 }

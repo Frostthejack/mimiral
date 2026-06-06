@@ -14,7 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 /**
@@ -170,9 +169,9 @@ class KavitaRepository @Inject constructor(
     /**
      * Resolve a cover image URL from a cover image path.
      */
-    fun resolveCoverImageUrl(coverImage: String?): String? {
+    suspend fun resolveCoverImageUrl(coverImage: String?): String? {
         if (coverImage.isNullOrBlank()) return null
-        val server = runBlocking { serverDao.getActiveServerByType("KAVITA") } ?: return null
+        val server = withContext(Dispatchers.IO) { serverDao.getActiveServerByType("KAVITA") } ?: return null
         val base = server.url.trimEnd('/')
         return "$base/api/image/cover?coverImage=$coverImage"
     }

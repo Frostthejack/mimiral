@@ -490,6 +490,13 @@ class PdfReaderViewModel @Inject constructor(
         if (bookId == 0) return
         viewModelScope.launch {
             try {
+                // Skip sync entirely if no Kavita server is configured
+                if (!kavitaSyncRepository.hasActiveServer()) {
+                    _uiState.update {
+                        it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.IDLE)
+                    }
+                    return@launch
+                }
                 _uiState.update {
                     it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
                 }
@@ -542,6 +549,13 @@ class PdfReaderViewModel @Inject constructor(
         if (bookId == 0) return
         viewModelScope.launch {
             try {
+                // Skip if no Kavita server is configured
+                if (!kavitaSyncRepository.hasActiveServer()) {
+                    _uiState.update {
+                        it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.IDLE)
+                    }
+                    return@launch
+                }
                 _uiState.update {
                     it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
                 }
@@ -600,6 +614,13 @@ class PdfReaderViewModel @Inject constructor(
         if (bookId == 0) return
         viewModelScope.launch {
             try {
+                // Skip if no Kavita server is configured
+                if (!kavitaSyncRepository.hasActiveServer()) {
+                    _uiState.update {
+                        it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.IDLE)
+                    }
+                    return@launch
+                }
                 _uiState.update {
                     it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
                 }

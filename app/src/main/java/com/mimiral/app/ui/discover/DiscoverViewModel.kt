@@ -237,7 +237,7 @@ class DiscoverViewModel @Inject constructor(
 
     // --- Mapping helpers ---
 
-    private fun KavitaSeries.toSeriesItem(): SeriesItem {
+    private suspend fun KavitaSeries.toSeriesItem(): SeriesItem {
         return SeriesItem(
             id = id,
             name = name,
@@ -249,7 +249,7 @@ class DiscoverViewModel @Inject constructor(
         )
     }
 
-    private fun KavitaSeries.toSeriesDetail(): SeriesDetail {
+    private suspend fun KavitaSeries.toSeriesDetail(): SeriesDetail {
         return SeriesDetail(
             id = id,
             name = name,
