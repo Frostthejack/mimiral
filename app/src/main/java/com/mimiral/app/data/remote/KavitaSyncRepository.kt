@@ -5,12 +5,17 @@ import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.di.KavitaApiClient
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Result of a sync operation.
@@ -50,17 +55,17 @@ class KavitaSyncRepository @Inject constructor(
         bookId: Int,
         pageNumber: Int,
         chapterIndex: Int = 0
-    ): SyncResult {
-        return try {
+    ): SyncResult = withContext(Dispatchers.IO) {
+        try {
             val book = bookDao.getBookById(bookId)
-                ?: return SyncResult.Error(
+                ?: return@withContext SyncResult.Error(
                     Exception("Book not found: $bookId")
                 )
 
             val seriesId = book.kavitaSeriesId
-                ?: return SyncResult.NoKavitaBook
+                ?: return@withContext SyncResult.NoKavitaBook
             val libraryId = book.kavitaLibraryId
-                ?: return SyncResult.NoKavitaBook
+                ?: return@withContext SyncResult.NoKavitaBook
 
             val timestamp = dateFormat.format(Date())
             val request = KavitaProgressRequest(
@@ -89,6 +94,12 @@ class KavitaSyncRepository @Inject constructor(
                     )
                 )
             }
+        } catch (e: ConnectException) {
+            SyncResult.Error(Exception("Cannot connect to Kavita server"))
+        } catch (e: SocketTimeoutException) {
+            SyncResult.Error(Exception("Kavita server timed out"))
+        } catch (e: UnknownHostException) {
+            SyncResult.Error(Exception("Kavita server unreachable"))
         } catch (e: Exception) {
             SyncResult.Error(e)
         }
@@ -99,17 +110,17 @@ class KavitaSyncRepository @Inject constructor(
      * Conflict resolution: use most recent timestamp.
      * Returns the page number that should be used after conflict resolution.
      */
-    suspend fun pullProgress(bookId: Int): SyncResult {
-        return try {
+    suspend fun pullProgress(bookId: Int): SyncResult = withContext(Dispatchers.IO) {
+        try {
             val book = bookDao.getBookById(bookId)
-                ?: return SyncResult.Error(
+                ?: return@withContext SyncResult.Error(
                     Exception("Book not found: $bookId")
                 )
 
             val seriesId = book.kavitaSeriesId
-                ?: return SyncResult.NoKavitaBook
+                ?: return@withContext SyncResult.NoKavitaBook
             val libraryId = book.kavitaLibraryId
-                ?: return SyncResult.NoKavitaBook
+                ?: return@withContext SyncResult.NoKavitaBook
 
             val response = kavitaApi.pullProgress(seriesId, libraryId)
             if (response.isSuccessful) {
@@ -135,6 +146,12 @@ class KavitaSyncRepository @Inject constructor(
                     )
                 )
             }
+        } catch (e: ConnectException) {
+            SyncResult.Error(Exception("Cannot connect to Kavita server"))
+        } catch (e: SocketTimeoutException) {
+            SyncResult.Error(Exception("Kavita server timed out"))
+        } catch (e: UnknownHostException) {
+            SyncResult.Error(Exception("Kavita server unreachable"))
         } catch (e: Exception) {
             SyncResult.Error(e)
         }
@@ -150,22 +167,22 @@ class KavitaSyncRepository @Inject constructor(
         localPageNumber: Int,
         localChapterIndex: Int = 0,
         localTimestamp: Long = System.currentTimeMillis()
-    ): SyncResult {
+    ): SyncResult = withContext(Dispatchers.IO) {
         val book = bookDao.getBookById(bookId)
-            ?: return SyncResult.Error(
+            ?: return@withContext SyncResult.Error(
                 Exception("Book not found: $bookId")
             )
 
         val seriesId = book.kavitaSeriesId
-            ?: return SyncResult.NoKavitaBook
+            ?: return@withContext SyncResult.NoKavitaBook
         val libraryId = book.kavitaLibraryId
-            ?: return SyncResult.NoKavitaBook
+            ?: return@withContext SyncResult.NoKavitaBook
 
-        return try {
+        try {
             // Step 1: Pull remote progress
             val pullResponse = kavitaApi.pullProgress(seriesId, libraryId)
             if (!pullResponse.isSuccessful) {
-                return SyncResult.Error(
+                return@withContext SyncResult.Error(
                     Exception(
                         "Pull failed: ${pullResponse.code()} ${pullResponse.message()}"
                     )
@@ -216,6 +233,12 @@ class KavitaSyncRepository @Inject constructor(
                     )
                 )
             }
+        } catch (e: ConnectException) {
+            SyncResult.Error(Exception("Cannot connect to Kavita server"))
+        } catch (e: SocketTimeoutException) {
+            SyncResult.Error(Exception("Kavita server timed out"))
+        } catch (e: UnknownHostException) {
+            SyncResult.Error(Exception("Kavita server unreachable"))
         } catch (e: Exception) {
             SyncResult.Error(e)
         }
@@ -251,7 +274,13 @@ class KavitaSyncRepository @Inject constructor(
     /**
      * Get the active Kavita server entity.
      */
-    suspend fun getKavitaServer(): ServerEntity? {
-        return serverDao.getActiveServerByType("KAVITA")
-    }
+    suspend fun getKavitaServer(): ServerEntity? =
+        withContext(Dispatchers.IO) { serverDao.getActiveServerByType("KAVITA") }
+
+    /**
+     * Check if an active Kavita server is configured.
+     * Use this before attempting sync to avoid unnecessary network calls.
+     */
+    suspend fun hasActiveServer(): Boolean =
+        withContext(Dispatchers.IO) { serverDao.getActiveServerByType("KAVITA") != null }
 }

@@ -9,7 +9,10 @@ import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -22,13 +25,20 @@ annotation class KavitaApiClient
 /**
  * Dagger Hilt module providing the Kavita Retrofit API client.
  *
- * Resolves the server URL dynamically from the active Kavita server
- * in the database. If no server is configured, uses a sentinel URL
- * that fails immediately instead of blocking for 30s on localhost.
+ * Uses a dynamic base URL that resolves from the active Kavita server
+ * in the database via [KavitaServerUrlProvider]. This avoids hardcoding
+ * a placeholder URL that could cause network calls to a non-existent host.
  */
 @Module
 @InstallIn(SingletonComponent::class)
 object KavitaApiModule {
+
+    /**
+     * Placeholder base URL used when no Kavita server is configured.
+     * All API calls will fail fast with a clear error rather than
+     * attempting to connect to localhost.
+     */
+    internal const val PLACEHOLDER_URL = "https://kavita.placeholder.invalid/"
 
     @Provides
     @Singleton
@@ -50,17 +60,9 @@ object KavitaApiModule {
     @KavitaApiClient
     fun provideKavitaSyncApi(
         @KavitaApiClient okHttpClient: OkHttpClient,
-        serverDao: ServerDao
+        serverUrlProvider: KavitaServerUrlProvider
     ): KavitaSyncApi {
-        val server = runBlocking {
-            serverDao.getActiveServerByType("KAVITA")
-        }
-        val baseUrl = if (server != null) {
-            server.url.trimEnd('/') + "/"
-        } else {
-            // No active Kavita server — use sentinel URL that fails fast
-            NO_OP_BASE_URL
-        }
+        val baseUrl = serverUrlProvider.getActiveServerUrl() ?: PLACEHOLDER_URL
         val retrofit = Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(okHttpClient)
@@ -69,6 +71,35 @@ object KavitaApiModule {
         return retrofit.create(KavitaSyncApi::class.java)
     }
 
-    /** Sentinel URL for the no-op client when no Kavita server is configured. */
-    private const val NO_OP_BASE_URL = "http://kavita-not-configured.local/"
+    @Provides
+    @Singleton
+    fun provideServerUrlProvider(serverDao: ServerDao): KavitaServerUrlProvider {
+        return KavitaServerUrlProvider(serverDao)
+    }
+}
+
+/**
+ * Provides the active Kavita server URL from the database.
+ *
+ * This is resolved at DI creation time for the Retrofit instance.
+ * For per-request resolution (when the server URL may change),
+ * repositories should call [ServerDao.getActiveServerByType] directly.
+ */
+class KavitaServerUrlProvider(
+    private val serverDao: ServerDao
+) {
+    /**
+     * Get the active Kavita server URL, or null if none configured.
+     * Runs on IO dispatcher to avoid blocking the main thread.
+     */
+    fun getActiveServerUrl(): String? {
+        return try {
+            runBlocking(Dispatchers.IO) {
+                val server = serverDao.getActiveServerByType("KAVITA")
+                server?.url
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
 }
