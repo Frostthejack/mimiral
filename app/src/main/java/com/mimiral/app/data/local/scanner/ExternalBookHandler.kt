@@ -61,7 +61,9 @@ class ExternalBookHandler @Inject constructor(
             try {
                 // Resolve file extension and format from URI and MIME type
                 val extension = resolveExtension(uri, mimeType)
-                if (extension == null || extension.lowercase() !in FileScanner.SUPPORTED_EXTENSIONS) {
+                if (extension == null ||
+                    extension.lowercase() !in FileScanner.SUPPORTED_EXTENSIONS
+                ) {
                     return@withContext ExternalBookResult.Error(
                         "Unsupported file format: ${extension ?: "unknown"}"
                     )
@@ -204,7 +206,9 @@ class ExternalBookHandler @Inject constructor(
                 )
                 cursor?.use {
                     if (it.moveToFirst()) {
-                        val nameCol = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        val nameCol = it.getColumnIndex(
+                            android.provider.OpenableColumns.DISPLAY_NAME
+                        )
                         if (nameCol >= 0) {
                             val name = it.getString(nameCol)
                             if (!name.isNullOrBlank()) return name
