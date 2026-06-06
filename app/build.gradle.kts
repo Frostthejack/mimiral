@@ -117,6 +117,7 @@ dependencies {
 
     // Security (EncryptedSharedPreferences for secure credential storage)
     implementation("androidx.security:security-crypto:1.0.0")
+    implementation("androidx.documentfile:documentfile:1.0.1")
 
     // Baseline Profile (consumes generated profile from :baseline-profile module)
     baselineProfile(project(":baseline-profile"))
