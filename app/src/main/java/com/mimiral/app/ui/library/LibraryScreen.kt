@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.AssistChip
@@ -84,6 +85,7 @@ fun LibraryScreen(
     onEditBookMetadata: (Int) -> Unit = {},
     onNavigateToCollections: ((List<Int>) -> Unit)? = null,
     onNavigateToAddBooks: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -102,6 +104,14 @@ fun LibraryScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Library") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(
+                            imageVector = Icons.Filled.Menu,
+                            contentDescription = "Open navigation menu"
+                        )
+                    }
+                },
                 actions = {
                     // View toggle button
                     IconButton(onClick = { viewModel.toggleViewMode() }) {

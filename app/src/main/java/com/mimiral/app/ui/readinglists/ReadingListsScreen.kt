@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -66,6 +67,7 @@ import com.mimiral.app.data.local.entity.ReadingListEntity
 @Composable
 fun ReadingListsScreen(
     onBookClick: (Int, String) -> Unit,
+    onOpenDrawer: () -> Unit = {},
     viewModel: ReadingListsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -81,7 +83,12 @@ fun ReadingListsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Reading Lists") }
+                title = { Text("Reading Lists") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Filled.Menu, contentDescription = "Open navigation menu")
+                    }
+                }
             )
         },
         floatingActionButton = {

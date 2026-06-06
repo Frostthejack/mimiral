@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
@@ -57,6 +58,7 @@ import java.time.LocalDate
 @Composable
 fun StatisticsScreen(
     onNavigateToGoals: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
     viewModel: StatisticsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -80,6 +82,14 @@ fun StatisticsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Statistics") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(
+                            Icons.Filled.Menu,
+                            contentDescription = "Open navigation menu"
+                        )
+                    }
+                },
                 actions = {
                     IconButton(
                         onClick = { viewModel.exportStatistics() },
