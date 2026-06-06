@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
@@ -64,7 +65,8 @@ import com.mimiral.app.data.remote.kavita.KavitaLibrary
 @Composable
 fun DiscoverScreen(
     viewModel: DiscoverViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentNav = uiState.navigationStack.lastOrNull()
@@ -80,7 +82,8 @@ fun DiscoverScreen(
                     } else {
                         onNavigateBack()
                     }
-                }
+                },
+                onOpenDrawer = onOpenDrawer
             )
         }
     ) { innerPadding ->
@@ -144,7 +147,8 @@ fun DiscoverScreen(
 private fun DiscoverTopBar(
     currentNav: DiscoverNavItem?,
     canGoBack: Boolean,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onOpenDrawer: () -> Unit
 ) {
     val title = when (currentNav) {
         null -> "Discover"
@@ -161,6 +165,13 @@ private fun DiscoverTopBar(
                     Icon(
                         Icons.Filled.ArrowBack,
                         contentDescription = "Back"
+                    )
+                }
+            } else {
+                IconButton(onClick = onOpenDrawer) {
+                    Icon(
+                        Icons.Filled.Menu,
+                        contentDescription = "Open navigation menu"
                     )
                 }
             }

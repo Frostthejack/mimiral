@@ -2,11 +2,13 @@ package com.mimiral.app.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -39,6 +41,7 @@ import com.mimiral.app.ui.settings.ReadingPreferencesScreen
 import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.settings.TTSSettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
+import kotlinx.coroutines.launch
 
 /**
  * Format-aware navigation: routes to the correct reader based on the book's format.
@@ -64,39 +67,17 @@ fun routeForBookFormat(bookId: Int, format: String): String {
 
 @Composable
 fun MimiralNavGraph(navController: NavHostController) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val openDrawer: () -> Unit = { scope.launch { drawerState.open() } }
 
-    Scaffold(
-        bottomBar = {
-            val route = currentDestination?.route
-            if (route == null || (
-                route != Screen.Library.route &&
-                    route != Screen.Collections.route &&
-                    route != Screen.ReadingLists.route &&
-                    route != Screen.AddBooks.route &&
-                    route != Screen.NowReading.route &&
-                    route != Screen.Discover.route &&
-                    route != Screen.Settings.route &&
-                    route != Screen.Statistics.route &&
-                    route != Screen.TTSSettings.route &&
-                    route != Screen.AccessibilitySettings.route &&
-                    route != Screen.ReadingGoals.route
-                )
-            ) {
-                // Don't show bottom bar
-            } else {
-                BottomNavBar(
-                    navController = navController,
-                    currentDestination = currentDestination
-                )
-            }
-        }
-    ) { innerPadding ->
+    MimiralNavigationDrawer(
+        drawerState = drawerState,
+        navController = navController
+    ) {
         NavHost(
             navController = navController,
-            startDestination = Screen.Library.route,
-            modifier = Modifier.padding(innerPadding)
+            startDestination = Screen.Library.route
         ) {
             composable(Screen.Library.route) {
                 LibraryScreen(
@@ -112,7 +93,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onNavigateToCollections = { bookIds ->
                         val route = Screen.CollectionPicker.createRoute(bookIds)
                         navController.navigate(route)
-                    }
+                    },
+                    onOpenDrawer = openDrawer
                 )
             }
             composable(Screen.Collections.route) {
@@ -120,7 +102,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onBookClick = { bookId, format ->
                         val route = routeForBookFormat(bookId, format)
                         navController.navigate(route)
-                    }
+                    },
+                    onOpenDrawer = openDrawer
                 )
             }
             composable(Screen.ReadingLists.route) {
@@ -128,7 +111,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onBookClick = { bookId, format ->
                         val route = routeForBookFormat(bookId, format)
                         navController.navigate(route)
-                    }
+                    },
+                    onOpenDrawer = openDrawer
                 )
             }
             composable(
@@ -150,10 +134,10 @@ fun MimiralNavGraph(navController: NavHostController) {
                 AddBooksScreen()
             }
             composable(Screen.NowReading.route) {
-                PlaceholderScreen("Now Reading")
+                PlaceholderScreen("Now Reading", onOpenDrawer = openDrawer)
             }
             composable(Screen.Discover.route) {
-                DiscoverScreen()
+                DiscoverScreen(onOpenDrawer = openDrawer)
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(
@@ -174,7 +158,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     },
                     onNavigateToGestureSettings = {
                         navController.navigate(Screen.GestureSettings.route)
-                    }
+                    },
+                    onOpenDrawer = openDrawer
                 )
             }
 
@@ -182,12 +167,13 @@ fun MimiralNavGraph(navController: NavHostController) {
                 StatisticsScreen(
                     onNavigateToGoals = {
                         navController.navigate(Screen.ReadingGoals.route)
-                    }
+                    },
+                    onOpenDrawer = openDrawer
                 )
             }
 
             composable(Screen.ReadingGoals.route) {
-                ReadingGoalsScreen()
+                ReadingGoalsScreen(onOpenDrawer = openDrawer)
             }
 
             composable(Screen.TTSSettings.route) {
@@ -280,7 +266,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                 route = Screen.KavitaSeries.route,
                 arguments = listOf(navArgument("seriesId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val seriesId = backStackEntry.arguments?.getInt("seriesId") ?: return@composable
+                val seriesId = backStackEntry.arguments?.getInt("seriesId")
+                    ?: return@composable
                 KavitaSeriesScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onChapterClick = { _, _, _ -> /* TODO: Navigate to Kavita reader */ }
@@ -318,7 +305,7 @@ fun MimiralNavGraph(navController: NavHostController) {
 }
 
 @Composable
-fun PlaceholderScreen(name: String) {
+fun PlaceholderScreen(name: String, onOpenDrawer: () -> Unit = {}) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center

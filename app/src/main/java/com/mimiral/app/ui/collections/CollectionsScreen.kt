@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -68,6 +69,7 @@ import com.mimiral.app.data.local.entity.CollectionEntity
 fun CollectionsScreen(
     onBookClick: (Int, String) -> Unit,
     onNavigateBack: () -> Unit = {},
+    onOpenDrawer: () -> Unit = {},
     viewModel: CollectionsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -84,7 +86,12 @@ fun CollectionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Collections") }
+                title = { Text("Collections") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Filled.Menu, contentDescription = "Open navigation menu")
+                    }
+                }
             )
         },
         floatingActionButton = {
