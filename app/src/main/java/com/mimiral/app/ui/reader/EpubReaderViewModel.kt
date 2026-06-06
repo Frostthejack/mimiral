@@ -71,6 +71,8 @@ data class ReaderUiState(
     val error: String? = null,
     val ttsPlaying: Boolean = false,
     val ttsPaused: Boolean = false,
+    /** Current TTS engine state for controlling the TtsControlsBar visibility. */
+    val ttsState: TTSState = TTSState.IDLE,
     /** The sentence currently being read by TTS, or null if no TTS active. */
     val currentTtsSentence: TtsSentence? = null,
     /** Sync status indicator for Kavita progress sync */
@@ -877,6 +879,25 @@ class EpubReaderViewModel @Inject constructor(
 
     fun setTtsStopped() {
         _uiState.update { it.copy(ttsPlaying = false, ttsPaused = false) }
+    }
+
+    /**
+     * Update the TTS engine state from a broadcast.
+     * Called from the UI layer when ACTION_TTS_STATE is received.
+     */
+    fun onTtsStateChanged(stateName: String) {
+        val state = try {
+            TTSState.valueOf(stateName)
+        } catch (_: IllegalArgumentException) {
+            TTSState.IDLE
+        }
+        _uiState.update {
+            it.copy(
+                ttsState = state,
+                ttsPlaying = state == TTSState.PLAYING,
+                ttsPaused = state == TTSState.PAUSED
+            )
+        }
     }
 
     /**

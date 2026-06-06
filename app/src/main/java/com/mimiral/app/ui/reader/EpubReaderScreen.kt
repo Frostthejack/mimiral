@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,8 +74,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.PageTurnStyle
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import com.mimiral.app.data.local.settings.TTSSettingsRepository
 import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.tts.TTSService
+import com.mimiral.app.tts.TTSState
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -278,6 +281,33 @@ fun EpubReaderScreen(
     val isBookmarked = uiState.isCurrentPageBookmarked
     val currentChapterTitle = uiState.chapters.getOrNull(uiState.currentChapter)?.title ?: "Reader"
 
+    // --- TTS state tracking ---
+    val ttsSettingsRepository = remember { TTSSettingsRepository(context) }
+    val ttsSettings by ttsSettingsRepository.settings.collectAsState(
+        initial = com.mimiral.app.data.local.settings.TTSSettings()
+    )
+
+    // TTS state broadcast receiver — tracks TTS engine state changes
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == TTSService.ACTION_TTS_STATE) {
+                    val stateName = intent.getStringExtra(TTSService.EXTRA_TTS_STATE) ?: "IDLE"
+                    viewModel.onTtsStateChanged(stateName)
+                }
+            }
+        }
+        val filter = IntentFilter(TTSService.ACTION_TTS_STATE)
+        context.registerReceiver(receiver, filter)
+
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
+
+    // Voice picker dialog state
+    var showVoicePicker by remember { mutableStateOf(false) }
+
     // Text settings change handler - persists via DataStore
     val onTextSettingsChanged: (TextSettings) -> Unit = remember(settingsRepository) {
         { newSettings ->
@@ -334,6 +364,24 @@ fun EpubReaderScreen(
                         }
                     },
                     actions = {
+                        // Read Aloud button — shows when TTS is not actively playing/paused
+                        if (uiState.ttsState == TTSState.IDLE || uiState.ttsState == TTSState.READY) {
+                            IconButton(onClick = {
+                                val textToRead = if (pages.isNotEmpty()) {
+                                    pages.joinToString("\n\n") { it.text }
+                                } else {
+                                    ""
+                                }
+                                if (textToRead.isNotBlank()) {
+                                    TtsControlsHelper.play(context, textToRead)
+                                }
+                            }) {
+                                Icon(
+                                    Icons.Default.RecordVoiceOver,
+                                    contentDescription = "Read Aloud"
+                                )
+                            }
+                        }
                         IconButton(onClick = { viewModel.showToc() }) {
                             Icon(Icons.Default.List, contentDescription = "Table of Contents")
                         }
@@ -364,7 +412,34 @@ fun EpubReaderScreen(
             }
         },
         bottomBar = {
-            if (toolbarVisible) {
+            if (uiState.ttsState == TTSState.PLAYING || uiState.ttsState == TTSState.PAUSED) {
+                // TTS controls bar — shown during active TTS playback/pause
+                TtsControlsBar(
+                    ttsState = uiState.ttsState,
+                    currentSpeed = ttsSettings.speechRate,
+                    currentPitch = ttsSettings.pitch,
+                    currentVoiceName = ttsSettings.voiceName,
+                    onPlayPause = {
+                        TtsControlsHelper.toggle(context)
+                    },
+                    onStop = {
+                        TtsControlsHelper.stop(context)
+                    },
+                    onSpeedChanged = { newSpeed ->
+                        TtsControlsHelper.setSpeed(context, newSpeed)
+                        coroutineScope.launch {
+                            ttsSettingsRepository.setSpeechRate(newSpeed)
+                        }
+                    },
+                    onPitchChanged = { newPitch ->
+                        TtsControlsHelper.setPitch(context, newPitch)
+                        coroutineScope.launch {
+                            ttsSettingsRepository.setPitch(newPitch)
+                        }
+                    },
+                    onVoicePickerOpen = { showVoicePicker = true }
+                )
+            } else if (toolbarVisible) {
                 NavigationBar {
                     NavigationBarItem(
                         selected = false,
@@ -737,6 +812,22 @@ fun EpubReaderScreen(
                 onDismiss = { viewModel.dismissHighlightColorPicker() }
             )
         }
+    }
+
+    // Voice picker dialog
+    if (showVoicePicker) {
+        VoicePickerDialog(
+            availableVoices = emptySet(), // TODO: get from TTS engine when bound
+            currentVoiceName = ttsSettings.voiceName,
+            onVoiceSelected = { voiceName ->
+                TtsControlsHelper.setVoice(context, voiceName)
+                coroutineScope.launch {
+                    ttsSettingsRepository.setVoiceName(voiceName)
+                }
+                showVoicePicker = false
+            },
+            onDismiss = { showVoicePicker = false }
+        )
     }
 }
 
