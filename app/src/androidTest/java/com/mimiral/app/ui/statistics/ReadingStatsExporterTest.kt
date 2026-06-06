@@ -103,7 +103,10 @@ class ReadingStatsExporterTest {
         assertTrue("First row should contain epoch day 20605 data", lines[0].startsWith(row1Prefix))
         // Second row: epoch day 20606, book 10
         val row2Prefix = "20606,10,"
-        assertTrue("Second row should contain epoch day 20606 data", lines[1].startsWith(row2Prefix))
+        assertTrue(
+            "Second row should contain epoch day 20606 data",
+            lines[1].startsWith(row2Prefix)
+        )
         // Third row: epoch day 20607, book 20
         val row3Prefix = "20607,20,"
         assertTrue("Third row should contain epoch day 20607 data", lines[2].startsWith(row3Prefix))
