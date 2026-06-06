@@ -24,6 +24,7 @@ import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.library.BookMetadataEditScreen
 import com.mimiral.app.ui.library.CollectionPickerScreen
 import com.mimiral.app.ui.library.LibraryScreen
+import com.mimiral.app.ui.nowreading.NowReadingScreen
 import com.mimiral.app.ui.reader.ComicReaderScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.DocReaderScreen
@@ -145,7 +146,18 @@ fun MimiralNavGraph(navController: NavHostController) {
                 AddBooksScreen()
             }
             composable(Screen.NowReading.route) {
-                PlaceholderScreen("Now Reading", onOpenDrawer = openDrawer)
+                NowReadingScreen(
+                    onBookClick = { bookId, format ->
+                        val route = routeForBookFormat(bookId, format)
+                        navController.navigate(route)
+                    },
+                    onNavigateToLibrary = {
+                        navController.navigate(Screen.Library.route) {
+                            popUpTo(Screen.Library.route) { inclusive = true }
+                        }
+                    },
+                    onOpenDrawer = openDrawer
+                )
             }
             composable(Screen.Discover.route) {
                 DiscoverScreen(onOpenDrawer = openDrawer)
