@@ -98,7 +98,8 @@ fun LibraryScreen(
         uiState.searchQuery.isBlank() &&
         uiState.filterOption == FilterOption.ALL &&
         uiState.error == null &&
-        !uiState.isLoading
+        !uiState.isLoading &&
+        uiState.scanState !is ScanState.Scanning
 
     Scaffold(
         topBar = {

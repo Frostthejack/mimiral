@@ -15,6 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -134,14 +135,26 @@ class FileScanner @Inject constructor(
      * @param scanDocuments Whether to scan the Documents directory (default: true)
      * @param additionalRoots Optional list of additional directories to scan
      */
+    private var currentScanJob: kotlinx.coroutines.Job? = null
+
     fun startScan(
         scanDownloads: Boolean = true,
         scanDocuments: Boolean = true,
         additionalRoots: List<File> = emptyList()
     ) {
-        if (_scanState.value is ScanState.Scanning) return
+        // If a scan is already actively running, don't start another.
+        // Only proceed if the completed job was truly active (not a stale Scanning state
+        // left behind by a cancelled coroutine).
+        val state = _scanState.value
+        if (state is ScanState.Scanning) {
+            val job = currentScanJob
+            if (job != null && job.isActive) return
+            // Stale Scanning state — the previous coroutine was cancelled.
+            // Reset to Idle so a new scan can proceed.
+            _scanState.value = ScanState.Idle
+        }
 
-        scope.launch {
+        currentScanJob = scope.launch {
             try {
                 performScan(scanDownloads, scanDocuments, additionalRoots)
             } catch (e: Exception) {
@@ -432,6 +445,8 @@ class FileScanner @Inject constructor(
      * Resets the scan state to Idle. Useful for retrying after an error.
      */
     fun reset() {
+        currentScanJob?.cancel()
+        currentScanJob = null
         _scanState.value = ScanState.Idle
     }
 
