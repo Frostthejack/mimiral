@@ -7,8 +7,8 @@ import android.graphics.pdf.PdfRenderer as AndroidPdfRenderer
 import android.os.ParcelFileDescriptor
 import java.io.File
 import java.io.FileNotFoundException
-import org.apache.pdfbox.pdmodel.PDDocument
-import org.apache.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

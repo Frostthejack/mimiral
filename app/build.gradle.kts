@@ -115,8 +115,8 @@ dependencies {
     // Image Loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // PDF text extraction (PDFBox)
-    implementation("org.apache.pdfbox:pdfbox:2.0.31")
+    // PDF text extraction (PDFBox Android port)
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

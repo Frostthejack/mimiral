@@ -22,6 +22,9 @@ class MimiralApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Initialize PDFBox resource loader for Android
+        com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)
+
         if (BuildConfig.DEBUG) {
             enableStrictMode()
         }
