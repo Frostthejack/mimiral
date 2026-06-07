@@ -45,6 +45,9 @@ class SettingsBackupExporter(private val context: Context) {
     private val Context.libraryDataStore: DataStore<Preferences> by preferencesDataStore(
         name = "library_settings"
     )
+    private val Context.readingModeDataStore: DataStore<Preferences> by preferencesDataStore(
+        name = "reading_mode_settings"
+    )
 
     /**
      * Export all settings to a JSON file in the cache/backups directory.
@@ -54,6 +57,7 @@ class SettingsBackupExporter(private val context: Context) {
         try {
             val readerPrefs = context.readerDataStore.data.first()
             val libraryPrefs = context.libraryDataStore.data.first()
+            val readingModePrefs = context.readingModeDataStore.data.first()
 
             val backupJson = JsonObject().apply {
                 addProperty("version", BACKUP_VERSION)
@@ -64,6 +68,7 @@ class SettingsBackupExporter(private val context: Context) {
                 )
                 add("reader_settings", prefsToJson(readerPrefs))
                 add("library_settings", prefsToJson(libraryPrefs))
+                add("reading_mode_settings", prefsToJson(readingModePrefs))
             }
 
             val timestamp = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.US).format(Date())
@@ -143,6 +148,13 @@ class SettingsBackupExporter(private val context: Context) {
                 }
             }
 
+            // Restore reading mode settings
+            jsonObject.getAsJsonObject("reading_mode_settings")?.let { readingModeJson ->
+                context.readingModeDataStore.edit { prefs ->
+                    applyJsonToPrefs(readingModeJson, prefs)
+                }
+            }
+
             true
         } catch (e: JsonSyntaxException) {
             false
@@ -210,6 +222,6 @@ class SettingsBackupExporter(private val context: Context) {
 
     companion object {
         /** Backup format version — increment when the schema changes. */
-        const val BACKUP_VERSION = 1
+        const val BACKUP_VERSION = 2
     }
 }
