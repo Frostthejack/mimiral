@@ -122,8 +122,8 @@ class SettingsBackupExporterTest {
     }
 
     @Test
-    fun `backup version constant is 1`() {
-        assertEquals(1, SettingsBackupExporter.BACKUP_VERSION)
+    fun `backup version constant is 2`() {
+        assertEquals(2, SettingsBackupExporter.BACKUP_VERSION)
     }
 
     @Test
@@ -147,7 +147,7 @@ class SettingsBackupExporterTest {
     fun `restore accepts current version`() {
         val currentVersionJson = """
         {
-            "version": 1,
+            "version": 2,
             "reader_settings": {},
             "library_settings": {}
         }
