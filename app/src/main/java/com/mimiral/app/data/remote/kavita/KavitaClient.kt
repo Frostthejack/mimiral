@@ -3,6 +3,7 @@ package com.mimiral.app.data.remote.kavita
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.mimiral.app.data.remote.KavitaServerInfo
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers

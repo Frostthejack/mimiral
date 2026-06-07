@@ -1,16 +1,6 @@
 package com.mimiral.app.data.remote.kavita
 
 /**
- * Kavita server information returned by /api/server/info.
- */
-data class KavitaServerInfo(
-    val installId: String,
-    val isInstalled: Boolean,
-    val version: String,
-    val allowAnyToken: Boolean = false
-)
-
-/**
  * Request body for Kavita JWT login.
  */
 data class KavitaLoginRequest(

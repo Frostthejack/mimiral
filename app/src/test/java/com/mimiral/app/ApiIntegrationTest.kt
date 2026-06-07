@@ -21,7 +21,6 @@ import com.mimiral.app.data.remote.kavita.KavitaPagedResponse
 import com.mimiral.app.data.remote.kavita.KavitaProgress
 import com.mimiral.app.data.remote.kavita.KavitaResult
 import com.mimiral.app.data.remote.kavita.KavitaSeries
-import com.mimiral.app.data.remote.kavita.KavitaServerInfo as KavitaClientServerInfo
 import com.mimiral.app.data.remote.opds.OpdsCategory
 import com.mimiral.app.data.remote.opds.OpdsClient
 import com.mimiral.app.data.remote.opds.OpdsConstants
@@ -505,14 +504,14 @@ class ApiIntegrationTest {
 
     @Test
     fun kavitaServerInfo_serialization() {
-        val info = KavitaClientServerInfo(
+        val info = KavitaServerInfo(
             installId = "install-123",
-            isInstalled = true,
             version = "0.8.1.0",
+            isInstalled = true,
             allowAnyToken = false
         )
         val json = gson.toJson(info)
-        val deserialized = gson.fromJson(json, KavitaClientServerInfo::class.java)
+        val deserialized = gson.fromJson(json, KavitaServerInfo::class.java)
         assertEquals(info.installId, deserialized.installId)
         assertEquals(info.version, deserialized.version)
     }
