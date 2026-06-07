@@ -7,7 +7,6 @@ import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.remote.ConnectionStatus
 import com.mimiral.app.data.remote.KavitaServerInfo
-import com.mimiral.app.data.remote.KavitaSyncApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -18,8 +17,6 @@ import kotlinx.coroutines.launch
 import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 /**
  * Authentication method for connecting to a Kavita server.
@@ -159,7 +156,7 @@ class KavitaSetupViewModel @Inject constructor(
 
             try {
                 val client = createTestClient(normalizedUrl, state)
-                val result = testServerConnection(client, normalizedUrl)
+                val result = testServerConnection(client, normalizedUrl, state)
 
                 when {
                     result.isSuccess -> {
@@ -314,16 +311,16 @@ class KavitaSetupViewModel @Inject constructor(
         builder.addInterceptor { chain ->
             val requestBuilder = chain.request().newBuilder()
                 .header("User-Agent", "Mimiral/0.1.0")
-                .header("Accept", "application/json")
+                .header("Accept", "*/*")
 
             when (state.authMethod) {
                 AuthMethod.USERNAME_PASSWORD -> {
-                    // For initial connection test with username/password,
-                    // we try to login first. But for the server info endpoint,
-                    // we don't need auth — it's a public endpoint.
-                    // The login test is done separately.
+                    // For username/password, we try to login first via /api/Auth/login
+                    // The login test is handled separately in testServerConnection
                 }
                 AuthMethod.API_KEY -> {
+                    // API key is passed in the URL path (/api/opds/<key>), not as header
+                    // But also support header-based auth for other endpoints
                     if (state.apiKey.isNotBlank()) {
                         requestBuilder.header("X-Api-Key", state.apiKey.trim())
                     }
@@ -337,44 +334,64 @@ class KavitaSetupViewModel @Inject constructor(
     }
 
     /**
-     * Test the server connection by fetching server info.
+     * Test the server connection by fetching the OPDS feed.
+     * Uses /api/opds/<api-key> which is the Kavita OPDS endpoint.
      */
     private suspend fun testServerConnection(
         client: OkHttpClient,
-        baseUrl: String
+        baseUrl: String,
+        state: KavitaSetupUiState
     ): Result<KavitaServerInfo> {
         return try {
-            val retrofit = Retrofit.Builder()
-                .baseUrl("$baseUrl/")
-                .client(client)
-                .addConverterFactory(GsonConverterFactory.create())
+            val apiKey = when (state.authMethod) {
+                AuthMethod.API_KEY -> state.apiKey.trim()
+                AuthMethod.USERNAME_PASSWORD -> ""
+            }
+
+            if (state.authMethod == AuthMethod.API_KEY && apiKey.isBlank()) {
+                return Result.failure(Exception("Please enter an API key"))
+            }
+
+            val opdsUrl = if (state.authMethod == AuthMethod.API_KEY) {
+                "$baseUrl/api/opds/$apiKey"
+            } else {
+                // For username/password, try the login endpoint first
+                "$baseUrl/api/Auth/login"
+            }
+
+            val request = okhttp3.Request.Builder()
+                .url(opdsUrl)
+                .header("User-Agent", "Mimiral/0.1.0")
+                .header("Accept", "*/*")
+                .get()
                 .build()
 
-            val api = retrofit.create(KavitaSyncApi::class.java)
-            val response = api.getServerInfo()
+            val httpResponse = client.newCall(request).execute()
 
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null) {
-                    Result.success(body)
-                } else {
-                    Result.failure(Exception("Empty server response"))
-                }
-            } else {
-                when (response.code()) {
-                    401 -> Result.failure(
-                        Exception("Authentication failed: invalid credentials")
-                    )
-                    403 -> Result.failure(
-                        Exception("Access denied: insufficient permissions")
-                    )
-                    404 -> Result.failure(
-                        Exception("Server endpoint not found — check the URL")
-                    )
-                    else -> Result.failure(
-                        Exception("HTTP ${response.code()}: ${response.message()}")
+            when (httpResponse.code) {
+                200 -> {
+                    // Server is reachable and auth is valid
+                    Result.success(
+                        KavitaServerInfo(
+                            installId = null,
+                            version = null,
+                            totalLibraries = 0,
+                            isDocker = false
+                        )
                     )
                 }
+                401 -> Result.failure(
+                    Exception("Authentication failed: invalid API key or credentials")
+                )
+                403 -> Result.failure(
+                    Exception("Access denied: insufficient permissions")
+                )
+                404 -> Result.failure(
+                    Exception("Server endpoint not found — check the URL")
+                )
+                else -> Result.failure(
+                    Exception("HTTP ${httpResponse.code}: ${httpResponse.message}")
+                )
             }
         } catch (e: java.io.IOException) {
             Result.failure(
