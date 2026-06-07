@@ -81,10 +81,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mimiral.app.data.local.settings.LibrarySettingsRepository
+import com.mimiral.app.data.local.settings.MarginWidth
+import com.mimiral.app.data.local.settings.ParagraphSpacing
+import com.mimiral.app.data.local.settings.ReadingModeSettingsRepository
+import com.mimiral.app.data.local.settings.ReadingModeTheme
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.data.local.settings.SyncInterval
 import com.mimiral.app.data.local.settings.SyncSettingsRepository
 import com.mimiral.app.data.local.settings.TTSSettingsRepository
+import com.mimiral.app.data.local.settings.TtsHighlightColor
 import com.mimiral.app.ui.theme.MimiralThemeSwitcher
 import com.mimiral.app.ui.theme.MimiralThemeType
 import kotlinx.coroutines.launch
@@ -111,6 +116,7 @@ fun SettingsScreen(
     val librarySettingsRepo = remember { LibrarySettingsRepository(context) }
     val ttsSettingsRepo = remember { TTSSettingsRepository(context) }
     val syncSettingsRepo = remember { SyncSettingsRepository(context) }
+    val readingModeSettingsRepo = remember { ReadingModeSettingsRepository(context) }
 
     // State flows
     val readerSettings by readerSettingsRepo.settings.collectAsState(
@@ -124,6 +130,9 @@ fun SettingsScreen(
     )
     val syncSettings by syncSettingsRepository.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.SyncSettings()
+    )
+    val readingModeSettings by readingModeSettingsRepo.settings.collectAsState(
+        initial = com.mimiral.app.data.local.settings.ReadingModeSettings()
     )
     val backupState by backupRestoreViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -288,6 +297,287 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+
+            // ═══════════════════════════════════════════════════
+            // SECTION: Reading Mode
+            // ═══════════════════════════════════════════════════
+            SectionHeader(
+                title = "Reading Mode",
+                icon = Icons.Default.Book
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // Font family selector
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.FormatSize,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Font Family",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ReadingModeEnumSelector(
+                            options = com.mimiral.app.ui.reader.ReaderFontFamily.entries,
+                            selected = com.mimiral.app.ui.reader.ReaderFontFamily.entries.find {
+                                it.name == readingModeSettings.fontFamily
+                            } ?: com.mimiral.app.ui.reader.ReaderFontFamily.DEFAULT,
+                            onSelect = { scope.launch { readingModeSettingsRepo.setFontFamily(it.name) } },
+                            labelFor = { it.displayName }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Font size slider (12–32sp)
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.FormatSize,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Font Size",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            Text(
+                                text = "${readingModeSettings.fontSize}sp",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Slider(
+                            value = readingModeSettings.fontSize.toFloat(),
+                            onValueChange = { size ->
+                                scope.launch { readingModeSettingsRepo.setFontSize(size.toInt()) }
+                            },
+                            valueRange = 12f..32f,
+                            steps = 19,
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("12sp", style = MaterialTheme.typography.labelSmall)
+                            Text("32sp", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Line spacing slider (1.0–2.0x)
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Line Spacing",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            Text(
+                                text = String.format("%.1fx", readingModeSettings.lineSpacing),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Slider(
+                            value = readingModeSettings.lineSpacing,
+                            onValueChange = { spacing ->
+                                scope.launch { readingModeSettingsRepo.setLineSpacing(spacing) }
+                            },
+                            valueRange = 1.0f..2.0f,
+                            steps = 9,
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("1.0x", style = MaterialTheme.typography.labelSmall)
+                            Text("2.0x", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Paragraph spacing
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.FormatSize,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Paragraph Spacing",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ReadingModeEnumSelector(
+                            options = ParagraphSpacing.entries,
+                            selected = readingModeSettings.paragraphSpacing,
+                            onSelect = { scope.launch { readingModeSettingsRepo.setParagraphSpacing(it) } },
+                            labelFor = { it.displayName }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Margins
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.FormatSize,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Margins",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ReadingModeEnumSelector(
+                            options = MarginWidth.entries,
+                            selected = readingModeSettings.margins,
+                            onSelect = { scope.launch { readingModeSettingsRepo.setMargins(it) } },
+                            labelFor = { it.displayName }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Reading Mode Theme
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Palette,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Theme",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ReadingModeEnumSelector(
+                            options = ReadingModeTheme.entries,
+                            selected = readingModeSettings.theme,
+                            onSelect = { scope.launch { readingModeSettingsRepo.setTheme(it) } },
+                            labelFor = { it.displayName }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // TTS Highlight Color
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Highlight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "TTS Highlight Color",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ReadingModeEnumSelector(
+                            options = TtsHighlightColor.entries,
+                            selected = readingModeSettings.ttsHighlightColor,
+                            onSelect = { scope.launch { readingModeSettingsRepo.setTtsHighlightColor(it) } },
+                            labelFor = { it.displayName }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Auto-scroll TTS
+                    SettingsToggleRow(
+                        title = "Auto-Scroll During TTS",
+                        description = "Automatically scroll to follow TTS playback",
+                        icon = Icons.Default.Speed,
+                        checked = readingModeSettings.autoScrollTTS,
+                        onCheckedChange = { enabled ->
+                            scope.launch { readingModeSettingsRepo.setAutoScrollTTS(enabled) }
+                        }
+                    )
+                }
+            }
 
             // ═══════════════════════════════════════════════════
             // SECTION: TTS Preferences
@@ -1622,6 +1912,51 @@ private fun ViewModeSelector(
                     Text(
                         text = label,
                         style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun <T> ReadingModeEnumSelector(
+    options: List<T>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    labelFor: (T) -> String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        options.forEach { option ->
+            val isSelected = option == selected
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onSelect(option) },
+                shape = MaterialTheme.shapes.small,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+                border = ButtonDefaults.outlinedButtonBorder
+            ) {
+                Box(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = labelFor(option),
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         color = if (isSelected) {
                             MaterialTheme.colorScheme.onPrimaryContainer
