@@ -130,36 +130,36 @@ class KavitaRepository @Inject constructor(
         serverDao.getActiveServerByType("KAVITA")
 
     /**
-     * Ensure a Kavita server is configured and the client has a valid base URL.
-     * Returns a [KavitaResult.Error] if no server is configured or the URL is blank,
-     * or `null` if the client is ready to use.
+     * Create a KavitaClient from the active server configuration in the database.
+     * Returns null if no server is configured.
      */
-    private suspend fun ensureServerConfigured(): KavitaResult.Error? {
-        val activeServer = serverDao.getActiveServerByType("KAVITA")
-        if (activeServer == null || activeServer.url.isBlank()) {
-            return KavitaResult.Error(
-                message = "No Kavita server configured. Please add a Kavita server in Settings."
-            )
-        }
-        return null
+    private suspend fun createClientFromDb(): KavitaClient? {
+        val activeServer = serverDao.getActiveServerByType("KAVITA") ?: return null
+        if (activeServer.url.isBlank()) return null
+        return KavitaClient.create(
+            baseUrl = activeServer.url,
+            apiKey = activeServer.apiKey
+        )
     }
 
     /**
      * List all Kavita libraries.
      */
     suspend fun getLibraries(): KavitaResult<List<KavitaLibrary>> {
-        val error = ensureServerConfigured()
-        if (error != null) return error
-        return kavitaClient.getLibraries()
+        val client = createClientFromDb() ?: return KavitaResult.Error(
+            message = "No Kavita server configured. Please add a Kavita server in Settings."
+        )
+        return client.getLibraries()
     }
 
     /**
      * Get all series in a library.
      */
     suspend fun getSeriesForLibrary(libraryId: Int): KavitaResult<List<KavitaSeries>> {
-        val error = ensureServerConfigured()
-        if (error != null) return error
-        val result = kavitaClient.getSeries(libraryId = libraryId)
+        val client = createClientFromDb() ?: return KavitaResult.Error(
+            message = "No Kavita server configured. Please add a Kavita server in Settings."
+        )
+        val result = client.getSeries(libraryId = libraryId)
         return when (result) {
             is KavitaResult.Success -> KavitaResult.Success(result.data.items)
             is KavitaResult.Error -> result
@@ -170,10 +170,10 @@ class KavitaRepository @Inject constructor(
      * Get detailed series metadata including volumes.
      */
     suspend fun getSeriesMetadata(seriesId: Int): KavitaResult<KavitaSeries> {
-        val error = ensureServerConfigured()
-        if (error != null) return error
-        // Get volumes for the series
-        val volumesResult = kavitaClient.getVolumes(seriesId)
+        val client = createClientFromDb() ?: return KavitaResult.Error(
+            message = "No Kavita server configured. Please add a Kavita server in Settings."
+        )
+        val volumesResult = client.getVolumes(seriesId)
         if (volumesResult is KavitaResult.Error) return volumesResult
         val volumes = (volumesResult as KavitaResult.Success).data
         // Return a KavitaSeries with the volumes populated
@@ -254,16 +254,16 @@ class KavitaRepository @Inject constructor(
         seriesId: Int? = null,
         author: String? = null
     ): KavitaResult<String> = withContext(Dispatchers.IO) {
-        val serverError = ensureServerConfigured()
-        if (serverError != null) {
-            _downloadState.value = DownloadState.Failed(title, serverError.message)
-            return@withContext serverError
+        val client = createClientFromDb()
+        if (client == null) {
+            _downloadState.value = DownloadState.Failed(title, "No Kavita server configured")
+            return@withContext KavitaResult.Error(message = "No Kavita server configured")
         }
         _downloadState.value = DownloadState.Downloading(bookTitle = title)
 
         try {
             // Step 1: Download bytes
-            val downloadResult = kavitaClient.downloadBook(chapterId)
+            val downloadResult = client.downloadBook(chapterId)
             if (downloadResult is KavitaResult.Error) {
                 _downloadState.value = DownloadState.Failed(title, downloadResult.message)
                 return@withContext KavitaResult.Error(
@@ -386,7 +386,8 @@ class KavitaRepository @Inject constructor(
         bookFilePath: String
     ): Result<String?> = withContext(Dispatchers.IO) {
         try {
-            val result = kavitaClient.downloadSeriesCover(seriesId)
+            val client = createClientFromDb() ?: return@withContext Result.success(null)
+            val result = client.downloadSeriesCover(seriesId)
             when (result) {
                 is KavitaResult.Success -> {
                     val bytes = result.data
@@ -460,9 +461,10 @@ class KavitaRepository @Inject constructor(
         volumeId: Int,
         libraryId: Int
     ): KavitaResult<Unit> {
-        val error = ensureServerConfigured()
-        if (error != null) return error
-        return kavitaClient.pushProgress(
+        val client = createClientFromDb() ?: return KavitaResult.Error(
+            message = "No Kavita server configured. Please add a Kavita server in Settings."
+        )
+        return client.pushProgress(
             chapterId = chapterId,
             pageNum = pageNum,
             seriesId = seriesId,
@@ -477,9 +479,10 @@ class KavitaRepository @Inject constructor(
     suspend fun pullProgress(
         seriesId: Int
     ): KavitaResult<List<KavitaProgress>> {
-        val error = ensureServerConfigured()
-        if (error != null) return error
-        return kavitaClient.pullProgress(seriesId)
+        val client = createClientFromDb() ?: return KavitaResult.Error(
+            message = "No Kavita server configured. Please add a Kavita server in Settings."
+        )
+        return client.pullProgress(seriesId)
     }
 
     /**
@@ -488,9 +491,10 @@ class KavitaRepository @Inject constructor(
     suspend fun getBookmarks(
         seriesId: Int
     ): KavitaResult<List<KavitaBookmark>> {
-        val error = ensureServerConfigured()
-        if (error != null) return error
-        return kavitaClient.getBookmarks(seriesId)
+        val client = createClientFromDb() ?: return KavitaResult.Error(
+            message = "No Kavita server configured. Please add a Kavita server in Settings."
+        )
+        return client.getBookmarks(seriesId)
     }
 
     /**
