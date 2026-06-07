@@ -134,9 +134,9 @@ class KavitaRepository @Inject constructor(
      * Returns a [KavitaResult.Error] if no server is configured or the URL is blank,
      * or `null` if the client is ready to use.
      */
-    private fun ensureServerConfigured(): KavitaResult.Error? {
-        val url = kavitaClient.serverUrl
-        if (url.isBlank()) {
+    private suspend fun ensureServerConfigured(): KavitaResult.Error? {
+        val activeServer = serverDao.getActiveServerByType("KAVITA")
+        if (activeServer == null || activeServer.url.isBlank()) {
             return KavitaResult.Error(
                 message = "No Kavita server configured. Please add a Kavita server in Settings."
             )
