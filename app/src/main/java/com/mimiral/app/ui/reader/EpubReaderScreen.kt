@@ -272,7 +272,11 @@ fun EpubReaderScreen(
         }
         val filter = IntentFilter(TTSService.ACTION_TTS_SENTENCE)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+            context.registerReceiver(
+                receiver,
+                filter,
+                android.content.Context.RECEIVER_NOT_EXPORTED
+            )
         } else {
             context.registerReceiver(receiver, filter)
         }
@@ -303,7 +307,11 @@ fun EpubReaderScreen(
         }
         val filter = IntentFilter(TTSService.ACTION_TTS_STATE)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(receiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+            context.registerReceiver(
+                receiver,
+                filter,
+                android.content.Context.RECEIVER_NOT_EXPORTED
+            )
         } else {
             context.registerReceiver(receiver, filter)
         }

@@ -182,7 +182,11 @@ class KavitaClient(
         pageNumber: Int = 1,
         pageSize: Int = 20
     ): KavitaResult<List<KavitaSeries>> {
-        val requestBody = """{"libraryId":${libraryId ?: -1},"pageNumber":$pageNumber,"pageSize":$pageSize}""".toRequestBody("application/json".toMediaType())
+        val requestBody =
+            """{"libraryId":${libraryId ?: -1},"pageNumber":$pageNumber,"pageSize":$pageSize}"""
+                .toRequestBody(
+                    "application/json".toMediaType()
+                )
         val path = "/api/Series/v2"
         val requestBuilder = Request.Builder()
             .url("$normalizedBaseUrl$path")
@@ -204,9 +208,15 @@ class KavitaClient(
         val body = response.body?.string()
             ?: return KavitaResult.Error(message = "Empty response body", code = response.code)
         return try {
-            val parsed = gson.fromJson<List<KavitaSeries>>(body, object : TypeToken<List<KavitaSeries>>() {}.type)
+            val parsed = gson.fromJson<List<KavitaSeries>>(
+                body,
+                object : TypeToken<List<KavitaSeries>>() {}.type
+            )
             if (parsed == null) {
-                KavitaResult.Error(message = "Parsed null response from server", code = response.code)
+                KavitaResult.Error(
+                    message = "Parsed null response from server",
+                    code = response.code
+                )
             } else {
                 KavitaResult.Success(parsed)
             }
@@ -663,7 +673,10 @@ class KavitaClient(
             val parsed = parser(body)
             if (parsed == null) {
                 Log.e(TAG, "Parse result was null for $path")
-                KavitaResult.Error(message = "Parsed null response from server", code = response.code)
+                KavitaResult.Error(
+                    message = "Parsed null response from server",
+                    code = response.code
+                )
             } else {
                 KavitaResult.Success(parsed)
             }

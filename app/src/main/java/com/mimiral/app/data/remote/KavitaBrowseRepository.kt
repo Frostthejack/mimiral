@@ -41,17 +41,24 @@ class KavitaBrowseRepository @Inject constructor(
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null) {
-                        android.util.Log.d("KavitaBrowse", "series-detail response: volumes=${body.volumes.size}, chapters=${body.chapters.size}, specials=${body.specials.size}")
+                        android.util.Log.d(
+                            "KavitaBrowse",
+                            "series-detail: vols=${body.volumes.size}, " +
+                                "chaps=${body.chapters.size}, specials=${body.specials.size}"
+                        )
                         BrowseResult.Success(body)
                     } else {
-                        // Log the raw response for debugging
-                        val rawBody = response.errorBody()?.string() ?: "null"
-                        android.util.Log.e("KavitaBrowse", "Empty body for series-detail, raw: $rawBody")
+                        android.util.Log.e(
+                            "KavitaBrowse",
+                            "Empty body series-detail"
+                        )
                         BrowseResult.Error("Empty response body")
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "no error body"
-                    android.util.Log.e("KavitaBrowse", "series-detail failed: ${response.code()} ${response.message()} body=$errorBody")
+                    android.util.Log.e(
+                        "KavitaBrowse",
+                        "series-detail fail: ${response.code()} ${response.message()}"
+                    )
                     BrowseResult.Error(
                         "Failed to load series: ${response.code()} ${response.message()}"
                     )

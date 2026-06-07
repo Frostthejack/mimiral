@@ -464,7 +464,9 @@ private fun VolumeDetailView(
                 ChapterRow(
                     chapter = chapter,
                     onClick = {
-                        val chapterTitle = chapter.title.ifBlank { chapter.titleName ?: "Chapter ${chapter.number}" }
+                        val chapterTitle = chapter.title.ifBlank {
+                            chapter.titleName ?: "Chapter ${chapter.number}"
+                        }
                         viewModel.downloadChapter(
                             chapterId = chapter.id,
                             title = chapterTitle,

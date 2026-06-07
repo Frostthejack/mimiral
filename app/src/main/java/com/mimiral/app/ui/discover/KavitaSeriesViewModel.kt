@@ -45,7 +45,7 @@ class KavitaSeriesViewModel @Inject constructor(
     fun loadSeriesDetail(seriesId: Int) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            
+
             // First get the series detail (specials, counts, etc.)
             when (val detailResult = browseRepository.getSeriesDetail(seriesId)) {
                 is BrowseResult.Success -> {
@@ -65,7 +65,7 @@ class KavitaSeriesViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(isLoading = true)
                 }
             }
-            
+
             // Then get volumes separately (series-detail may return empty volumes)
             when (val volumesResult = browseRepository.getVolumes(seriesId)) {
                 is BrowseResult.Success -> {
@@ -132,7 +132,12 @@ class KavitaSeriesViewModel @Inject constructor(
     /**
      * Download a chapter and return the local book ID and format for reading.
      */
-    fun downloadChapter(chapterId: Int, title: String, seriesId: Int, onResult: (Int?, String?) -> Unit) {
+    fun downloadChapter(
+        chapterId: Int,
+        title: String,
+        seriesId: Int,
+        onResult: (Int?, String?) -> Unit
+    ) {
         viewModelScope.launch {
             val result = kavitaRepository.downloadBook(
                 chapterId = chapterId,
