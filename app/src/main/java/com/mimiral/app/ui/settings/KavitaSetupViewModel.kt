@@ -381,6 +381,11 @@ class KavitaSetupViewModel @Inject constructor(
                 Exception("Cannot reach server at $baseUrl — check the URL and network")
             )
         } catch (e: Exception) {
+            try {
+                val ctx = getApplication<Application>()
+                val logFile = java.io.File(ctx.getExternalFilesDir(null), "mimiral_error.txt")
+                logFile.writeText("ERROR: ${e.message}\n\n${e.stackTraceToString()}")
+            } catch (_: Exception) { }
             Log.e(TAG, "testServerConnection failed", e)
             Result.failure(e)
         }
