@@ -1,0 +1,18 @@
+# Baseline Profile for Mimiral
+# Task t_7b1ad435 — startup ANR fix
+# https://developer.android.com/topic/performance/baselineprofiles/format
+#
+# Class rules: L prefix (Legacy — include class in profile)
+# Method rules: HSPL prefix (Hot+Startup+Post-startup+Legacy — AOT-compiled)
+
+# Class rules — pre-compile these classes at install
+Lcom/mimiral/app/MimiralApp;
+Lcom/mimiral/app/MainActivity;
+Lcom/mimiral/app/data/local/database/MimiralDatabase;
+Lcom/mimiral/app/di/DatabaseModule;
+Lcom/mimiral/app/di/TTSModule;
+Lcom/mimiral/app/navigation/MimiralNavGraphKt;
+
+# Method rules — AOT-compile these startup methods
+HSPLcom/mimiral/app/MimiralApp->onCreate()V
+HSPLcom/mimiral/app/MainActivity->onCreate(Landroid/os/Bundle;)V

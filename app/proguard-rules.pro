@@ -19,9 +19,28 @@
 -keep class **_HiltComponents* { *; }
 -keep @dagger.hilt.android.lifecycle.HiltViewModel class * { *; }
 
-# ---------- Keep Compose ----------
-# Compose runtime uses reflection for Composable function discovery.
--keep class androidx.compose.** { *; }
+# ---------- Keep Compose (targeted) ----------
+# Do NOT use a blanket keep for androidx.compose.** — keeps too much.
+# Specifically exclude material.icons.extended (~5000 unused icon classes)
+# to allow R8 to strip them and reduce DEX verification time.
+-keep class androidx.compose.runtime.** { *; }
+-keep class androidx.compose.ui.** { *; }
+-keep class androidx.compose.foundation.** { *; }
+-keep class androidx.compose.material3.** { *; }
+-keep class androidx.compose.animation.** { *; }
+-keep class androidx.compose.navigation.** { *; }
+# Keep material.core Scaffold, TopAppBar, etc. but NOT material.icons.extended
+-keep class androidx.compose.material.AppBarKt { *; }
+-keep class androidx.compose.material.ScaffoldKt { *; }
+-keep class androidx.compose.material.SnackbarKt { *; }
+-keep class androidx.compose.material.SurfaceKt { *; }
+-keep class androidx.compose.material.TopAppBarKt { *; }
+-keep class androidx.compose.material.AlertDialogKt { *; }
+-keep class androidx.compose.material.ModalNavigationDrawerKt { *; }
+-keep class androidx.compose.material.DrawerKt { *; }
+-keep class androidx.compose.material.BottomAppBarKt { *; }
+-keep class androidx.compose.material.FloatingActionButtonKt { *; }
+-keep class androidx.compose.material.icons.Icons { *; }
 -dontwarn androidx.compose.**
 
 # ---------- Keep Room generated ----------
