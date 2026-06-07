@@ -89,6 +89,19 @@ class TTSManager(
      */
     val onSentenceChanged: MutableList<(Sentence?) -> Unit> = mutableListOf()
 
+    /**
+     * Callback fired when the active word range changes during TTS playback.
+     *
+     * Provides character-level [start, end) offsets into the full text for the
+     * word currently being spoken, or null if playback stopped/paused.
+     *
+     * Driven by the TTS engine's onRangeStart callback which reports word boundaries.
+     */
+    val onWordChanged: MutableList<(Int, Int) -> Unit> = mutableListOf()
+
+    /** Callback fired when word highlight should be cleared (stop/pause). */
+    val onWordCleared: MutableList<() -> Unit> = mutableListOf()
+
     /** Sentences extracted from the currently playing text. */
     private var currentSentences: List<Sentence> = emptyList()
 
@@ -204,6 +217,7 @@ class TTSManager(
         // Clear sentence highlight on pause
         currentSentenceIndex = -1
         onSentenceChanged.forEach { cb -> cb(null) }
+        onWordCleared.forEach { cb -> cb() }
         Log.d(TAG, "TTS paused, queue size=" + queue.size)
     }
 
@@ -227,6 +241,7 @@ class TTSManager(
         currentSentenceIndex = -1
         currentSentences = emptyList()
         onSentenceChanged.forEach { cb -> cb(null) }
+        onWordCleared.forEach { cb -> cb() }
         if (_state == TTSState.PLAYING || _state == TTSState.PAUSED) {
             _state = TTSState.READY
         }
@@ -466,9 +481,10 @@ class TTSManager(
         val engine = ttsEngine ?: return
         if (queue.isEmpty()) {
             _state = TTSState.READY
-            // All utterances done — clear sentence highlight
+            // All utterances done — clear sentence and word highlight
             currentSentenceIndex = -1
             onSentenceChanged.forEach { cb -> cb(null) }
+            onWordCleared.forEach { cb -> cb() }
             return
         }
         val item = queue.removeFirst()
@@ -549,6 +565,8 @@ class TTSManager(
                     utteranceId?.let { id -> onRangeProgress.forEach { cb -> cb(id, start, end) } }
                     // Update sentence highlight based on word position
                     updateCurrentSentence(start)
+                    // Update word-level highlight
+                    onWordChanged.forEach { cb -> cb(start, end) }
                 }
             })
         }

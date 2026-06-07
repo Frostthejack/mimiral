@@ -286,6 +286,39 @@ fun EpubReaderScreen(
         }
     }
 
+    // TTS word broadcast receiver — updates ViewModel with word-level offsets
+    // for karaoke-style highlighting during TTS playback.
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == TTSService.ACTION_TTS_WORD) {
+                    val isActive = intent.getBooleanExtra(TTSService.EXTRA_WORD_ACTIVE, false)
+                    if (isActive) {
+                        val start = intent.getIntExtra(TTSService.EXTRA_WORD_START, -1)
+                        val end = intent.getIntExtra(TTSService.EXTRA_WORD_END, -1)
+                        viewModel.onTtsWordChanged(start, end)
+                    } else {
+                        viewModel.onTtsWordCleared()
+                    }
+                }
+            }
+        }
+        val filter = IntentFilter(TTSService.ACTION_TTS_WORD)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(
+                receiver,
+                filter,
+                android.content.Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
+
     val isBookmarked = uiState.isCurrentPageBookmarked
     val currentChapterTitle = uiState.chapters.getOrNull(uiState.currentChapter)?.title ?: "Reader"
 
@@ -728,7 +761,21 @@ fun EpubReaderScreen(
                             },
                             textSettings = textSettings,
                             highlights = currentChapterHighlights,
-                            ttsSentence = uiState.currentTtsSentence,
+                            ttsSentence = if (ttsSettings.highlightWhileReading) {
+                                uiState.currentTtsSentence
+                            } else {
+                                null
+                            },
+                            ttsWordStart = if (ttsSettings.highlightWhileReading) {
+                                uiState.currentTtsWordStart
+                            } else {
+                                -1
+                            },
+                            ttsWordEnd = if (ttsSettings.highlightWhileReading) {
+                                uiState.currentTtsWordEnd
+                            } else {
+                                -1
+                            },
                             onLongPress = onTextLongPress
                         )
                     }
@@ -863,9 +910,36 @@ private fun EpubPageContent(
     textSettings: TextSettings = TextSettings(),
     highlights: List<ReaderHighlight> = emptyList(),
     ttsSentence: Sentence? = null,
+    ttsWordStart: Int = -1,
+    ttsWordEnd: Int = -1,
     onLongPress: (String, Int, Int) -> Unit = { _, _, _ -> }
 ) {
     val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+
+    // Auto-scroll to keep the highlighted TTS word visible in the viewport.
+    // Approximates pixel position from character ratio in the text.
+    LaunchedEffect(ttsWordStart, ttsWordEnd) {
+        if (ttsWordStart >= 0 && ttsWordEnd > ttsWordStart && pageText.isNotEmpty()) {
+            val charRatio = ttsWordStart.toFloat() / pageText.length.toFloat()
+            // Estimate total content height from line count and font size
+            val lineHeightDp = textSettings.fontSize * textSettings.lineSpacingMultiplier
+            val estimatedLineHeightPx: Float = with(density) {
+                lineHeightDp.dp.toPx()
+            }
+            val approximateLineCount: Float =
+                (pageText.count { it == '\n' } + 1).toFloat()
+            val totalHeightPx: Float = approximateLineCount * estimatedLineHeightPx
+            val targetPx: Int = (charRatio * totalHeightPx).toInt()
+            // Scroll to bring the target into view, centering it if possible
+            val viewportHeight = scrollState.maxValue
+            val centeredTarget = (targetPx - viewportHeight / 2).coerceIn(0, scrollState.maxValue)
+            if (kotlin.math.abs(scrollState.value - centeredTarget) > viewportHeight / 4) {
+                kotlinx.coroutines.delay(50) // small delay to avoid jank
+                scrollState.animateScrollTo(centeredTarget)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -894,6 +968,8 @@ private fun EpubPageContent(
             highlights = highlights,
             textSettings = textSettings,
             ttsSentence = ttsSentence,
+            ttsWordStart = ttsWordStart,
+            ttsWordEnd = ttsWordEnd,
             onLongPress = onLongPress,
             modifier = Modifier.fillMaxWidth()
         )

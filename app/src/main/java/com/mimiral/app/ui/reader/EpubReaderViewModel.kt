@@ -75,6 +75,10 @@ data class ReaderUiState(
     val ttsState: TTSState = TTSState.IDLE,
     /** The sentence currently being read by TTS, or null if no TTS active. */
     val currentTtsSentence: TtsSentence? = null,
+    /** Character start offset of the currently spoken word, or -1 if none. */
+    val currentTtsWordStart: Int = -1,
+    /** Character end offset of the currently spoken word, or -1 if none. */
+    val currentTtsWordEnd: Int = -1,
     /** Sync status indicator for Kavita progress sync */
     val syncStatus: com.mimiral.app.data.remote.SyncStatus =
         com.mimiral.app.data.remote.SyncStatus.IDLE
@@ -908,5 +912,23 @@ class EpubReaderViewModel @Inject constructor(
      */
     fun onTtsSentenceChanged(sentence: TtsSentence?) {
         _uiState.update { it.copy(currentTtsSentence = sentence) }
+    }
+
+    /**
+     * Update the current TTS word range being spoken.
+     * Called from the UI layer when a word broadcast is received.
+     *
+     * @param start Character start offset of the active word, or -1 to clear.
+     * @param end Character end offset of the active word, or -1 to clear.
+     */
+    fun onTtsWordChanged(start: Int, end: Int) {
+        _uiState.update { it.copy(currentTtsWordStart = start, currentTtsWordEnd = end) }
+    }
+
+    /**
+     * Clear the TTS word highlight (called when TTS pauses/stops).
+     */
+    fun onTtsWordCleared() {
+        _uiState.update { it.copy(currentTtsWordStart = -1, currentTtsWordEnd = -1) }
     }
 }
