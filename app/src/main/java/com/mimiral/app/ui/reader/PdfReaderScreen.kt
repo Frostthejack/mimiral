@@ -277,6 +277,9 @@ fun PdfReaderScreen(
                     selectionState = selectionState,
                     onSelectionChange = { selectionState = it },
                     onShowSelectionMenu = { showSelectionMenu = true },
+                    onToggleControls = { viewModel.toggleControls() },
+                    onSwipeNext = { viewModel.nextPage() },
+                    onSwipePrevious = { viewModel.previousPage() },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -441,93 +444,111 @@ private fun PdfPageView(
     selectionState: SelectionState,
     onSelectionChange: (SelectionState) -> Unit,
     onShowSelectionMenu: () -> Unit,
+    onToggleControls: () -> Unit,
+    onSwipeNext: () -> Unit,
+    onSwipePrevious: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
+    val scrollState = remember { androidx.compose.foundation.lazy.LazyListState() }
 
     BoxWithConstraints(
         modifier = modifier.background(Color(0xFF1A1A1A))
     ) {
         if (pageBitmap != null) {
             val containerWidth = constraints.maxWidth.toFloat()
+            val containerHeight = constraints.maxHeight.toFloat()
             val bitmapWidth = pageBitmap.width.toFloat()
             val bitmapHeight = pageBitmap.height.toFloat()
             val scale = containerWidth / bitmapWidth
             val displayHeight = bitmapHeight * scale
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(with(density) { displayHeight.toDp() })
-            ) {
-                // Page bitmap canvas with selection drawing
-                Canvas(
+            // If page fits in view, no scroll needed; otherwise use vertical scroll
+            val needsScroll = displayHeight > containerHeight
+
+            if (needsScroll) {
+                // Scrollable page view
+                androidx.compose.foundation.lazy.LazyColumn(
+                    state = scrollState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(
-                            if (hasTextContent) {
-                                Modifier.pointerInput(currentPage) {
-                                    detectTapGestures(
-                                        onLongPress = { offset ->
-                                            onSelectionChange(
-                                                SelectionState(
-                                                    isActive = true,
-                                                    pageIndex = currentPage,
-                                                    selectedText = "",
-                                                    startHandlePosition = PointF(
-                                                        offset.x,
-                                                        offset.y
-                                                    ),
-                                                    endHandlePosition = PointF(
-                                                        offset.x,
-                                                        offset.y
-                                                    )
-                                                )
-                                            )
-                                            onShowSelectionMenu()
-                                        }
-                                    )
+                        .pointerInput(currentPage) {
+                            // Horizontal swipe gesture for page turning
+                            detectDragGestures { change, dragAmount ->
+                                change.consume()
+                            }
+                        }
+                        .pointerInput(currentPage) {
+                            // Detect horizontal swipes via tap + drag
+                            var totalDragX = 0f
+                            detectDragGestures(
+                                onDragStart = { totalDragX = 0f },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    totalDragX += dragAmount.x
+                                },
+                                onDragEnd = {
+                                    val swipeThreshold = containerWidth * 0.2f
+                                    if (totalDragX < -swipeThreshold) {
+                                        onSwipeNext()
+                                    } else if (totalDragX > swipeThreshold) {
+                                        onSwipePrevious()
+                                    }
                                 }
-                            } else {
-                                Modifier // Image-based PDF: no text selection
-                            }
-                        )
+                            )
+                        },
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    drawImage(
-                        image = pageBitmap.asImageBitmap(),
-                        dstSize = IntSize(containerWidth.toInt(), displayHeight.toInt())
-                    )
-                    // Draw selection highlight overlays
-                    if (selectionState.hasSelection && selectionState.pageIndex == currentPage) {
-                        drawSelectionHighlights(selectionState, scale)
-                    }
-                }
-
-                // Selection handles (draggable)
-                if (selectionState.hasSelection && selectionState.pageIndex == currentPage) {
-                    selectionState.startHandlePosition?.let { pos ->
-                        SelectionHandle(
-                            position = Offset(pos.x, pos.y),
-                            isStart = true,
+                    item {
+                        PageContent(
+                            pageBitmap = pageBitmap,
+                            containerWidth = containerWidth,
+                            displayHeight = displayHeight,
                             scale = scale,
-                            onDrag = { delta ->
-                                val newPos = PointF(pos.x + delta.x, pos.y + delta.y)
-                                onSelectionChange(selectionState.copy(startHandlePosition = newPos))
-                            }
-                        )
-                    }
-                    selectionState.endHandlePosition?.let { pos ->
-                        SelectionHandle(
-                            position = Offset(pos.x, pos.y),
-                            isStart = false,
-                            scale = scale,
-                            onDrag = { delta ->
-                                val newPos = PointF(pos.x + delta.x, pos.y + delta.y)
-                                onSelectionChange(selectionState.copy(endHandlePosition = newPos))
-                            }
+                            currentPage = currentPage,
+                            hasTextContent = hasTextContent,
+                            selectionState = selectionState,
+                            onSelectionChange = onSelectionChange,
+                            onShowSelectionMenu = onShowSelectionMenu,
+                            onToggleControls = onToggleControls
                         )
                     }
                 }
+            } else {
+                // Non-scrollable: page fits in view
+                PageContent(
+                    pageBitmap = pageBitmap,
+                    containerWidth = containerWidth,
+                    displayHeight = displayHeight,
+                    scale = scale,
+                    currentPage = currentPage,
+                    hasTextContent = hasTextContent,
+                    selectionState = selectionState,
+                    onSelectionChange = onSelectionChange,
+                    onShowSelectionMenu = onShowSelectionMenu,
+                    onToggleControls = onToggleControls,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(currentPage) {
+                            // Horizontal swipe for page turning
+                            var totalDragX = 0f
+                            detectDragGestures(
+                                onDragStart = { totalDragX = 0f },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    totalDragX += dragAmount.x
+                                },
+                                onDragEnd = {
+                                    val swipeThreshold = containerWidth * 0.2f
+                                    if (totalDragX < -swipeThreshold) {
+                                        onSwipeNext()
+                                    } else if (totalDragX > swipeThreshold) {
+                                        onSwipePrevious()
+                                    }
+                                }
+                            )
+                        }
+                )
             }
         } else {
             Box(
@@ -538,6 +559,107 @@ private fun PdfPageView(
                     text = "Loading page...",
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 16.sp
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Renders the actual page bitmap with selection support and tap-to-toggle-controls.
+ */
+@Composable
+private fun PageContent(
+    pageBitmap: Bitmap,
+    containerWidth: Float,
+    displayHeight: Float,
+    scale: Float,
+    currentPage: Int,
+    hasTextContent: Boolean,
+    selectionState: SelectionState,
+    onSelectionChange: (SelectionState) -> Unit,
+    onShowSelectionMenu: () -> Unit,
+    onToggleControls: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(with(density) { displayHeight.toDp() })
+    ) {
+        // Page bitmap canvas with selection drawing
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (hasTextContent) {
+                        Modifier.pointerInput(currentPage) {
+                            detectTapGestures(
+                                onTap = { onToggleControls() },
+                                onLongPress = { offset ->
+                                    onSelectionChange(
+                                        SelectionState(
+                                            isActive = true,
+                                            pageIndex = currentPage,
+                                            selectedText = "",
+                                            startHandlePosition = PointF(
+                                                offset.x,
+                                                offset.y
+                                            ),
+                                            endHandlePosition = PointF(
+                                                offset.x,
+                                                offset.y
+                                            )
+                                        )
+                                    )
+                                    onShowSelectionMenu()
+                                }
+                            )
+                        }
+                    } else {
+                        // Image-based PDF: tap to toggle controls, no text selection
+                        Modifier.pointerInput(currentPage) {
+                            detectTapGestures(
+                                onTap = { onToggleControls() }
+                            )
+                        }
+                    }
+                )
+        ) {
+            drawImage(
+                image = pageBitmap.asImageBitmap(),
+                dstSize = IntSize(containerWidth.toInt(), displayHeight.toInt())
+            )
+            // Draw selection highlight overlays
+            if (selectionState.hasSelection && selectionState.pageIndex == currentPage) {
+                drawSelectionHighlights(selectionState, scale)
+            }
+        }
+
+        // Selection handles (draggable)
+        if (selectionState.hasSelection && selectionState.pageIndex == currentPage) {
+            selectionState.startHandlePosition?.let { pos ->
+                SelectionHandle(
+                    position = Offset(pos.x, pos.y),
+                    isStart = true,
+                    scale = scale,
+                    onDrag = { delta ->
+                        val newPos = PointF(pos.x + delta.x, pos.y + delta.y)
+                        onSelectionChange(selectionState.copy(startHandlePosition = newPos))
+                    }
+                )
+            }
+            selectionState.endHandlePosition?.let { pos ->
+                SelectionHandle(
+                    position = Offset(pos.x, pos.y),
+                    isStart = false,
+                    scale = scale,
+                    onDrag = { delta ->
+                        val newPos = PointF(pos.x + delta.x, pos.y + delta.y)
+                        onSelectionChange(selectionState.copy(endHandlePosition = newPos))
+                    }
                 )
             }
         }

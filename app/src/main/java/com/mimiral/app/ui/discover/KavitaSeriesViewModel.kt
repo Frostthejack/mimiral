@@ -27,6 +27,7 @@ data class KavitaSeriesUiState(
 @HiltViewModel
 class KavitaSeriesViewModel @Inject constructor(
     private val browseRepository: KavitaBrowseRepository,
+    private val kavitaRepository: com.mimiral.app.data.remote.kavita.KavitaRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -44,24 +45,45 @@ class KavitaSeriesViewModel @Inject constructor(
     fun loadSeriesDetail(seriesId: Int) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            when (val result = browseRepository.getSeriesDetail(seriesId)) {
+            
+            // First get the series detail (specials, counts, etc.)
+            when (val detailResult = browseRepository.getSeriesDetail(seriesId)) {
+                is BrowseResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = true, // still loading volumes
+                        seriesDetail = detailResult.data
+                    )
+                }
+                is BrowseResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = detailResult.message
+                    )
+                    return@launch
+                }
+                is BrowseResult.Loading -> {
+                    _uiState.value = _uiState.value.copy(isLoading = true)
+                }
+            }
+            
+            // Then get volumes separately (series-detail may return empty volumes)
+            when (val volumesResult = browseRepository.getVolumes(seriesId)) {
                 is BrowseResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        seriesDetail = result.data,
-                        volumes = result.data.volumes,
+                        volumes = volumesResult.data,
                         selectedSeries = SeriesDto(
                             id = seriesId,
                             name = "",
-                            pages = result.data.volumes.sumOf { it.pages },
-                            pagesRead = result.data.volumes.sumOf { it.pagesRead }
+                            pages = volumesResult.data.sumOf { it.pages },
+                            pagesRead = volumesResult.data.sumOf { it.pagesRead }
                         )
                     )
                 }
                 is BrowseResult.Error -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = result.message
+                        errorMessage = volumesResult.message
                     )
                 }
                 is BrowseResult.Loading -> {
@@ -105,5 +127,36 @@ class KavitaSeriesViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    /**
+     * Download a chapter and return the local book ID and format for reading.
+     */
+    fun downloadChapter(chapterId: Int, title: String, seriesId: Int, onResult: (Int?, String?) -> Unit) {
+        viewModelScope.launch {
+            val result = kavitaRepository.downloadBook(
+                chapterId = chapterId,
+                title = title,
+                seriesId = seriesId
+            )
+            when (result) {
+                is com.mimiral.app.data.remote.kavita.KavitaResult.Success -> {
+                    // Look up the book's format from the database
+                    val bookId = result.data
+                    val format = try {
+                        kavitaRepository.getBookFormat(bookId)
+                    } catch (_: Exception) {
+                        null
+                    }
+                    onResult(bookId, format)
+                }
+                is com.mimiral.app.data.remote.kavita.KavitaResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = "Download failed: ${result.message}"
+                    )
+                    onResult(null, null)
+                }
+            }
+        }
     }
 }

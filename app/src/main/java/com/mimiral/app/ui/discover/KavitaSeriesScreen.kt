@@ -62,7 +62,7 @@ import com.mimiral.app.data.remote.VolumeDto
 fun KavitaSeriesScreen(
     viewModel: KavitaSeriesViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onChapterClick: (seriesId: Int, volumeId: Int, chapterId: Int) -> Unit = { _, _, _ -> }
+    onNavigateToReader: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -128,7 +128,8 @@ fun KavitaSeriesScreen(
                 uiState.selectedVolume != null -> {
                     VolumeDetailView(
                         volume = uiState.selectedVolume!!,
-                        onChapterClick = onChapterClick
+                        viewModel = viewModel,
+                        onNavigateToReader = onNavigateToReader
                     )
                 }
 
@@ -385,7 +386,8 @@ private fun VolumeCard(
 @Composable
 private fun VolumeDetailView(
     volume: VolumeDto,
-    onChapterClick: (seriesId: Int, volumeId: Int, chapterId: Int) -> Unit
+    viewModel: KavitaSeriesViewModel,
+    onNavigateToReader: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(true) }
 
@@ -462,7 +464,21 @@ private fun VolumeDetailView(
                 ChapterRow(
                     chapter = chapter,
                     onClick = {
-                        onChapterClick(volume.seriesId, volume.id, chapter.id)
+                        val chapterTitle = chapter.title.ifBlank { chapter.titleName ?: "Chapter ${chapter.number}" }
+                        viewModel.downloadChapter(
+                            chapterId = chapter.id,
+                            title = chapterTitle,
+                            seriesId = volume.seriesId
+                        ) { bookId, format ->
+                            if (bookId != null) {
+                                val route = when (format?.uppercase()) {
+                                    "PDF" -> "pdf_reader/$bookId"
+                                    "CBZ", "CBR" -> "comic_reader/$bookId"
+                                    else -> "epub_reader/$bookId" // default to EPUB reader
+                                }
+                                onNavigateToReader(route)
+                            }
+                        }
                     }
                 )
             }

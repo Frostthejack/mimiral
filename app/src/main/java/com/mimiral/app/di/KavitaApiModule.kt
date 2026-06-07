@@ -95,20 +95,22 @@ class KavitaBaseUrlInterceptor(
     override fun intercept(chain: Interceptor.Chain): okhttp3.Response {
         val originalRequest = chain.request()
 
-        // Resolve the active Kavita server URL on OkHttp's background thread
-        val serverUrl = try {
+        // Resolve the active Kavita server URL and API key on OkHttp's background thread
+        val server = try {
             runBlocking(Dispatchers.IO) {
-                serverDao.getActiveServerByType("KAVITA")?.url
+                serverDao.getActiveServerByType("KAVITA")
             }
         } catch (_: Exception) {
             null
         }
 
-        if (serverUrl.isNullOrBlank()) {
+        if (server == null || server.url.isBlank()) {
             // No server configured — let the request go to the placeholder URL,
             // which will fail fast with a connection error.
             return chain.proceed(originalRequest)
         }
+
+        val serverUrl = server.url
 
         // Normalize the server URL — ensure it ends with /
         val normalizedUrl = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
@@ -120,10 +122,14 @@ class KavitaBaseUrlInterceptor(
             .port(normalizedUrl.toHttpUrlOrNull()?.port ?: 443)
             .build()
 
-        val newRequest = originalRequest.newBuilder()
+        val requestBuilder = originalRequest.newBuilder()
             .url(newUrl)
-            .build()
 
-        return chain.proceed(newRequest)
+        // Add X-Api-Key header if the server has an API key configured
+        if (!server.apiKey.isNullOrBlank()) {
+            requestBuilder.header("X-Api-Key", server.apiKey)
+        }
+
+        return chain.proceed(requestBuilder.build())
     }
 }

@@ -168,7 +168,7 @@ class KavitaClient(
      * List all libraries on the server.
      */
     suspend fun getLibraries(): KavitaResult<List<KavitaLibrary>> =
-        getList("/api/library", object : TypeToken<List<KavitaLibrary>>() {})
+        getList("/api/Library/libraries", object : TypeToken<List<KavitaLibrary>>() {})
 
     /**
      * List all series across all libraries.
@@ -181,19 +181,39 @@ class KavitaClient(
         libraryId: Int? = null,
         pageNumber: Int = 1,
         pageSize: Int = 20
-    ): KavitaResult<KavitaPagedResponse<KavitaSeries>> {
-        val params = mutableListOf(
-            "pageNumber=$pageNumber",
-            "pageSize=$pageSize"
-        )
-        if (libraryId != null) {
-            params.add("libraryId=$libraryId")
+    ): KavitaResult<List<KavitaSeries>> {
+        val requestBody = """{"libraryId":${libraryId ?: -1},"pageNumber":$pageNumber,"pageSize":$pageSize}""".toRequestBody("application/json".toMediaType())
+        val path = "/api/Series/v2"
+        val requestBuilder = Request.Builder()
+            .url("$normalizedBaseUrl$path")
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "Mimiral/0.1.0")
+            .post(requestBody)
+        addAuthHeader(requestBuilder)
+        val request = requestBuilder.build()
+        val response = withContext(Dispatchers.IO) {
+            client.newCall(request).execute()
         }
-        val query = params.joinToString("&")
-        return get(
-            "/api/series/all?$query",
-            object : TypeToken<KavitaPagedResponse<KavitaSeries>>() {}
-        )
+        if (!response.isSuccessful) {
+            return KavitaResult.Error(
+                message = "HTTP ${response.code}: ${response.message}",
+                code = response.code
+            )
+        }
+        val body = response.body?.string()
+            ?: return KavitaResult.Error(message = "Empty response body", code = response.code)
+        return try {
+            val parsed = gson.fromJson<List<KavitaSeries>>(body, object : TypeToken<List<KavitaSeries>>() {}.type)
+            if (parsed == null) {
+                KavitaResult.Error(message = "Parsed null response from server", code = response.code)
+            } else {
+                KavitaResult.Success(parsed)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Parse error: ${e.message}", e)
+            KavitaResult.Error(message = "Parse error: ${e.message}", code = response.code)
+        }
     }
 
     /**
@@ -201,7 +221,7 @@ class KavitaClient(
      */
     suspend fun getVolumes(seriesId: Int): KavitaResult<List<KavitaVolume>> =
         getList(
-            "/api/series/volume?$seriesId=$seriesId",
+            "/api/Series/volumes?seriesId=$seriesId",
             object : TypeToken<List<KavitaVolume>>() {}
         )
 
@@ -210,7 +230,7 @@ class KavitaClient(
      */
     suspend fun getChapters(volumeId: Int): KavitaResult<List<KavitaChapter>> =
         getList(
-            "/api/series/chapter?$volumeId=$volumeId",
+            "/api/Series/chapter?chapterId=$volumeId",
             object : TypeToken<List<KavitaChapter>>() {}
         )
 
@@ -229,7 +249,7 @@ class KavitaClient(
     ): KavitaResult<ByteArray> = withContext(Dispatchers.IO) {
         try {
             val requestBuilder = Request.Builder()
-                .url("$normalizedBaseUrl/api/download/book?chapterId=$chapterId")
+                .url("$normalizedBaseUrl/api/download/chapter?chapterId=$chapterId")
                 .header("User-Agent", "Mimiral/0.1.0")
 
             addAuthHeader(requestBuilder)
@@ -239,33 +259,10 @@ class KavitaClient(
             val response = dClient.newCall(request).execute()
 
             if (!response.isSuccessful) {
-                // Fallback: try scanlator-file endpoint
-                val fallbackRequest = Request.Builder()
-                    .url(
-                        "$normalizedBaseUrl/api/download" +
-                            "/scanlator-file?chapterId=$chapterId"
-                    )
-                    .header("User-Agent", "Mimiral/0.1.0")
-                    .also { addAuthHeader(it) }
-                    .build()
-                val fallbackResponse = dClient.newCall(fallbackRequest).execute()
-                if (!fallbackResponse.isSuccessful) {
-                    return@withContext KavitaResult.Error(
-                        message = "Download failed: HTTP ${response.code}",
-                        code = response.code
-                    )
-                }
-                val bytes = fallbackResponse.body?.bytes()
-                    ?: return@withContext KavitaResult.Error(
-                        message = "Empty download response",
-                        code = fallbackResponse.code
-                    )
-                Log.d(
-                    TAG,
-                    "Downloaded book (fallback): ${bytes.size} bytes " +
-                        "for chapter $chapterId"
+                return@withContext KavitaResult.Error(
+                    message = "Download failed: HTTP ${response.code}",
+                    code = response.code
                 )
-                return@withContext KavitaResult.Success(bytes)
             }
 
             val bytes = response.body?.bytes()
@@ -608,7 +605,7 @@ class KavitaClient(
         val key = apiKey
         when {
             token != null -> requestBuilder.header("Authorization", "Bearer $token")
-            key != null -> requestBuilder.header("ApiKey", key)
+            key != null -> requestBuilder.header("X-Api-Key", key)
         }
     }
 
@@ -663,7 +660,13 @@ class KavitaClient(
             )
 
         return try {
-            KavitaResult.Success(parser(body))
+            val parsed = parser(body)
+            if (parsed == null) {
+                Log.e(TAG, "Parse result was null for $path")
+                KavitaResult.Error(message = "Parsed null response from server", code = response.code)
+            } else {
+                KavitaResult.Success(parsed)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Parse error: ${e.message}", e)
             KavitaResult.Error(

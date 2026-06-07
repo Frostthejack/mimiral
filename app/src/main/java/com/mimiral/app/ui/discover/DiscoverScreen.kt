@@ -66,7 +66,8 @@ import com.mimiral.app.data.remote.kavita.KavitaLibrary
 fun DiscoverScreen(
     viewModel: DiscoverViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onOpenDrawer: () -> Unit = {}
+    onOpenDrawer: () -> Unit = {},
+    onNavigateToKavitaSeries: (Int) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentNav = uiState.navigationStack.lastOrNull()
@@ -108,7 +109,9 @@ fun DiscoverScreen(
                         series = uiState.series,
                         isLoading = uiState.isLoadingSeries,
                         error = uiState.error,
-                        onSeriesClick = { viewModel.selectSeries(it) },
+                        onSeriesClick = { seriesItem ->
+                            onNavigateToKavitaSeries(seriesItem.id)
+                        },
                         onRetry = {
                             uiState.selectedLibrary?.let { viewModel.selectLibrary(it) }
                         }

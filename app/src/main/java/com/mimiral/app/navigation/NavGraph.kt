@@ -165,7 +165,12 @@ fun MimiralNavGraph(navController: NavHostController) {
                 )
             }
             composable(Screen.Discover.route) {
-                DiscoverScreen(onOpenDrawer = openDrawer)
+                DiscoverScreen(
+                    onOpenDrawer = openDrawer,
+                    onNavigateToKavitaSeries = { seriesId ->
+                        navController.navigate("kavita_series/$seriesId")
+                    }
+                )
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(
@@ -358,7 +363,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                     ?: return@composable
                 KavitaSeriesScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onChapterClick = { _, _, _ -> /* TODO: Navigate to Kavita reader */ }
+                    onNavigateToReader = { route -> navController.navigate(route) }
                 )
             }
             // Book metadata editing

@@ -161,7 +161,7 @@ class KavitaRepository @Inject constructor(
         )
         val result = client.getSeries(libraryId = libraryId)
         return when (result) {
-            is KavitaResult.Success -> KavitaResult.Success(result.data.items)
+            is KavitaResult.Success -> KavitaResult.Success(result.data)
             is KavitaResult.Error -> result
         }
     }
@@ -197,7 +197,17 @@ class KavitaRepository @Inject constructor(
             serverDao.getActiveServerByType("KAVITA")
         } ?: return null
         val base = server.url.trimEnd('/')
-        return "$base/api/image/cover?coverImage=$coverImage"
+        val apiKey = server.apiKey ?: return null
+        // coverImage is a filename like "v1567_c1724.png" — extract the volumeId and chapterId
+        // Format: v{volumeId}_c{chapterId}.png
+        val regex = Regex("v(\\d+)_c(\\d+)")
+        val match = regex.find(coverImage)
+        return if (match != null) {
+            val volumeId = match.groupValues[1]
+            "$base/api/Image/volume-cover?volumeId=$volumeId&apiKey=$apiKey"
+        } else {
+            null
+        }
     }
 
     /**
@@ -253,7 +263,7 @@ class KavitaRepository @Inject constructor(
         title: String,
         seriesId: Int? = null,
         author: String? = null
-    ): KavitaResult<String> = withContext(Dispatchers.IO) {
+    ): KavitaResult<Int> = withContext(Dispatchers.IO) {
         val client = createClientFromDb()
         if (client == null) {
             _downloadState.value = DownloadState.Failed(title, "No Kavita server configured")
@@ -357,7 +367,7 @@ class KavitaRepository @Inject constructor(
                 filePath = finalFile.absolutePath
             )
 
-            KavitaResult.Success(finalFile.absolutePath)
+            KavitaResult.Success(bookId.toInt())
         } catch (e: Exception) {
             Log.e(TAG, "Error downloading book: ${e.message}", e)
             _downloadState.value = DownloadState.Failed(
@@ -495,6 +505,17 @@ class KavitaRepository @Inject constructor(
             message = "No Kavita server configured. Please add a Kavita server in Settings."
         )
         return client.getBookmarks(seriesId)
+    }
+
+    /**
+     * Get the format of a downloaded book by its database ID.
+     */
+    suspend fun getBookFormat(bookId: Int): String? {
+        return try {
+            bookRepository.getBookById(bookId)?.format
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**
