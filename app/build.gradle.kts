@@ -24,7 +24,7 @@ android {
         applicationId = "com.mimiral.app"
         minSdk = 31
         targetSdk = 34
-        versionCode = 2
+        versionCode = 101
         versionName = "0.1.01"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
