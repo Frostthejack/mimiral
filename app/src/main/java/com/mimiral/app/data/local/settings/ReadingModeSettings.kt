@@ -42,6 +42,11 @@ enum class TtsHighlightColor(val displayName: String) {
     CYAN("Cyan")
 }
 
+enum class DefaultReaderMode(val displayName: String) {
+    ALWAYS_READING_MODE("Always Reading Mode"),
+    FORMAT_SPECIFIC("Format-Specific Reader")
+}
+
 data class ReadingModeSettings(
     val fontFamily: String = "DEFAULT",
     val fontSize: Int = 18,
@@ -50,7 +55,8 @@ data class ReadingModeSettings(
     val margins: MarginWidth = MarginWidth.MEDIUM,
     val theme: ReadingModeTheme = ReadingModeTheme.LIGHT,
     val ttsHighlightColor: TtsHighlightColor = TtsHighlightColor.YELLOW,
-    val autoScrollTTS: Boolean = false
+    val autoScrollTTS: Boolean = false,
+    val defaultReaderMode: DefaultReaderMode = DefaultReaderMode.FORMAT_SPECIFIC
 )
 
 class ReadingModeSettingsRepository(private val context: Context) {
@@ -64,6 +70,7 @@ class ReadingModeSettingsRepository(private val context: Context) {
         val THEME = stringPreferencesKey("reading_mode_theme")
         val TTS_HIGHLIGHT_COLOR = stringPreferencesKey("reading_mode_tts_highlight_color")
         val AUTO_SCROLL_TTS = booleanPreferencesKey("reading_mode_auto_scroll_tts")
+        val DEFAULT_READER_MODE = stringPreferencesKey("reading_mode_default_reader_mode")
     }
 
     val settings: Flow<ReadingModeSettings> = context.readingModeDataStore.data.map { prefs ->
@@ -91,7 +98,12 @@ class ReadingModeSettingsRepository(private val context: Context) {
             } catch (_: IllegalArgumentException) {
                 TtsHighlightColor.YELLOW
             },
-            autoScrollTTS = prefs[Keys.AUTO_SCROLL_TTS] ?: false
+            autoScrollTTS = prefs[Keys.AUTO_SCROLL_TTS] ?: false,
+            defaultReaderMode = try {
+                DefaultReaderMode.valueOf(prefs[Keys.DEFAULT_READER_MODE] ?: "FORMAT_SPECIFIC")
+            } catch (_: IllegalArgumentException) {
+                DefaultReaderMode.FORMAT_SPECIFIC
+            }
         )
     }
 
@@ -140,6 +152,12 @@ class ReadingModeSettingsRepository(private val context: Context) {
     suspend fun setAutoScrollTTS(enabled: Boolean) {
         context.readingModeDataStore.edit { prefs ->
             prefs[Keys.AUTO_SCROLL_TTS] = enabled
+        }
+    }
+
+    suspend fun setDefaultReaderMode(mode: DefaultReaderMode) {
+        context.readingModeDataStore.edit { prefs ->
+            prefs[Keys.DEFAULT_READER_MODE] = mode.name
         }
     }
 }

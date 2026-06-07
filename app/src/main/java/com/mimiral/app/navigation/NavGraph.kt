@@ -267,7 +267,10 @@ fun MimiralNavGraph(navController: NavHostController) {
                     ?: return@composable
                 PdfReaderScreen(
                     bookId = bookId,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToReadingMode = {
+                        navController.navigate("reading_mode/$bookId")
+                    }
                 )
             }
 
@@ -279,7 +282,10 @@ fun MimiralNavGraph(navController: NavHostController) {
                     ?: return@composable
                 EpubReaderScreen(
                     bookId = bookId,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToReadingMode = {
+                        navController.navigate("reading_mode/$bookId")
+                    }
                 )
             }
 

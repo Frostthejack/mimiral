@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Folder
@@ -313,6 +314,35 @@ fun SettingsScreen(
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    // Default Reader Mode
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.MenuBook,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Default Reader Mode",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ReadingModeEnumSelector(
+                            options = com.mimiral.app.data.local.settings.DefaultReaderMode.entries,
+                            selected = readingModeSettings.defaultReaderMode,
+                            onSelect = { scope.launch { readingModeSettingsRepo.setDefaultReaderMode(it) } },
+                            labelFor = { it.displayName }
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
                     // Font family selector
                     Column {
                         Row(
