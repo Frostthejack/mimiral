@@ -263,9 +263,33 @@ class TTSService : Service() {
             }
             ACTION_SET_VOICE -> {
                 val voiceName = intent.getStringExtra(EXTRA_VOICE_NAME) ?: ""
+                Log.d(TAG, "ACTION_SET_VOICE: voiceName='$voiceName'")
+                val wasPlaying = ttsManager?.state == TTSState.PLAYING
                 if (voiceName.isNotBlank()) {
-                    val voice = ttsManager?.getAvailableVoices()?.find { it.name == voiceName }
-                    if (voice != null) ttsManager?.setVoice(voice)
+                    val availableVoices = ttsManager?.getAvailableVoices() ?: emptySet()
+                    Log.d(TAG, "Available voices count: ${availableVoices.size}")
+                    val voice = availableVoices.find { it.name == voiceName }
+                    if (voice != null) {
+                        val result = ttsManager?.setVoice(voice) ?: false
+                        Log.d(TAG, "setVoice result: $result for voice '${voice.name}'")
+                        // Restart playback so the new voice takes immediate effect
+                        if (result && wasPlaying) {
+                            Log.d(TAG, "Restarting playback with new voice")
+                            ttsManager?.stop()
+                            handlePlay()
+                        }
+                    } else {
+                        Log.w(TAG, "Voice '$voiceName' not found in available voices. " +
+                            "Available: ${availableVoices.map { it.name }}")
+                    }
+                } else {
+                    // Reset to default voice
+                    Log.d(TAG, "Resetting to default voice")
+                    ttsManager?.setVoiceToDefault()
+                    if (wasPlaying) {
+                        ttsManager?.stop()
+                        handlePlay()
+                    }
                 }
             }
             else -> {

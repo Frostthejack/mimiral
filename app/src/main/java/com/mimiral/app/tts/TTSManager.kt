@@ -253,7 +253,36 @@ class TTSManager(
     }
 
     fun setVoice(voice: Voice): Boolean {
-        val result = ttsEngine?.setVoice(voice)
+        val engine = ttsEngine
+        if (engine == null) {
+            Log.w(TAG, "setVoice: ttsEngine is null, cannot set voice")
+            return false
+        }
+        val result = engine.setVoice(voice)
+        Log.d(TAG, "setVoice: voice='${voice.name}', locale=${voice.locale}, result=$result")
+        return result == TextToSpeech.SUCCESS
+    }
+
+    /**
+     * Reset to the default voice by setting the language back to the default locale.
+     * Android TTS doesn't have a direct "clear voice" API, so we set the language
+     * which implicitly resets the voice to the default for that locale.
+     */
+    fun setVoiceToDefault(): Boolean {
+        val engine = ttsEngine
+        if (engine == null) {
+            Log.w(TAG, "setVoiceToDefault: ttsEngine is null")
+            return false
+        }
+        val defaultLocale = Locale.getDefault()
+        val result = engine.setVoice(
+            engine.voices?.firstOrNull {
+                it.locale.language == defaultLocale.language &&
+                    it.locale.country == defaultLocale.country &&
+                    it.quality >= Voice.QUALITY_NORMAL
+            } ?: return false
+        )
+        Log.d(TAG, "setVoiceToDefault: result=$result")
         return result == TextToSpeech.SUCCESS
     }
 

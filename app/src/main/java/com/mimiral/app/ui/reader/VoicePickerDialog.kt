@@ -60,7 +60,9 @@ fun VoicePickerDialog(
 
     // Initialize TTS engine to query voices
     DisposableEffect(context) {
-        val tts = TextToSpeech(context.applicationContext, null)
+        val tts = TextToSpeech(context.applicationContext) { _ ->
+            // Engine init callback — voices become available asynchronously after this
+        }
         ttsEngine = tts
         onDispose {
             tts.shutdown()
@@ -71,8 +73,17 @@ fun VoicePickerDialog(
     LaunchedEffect(ttsEngine) {
         val engine = ttsEngine
         if (engine != null) {
-            // Small delay to let engine initialize
-            kotlinx.coroutines.delay(500)
+            // Poll for engine readiness (voices become available after onInit callback)
+            for (attempt in 1..20) {
+                val availableVoices = engine.voices
+                if (availableVoices != null && availableVoices.isNotEmpty()) {
+                    voices = availableVoices
+                    isLoading = false
+                    return@LaunchedEffect
+                }
+                kotlinx.coroutines.delay(100)
+            }
+            // Timeout — show whatever we have
             voices = engine.voices ?: emptySet()
             isLoading = false
         }
