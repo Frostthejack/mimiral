@@ -69,6 +69,22 @@
 -keep class * implements com.google.gson.JsonSerializer
 -keep class * implements com.google.gson.JsonDeserializer
 
+# ---------- Keep Kavita models ----------
+# Two KavitaServerInfo classes in different packages — keep both to prevent R8 merging
+-keep class com.mimiral.app.data.remote.kavita.KavitaModels { *; }
+-keep class com.mimiral.app.data.remote.kavita.KavitaModels$* { *; }
+-keep class com.mimiral.app.data.remote.KavitaSyncModels { *; }
+-keep class com.mimiral.app.data.remote.KavitaSyncModels$* { *; }
+-keep class com.mimiral.app.data.remote.kavita.KavitaBookmarkModels { *; }
+-keep class com.mimiral.app.data.remote.kavita.KavitaBookmarkModels$* { *; }
+# Keep all @SerializedName fields in Kavita models for Gson
+-keepclassmembers class com.mimiral.app.data.remote.kavita.** {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+-keepclassmembers class com.mimiral.app.data.remote.KavitaSyncModels$* {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+
 # ---------- Keep Kotlin Coroutines ----------
 -keepclassmembers class kotlinx.coroutines.** {
     ** <methods>;
