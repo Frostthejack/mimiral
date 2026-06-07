@@ -75,6 +75,19 @@
 -keep class com.mimiral.app.data.remote.kavita.KavitaModels$* { *; }
 -keep class com.mimiral.app.data.remote.KavitaSyncModels { *; }
 -keep class com.mimiral.app.data.remote.KavitaSyncModels$* { *; }
+# Keep all top-level data classes in KavitaSyncModels.kt (each compiles to its own class)
+-keep class com.mimiral.app.data.remote.KavitaServerInfo { *; }
+-keep class com.mimiral.app.data.remote.KavitaLoginRequest { *; }
+-keep class com.mimiral.app.data.remote.KavitaLoginResponse { *; }
+-keep class com.mimiral.app.data.remote.KavitaProgressRequest { *; }
+-keep class com.mimiral.app.data.remote.KavitaProgressResponse { *; }
+-keep class com.mimiral.app.data.remote.KavitaProgressData { *; }
+-keep class com.mimiral.app.data.remote.ConnectionStatus { *; }
+-keep class com.mimiral.app.data.remote.SyncStatus { *; }
+-keep class com.mimiral.app.data.remote.SeriesDetailDto { *; }
+-keep class com.mimiral.app.data.remote.VolumeDto { *; }
+-keep class com.mimiral.app.data.remote.ChapterDto { *; }
+-keep class com.mimiral.app.data.remote.SeriesDto { *; }
 -keep class com.mimiral.app.data.remote.kavita.KavitaBookmarkModels { *; }
 -keep class com.mimiral.app.data.remote.kavita.KavitaBookmarkModels$* { *; }
 # Keep all @SerializedName fields in Kavita models for Gson
@@ -82,6 +95,16 @@
     @com.google.gson.annotations.SerializedName <fields>;
 }
 -keepclassmembers class com.mimiral.app.data.remote.KavitaSyncModels$* {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+# Keep top-level model classes in data.remote (from KavitaSyncModels.kt)
+-keepclassmembers class com.mimiral.app.data.remote.KavitaServerInfo {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+-keepclassmembers class com.mimiral.app.data.remote.KavitaLoginRequest {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+-keepclassmembers class com.mimiral.app.data.remote.KavitaLoginResponse {
     @com.google.gson.annotations.SerializedName <fields>;
 }
 
