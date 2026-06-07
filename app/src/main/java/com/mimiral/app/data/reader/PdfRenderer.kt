@@ -7,6 +7,8 @@ import android.graphics.pdf.PdfRenderer as AndroidPdfRenderer
 import android.os.ParcelFileDescriptor
 import java.io.File
 import java.io.FileNotFoundException
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.text.PDFTextStripper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -14,10 +16,7 @@ import kotlinx.coroutines.withContext
  * PDF renderer wrapper around Android's platform PdfRenderer.
  *
  * Provides page rendering, margin detection, and on-demand page rendering for large PDFs.
- *
- * NOTE: Text extraction is not supported by Android's PdfRenderer.Page API.
- * The extractPageText() and hasTextOnPage() methods return stub values for Phase 1.
- * Full text extraction requires a separate library (e.g., PDFBox).
+ * Text extraction is powered by Apache PDFBox (PDFTextStripper).
  *
  * Supports two constructors:
  * - PdfRenderer(context) — for use with open(filePath)
@@ -170,21 +169,38 @@ class PdfRenderer : AutoCloseable {
             return@withContext PageText("", false, pageIndex, 0, 0)
         }
 
+        val filePath = openedFilePath ?: return@withContext PageText(
+            "", false, pageIndex, 0, 0
+        )
+
         try {
             val page = renderer.openPage(pageIndex)
-            try {
-                // Android PdfRenderer.Page does not have a text property.
-                // Text extraction requires a separate library (e.g., PDFBox).
-                // Returning empty text for Phase 1.
-                PageText(
-                    text = "",
-                    hasText = false,
-                    pageIndex = pageIndex,
-                    pageWidth = page.width,
-                    pageHeight = page.height
-                )
-            } finally {
-                page.close()
+            val pageWidth = page.width
+            val pageHeight = page.height
+            page.close()
+
+            // Use PDFBox for text extraction
+            val file = File(filePath)
+            if (!file.exists()) {
+                PageText("", false, pageIndex, pageWidth, pageHeight)
+            } else {
+                var result = PageText("", false, pageIndex, pageWidth, pageHeight)
+                PDDocument.load(file).use { document ->
+                    if (pageIndex < document.numberOfPages) {
+                        val stripper = PDFTextStripper()
+                        stripper.startPage = pageIndex + 1 // 1-indexed
+                        stripper.endPage = pageIndex + 1
+                        val text = stripper.getText(document).trim()
+                        result = PageText(
+                            text = text,
+                            hasText = text.isNotEmpty(),
+                            pageIndex = pageIndex,
+                            pageWidth = pageWidth,
+                            pageHeight = pageHeight
+                        )
+                    }
+                }
+                result
             }
         } catch (e: Exception) {
             PageText("", false, pageIndex, 0, 0)
@@ -195,22 +211,8 @@ class PdfRenderer : AutoCloseable {
      * Check if a page has extractable text content.
      */
     suspend fun hasTextOnPage(pageIndex: Int): Boolean = withContext(Dispatchers.IO) {
-        val renderer = pdfRenderer ?: return@withContext false
-        if (pageIndex < 0 || pageIndex >= renderer.pageCount) return@withContext false
-
-        try {
-            val page = renderer.openPage(pageIndex)
-            try {
-                // Android PdfRenderer.Page does not have a text property.
-                // Text extraction requires a separate library (e.g., PDFBox).
-                // Returning false for Phase 1.
-                false
-            } finally {
-                page.close()
-            }
-        } catch (e: Exception) {
-            false
-        }
+        val result = extractPageText(pageIndex)
+        result.hasText
     }
 
     /**
