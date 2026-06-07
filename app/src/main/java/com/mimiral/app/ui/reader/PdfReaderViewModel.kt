@@ -45,6 +45,9 @@ data class PdfReaderUiState(
     val showCropSettings: Boolean = false,
     val autoDetecting: Boolean = false,
     val suggestedCrop: MarginCrop? = null,
+    /** TTS playback state */
+    val ttsState: com.mimiral.app.tts.TTSState =
+        com.mimiral.app.tts.TTSState.IDLE,
     /** Sync status indicator for Kavita progress sync */
     val syncStatus: com.mimiral.app.data.remote.SyncStatus =
         com.mimiral.app.data.remote.SyncStatus.IDLE
@@ -270,6 +273,16 @@ class PdfReaderViewModel @Inject constructor(
 
     fun toggleControls() {
         _uiState.update { it.copy(isControlsVisible = !it.isControlsVisible) }
+    }
+
+    /** Update TTS state from broadcast receiver */
+    fun onTtsStateChanged(stateName: String) {
+        val state = try {
+            com.mimiral.app.tts.TTSState.valueOf(stateName)
+        } catch (_: Exception) {
+            com.mimiral.app.tts.TTSState.IDLE
+        }
+        _uiState.update { it.copy(ttsState = state) }
     }
 
     // --- Bookmark integration ---

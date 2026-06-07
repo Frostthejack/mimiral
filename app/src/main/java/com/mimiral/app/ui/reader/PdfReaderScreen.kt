@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.BroadcastReceiver
 import android.graphics.Bitmap
 import android.graphics.PointF
 import androidx.compose.animation.AnimatedVisibility
@@ -46,6 +48,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -92,9 +95,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.entity.BookmarkEntity
+import com.mimiral.app.data.local.settings.TTSSettings
+import com.mimiral.app.data.local.settings.TTSSettingsRepository
 import com.mimiral.app.data.reader.MarginCrop
 import com.mimiral.app.data.reader.PdfRenderer
 import com.mimiral.app.data.reader.SelectionState
+import com.mimiral.app.tts.TTSService
+import com.mimiral.app.tts.TTSState
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -153,6 +160,42 @@ fun PdfReaderScreen(
     var showSelectionMenu by remember { mutableStateOf(false) }
     var pageBitmaps by remember { mutableStateOf<Map<Int, Bitmap>>(emptyMap()) }
     var hasTextOnCurrentPage by remember { mutableStateOf(true) }
+    var showVoicePicker by remember { mutableStateOf(false) }
+
+    // --- TTS state tracking ---
+    val ttsSettingsRepository = remember { TTSSettingsRepository(context) }
+    val ttsSettings by ttsSettingsRepository.settings.collectAsState(
+        initial = TTSSettings()
+    )
+
+    // TTS state broadcast receiver
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == TTSService.ACTION_TTS_STATE) {
+                    val stateName = intent.getStringExtra(
+                        TTSService.EXTRA_TTS_STATE
+                    ) ?: "IDLE"
+                    viewModel.onTtsStateChanged(stateName)
+                }
+            }
+        }
+        val filter = IntentFilter(TTSService.ACTION_TTS_STATE)
+        if (android.os.Build.VERSION.SDK_INT >=
+            android.os.Build.VERSION_CODES.TIRAMISU
+        ) {
+            context.registerReceiver(
+                receiver,
+                filter,
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
 
     // Update total pages when renderer is ready
     LaunchedEffect(pdfRenderer) {
@@ -327,7 +370,28 @@ fun PdfReaderScreen(
                 onBookmarkClick = { viewModel.toggleBookmarkAtCurrentPage() },
                 onBookmarkListClick = { viewModel.showBookmarkList() },
                 onCropClick = { viewModel.toggleCropSettings() },
-                isBookmarked = viewModel.isPageBookmarked(uiState.currentPage)
+                isBookmarked = viewModel.isPageBookmarked(uiState.currentPage),
+                ttsState = uiState.ttsState,
+                onReadAloud = {
+                    // Extract text from current page for TTS
+                    scope.launch {
+                        val pageText = pdfRenderer?.let { renderer ->
+                            if (renderer.isOpen) {
+                                try {
+                                    val pageTextObj = renderer.extractPageText(
+                                        uiState.currentPage
+                                    )
+                                    pageTextObj.text
+                                } catch (_: Exception) {
+                                    ""
+                                }
+                            } else ""
+                        } ?: ""
+                        if (pageText.isNotBlank()) {
+                            TtsControlsHelper.play(context, pageText)
+                        }
+                    }
+                }
             )
         }
 
@@ -380,21 +444,45 @@ fun PdfReaderScreen(
             )
         }
 
-        // Bottom controls
-        AnimatedVisibility(
-            visible = uiState.isControlsVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
+        // Bottom controls — TTS bar or page navigation
+        if (uiState.ttsState == TTSState.PLAYING ||
+            uiState.ttsState == TTSState.PAUSED
         ) {
-            PdfBottomReaderControls(
-                currentPage = uiState.currentPage,
-                totalPages = uiState.totalPages,
-                progressPercent = uiState.progressPercent,
-                onPreviousPage = { viewModel.previousPage() },
-                onNextPage = { viewModel.nextPage() },
-                onPageSelected = { viewModel.goToPage(it) }
+            // TTS controls bar during active playback
+            TtsControlsBar(
+                ttsState = uiState.ttsState,
+                currentSpeed = ttsSettings.speechRate,
+                currentPitch = ttsSettings.pitch,
+                currentVoiceName = ttsSettings.voiceName,
+                onPlayPause = { TtsControlsHelper.toggle(context) },
+                onStop = { TtsControlsHelper.stop(context) },
+                onSpeedChanged = { newSpeed ->
+                    TtsControlsHelper.setSpeed(context, newSpeed)
+                    scope.launch { ttsSettingsRepository.setSpeechRate(newSpeed) }
+                },
+                onPitchChanged = { newPitch ->
+                    TtsControlsHelper.setPitch(context, newPitch)
+                    scope.launch { ttsSettingsRepository.setPitch(newPitch) }
+                },
+                onVoicePickerOpen = { showVoicePicker = true },
+                modifier = Modifier.align(Alignment.BottomCenter)
             )
+        } else {
+            AnimatedVisibility(
+                visible = uiState.isControlsVisible,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                PdfBottomReaderControls(
+                    currentPage = uiState.currentPage,
+                    totalPages = uiState.totalPages,
+                    progressPercent = uiState.progressPercent,
+                    onPreviousPage = { viewModel.previousPage() },
+                    onNextPage = { viewModel.nextPage() },
+                    onPageSelected = { viewModel.goToPage(it) }
+                )
+            }
         }
 
         // Minimal page indicator when controls are hidden
@@ -420,6 +508,22 @@ fun PdfReaderScreen(
                     viewModel.removeBookmark(bookmark)
                 },
                 onDismiss = { viewModel.dismissBookmarkList() }
+            )
+        }
+
+        // Voice picker dialog for TTS
+        if (showVoicePicker) {
+            VoicePickerDialog(
+                availableVoices = emptySet(),
+                currentVoiceName = ttsSettings.voiceName,
+                onVoiceSelected = { voiceName ->
+                    TtsControlsHelper.setVoice(context, voiceName)
+                    scope.launch {
+                        ttsSettingsRepository.setVoiceName(voiceName)
+                    }
+                    showVoicePicker = false
+                },
+                onDismiss = { showVoicePicker = false }
             )
         }
     }
@@ -768,7 +872,9 @@ private fun TopReaderBar(
     onBookmarkClick: () -> Unit,
     onBookmarkListClick: () -> Unit,
     onCropClick: () -> Unit,
-    isBookmarked: Boolean
+    isBookmarked: Boolean,
+    ttsState: TTSState = TTSState.IDLE,
+    onReadAloud: () -> Unit = {}
 ) {
     Surface(
         color = Color.Black.copy(alpha = 0.75f),
@@ -805,6 +911,19 @@ private fun TopReaderBar(
                 fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
+
+            // Read Aloud button — show when TTS is not actively playing/paused
+            val isTtsIdle = ttsState == TTSState.IDLE
+            val isTtsReady = ttsState == TTSState.READY
+            if (isTtsIdle || isTtsReady) {
+                IconButton(onClick = onReadAloud) {
+                    Icon(
+                        imageVector = Icons.Default.RecordVoiceOver,
+                        contentDescription = "Read Aloud",
+                        tint = Color.White
+                    )
+                }
+            }
 
             IconButton(onClick = onCropClick) {
                 Icon(
