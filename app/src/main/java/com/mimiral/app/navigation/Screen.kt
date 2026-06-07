@@ -44,6 +44,10 @@ sealed class Screen(val route: String) {
         fun createRoute(bookId: Int): String = "markdown_reader/$bookId"
     }
 
+    object ReadingMode : Screen("reading_mode/{bookId}") {
+        fun createRoute(bookId: Int): String = "reading_mode/$bookId"
+    }
+
     // TTS settings
     object TTSSettings : Screen("tts_settings")
 

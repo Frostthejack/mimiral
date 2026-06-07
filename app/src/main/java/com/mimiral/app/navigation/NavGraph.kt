@@ -34,6 +34,7 @@ import com.mimiral.app.ui.reader.Fb2ReaderScreen
 import com.mimiral.app.ui.reader.MarkdownReaderScreen
 import com.mimiral.app.ui.reader.MobiReaderScreen
 import com.mimiral.app.ui.reader.PdfReaderScreen
+import com.mimiral.app.ui.reader.ReadingModeScreen
 import com.mimiral.app.ui.reader.TxtRtfReaderScreen
 import com.mimiral.app.ui.readinglists.ReadingListDetailScreen
 import com.mimiral.app.ui.readinglists.ReadingListsScreen
@@ -72,6 +73,18 @@ fun routeForBookFormat(bookId: Int, format: String): String {
         "DOC", "DOCX" -> "doc_reader/$bookId"
         "MD" -> "markdown_reader/$bookId"
         else -> "pdf_reader/$bookId"
+    }
+}
+
+/**
+ * Navigation route for the Reading Mode (reflowable text) view.
+ * All formats that support text extraction go to reading_mode.
+ * Comic archives (CBZ/CBR) are excluded since they are image-based.
+ */
+fun routeForBookReadingMode(bookId: Int, format: String): String {
+    return when (format.uppercase()) {
+        "CBZ", "CBR" -> "comic_reader/$bookId" // Comics don't have text
+        else -> "reading_mode/$bookId" // All other formats support text extraction
     }
 }
 
@@ -349,6 +362,18 @@ fun MimiralNavGraph(navController: NavHostController) {
                 val bookId = backStackEntry.arguments?.getInt("bookId")
                     ?: return@composable
                 MarkdownReaderScreen(
+                    bookId = bookId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "reading_mode/{bookId}",
+                arguments = listOf(navArgument("bookId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val bookId = backStackEntry.arguments?.getInt("bookId")
+                    ?: return@composable
+                ReadingModeScreen(
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() }
                 )
