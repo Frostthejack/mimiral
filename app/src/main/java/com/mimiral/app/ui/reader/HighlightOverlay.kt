@@ -20,7 +20,13 @@ import com.mimiral.app.data.reader.Sentence
 /**
  * Renders page text with highlight overlays applied.
  * Supports long press gesture to trigger text selection for highlighting.
- * Also renders TTS sentence-level highlight when a sentence is actively being read.
+ * Also renders TTS sentence-level highlight and word-level highlight when TTS
+ * is actively reading.
+ *
+ * When a word-level range [ttsWordStart, ttsWordEnd) is available, the active
+ * word gets a stronger highlight while the containing sentence gets a subtler
+ * background. When only sentence-level data is available, the sentence gets
+ * the full highlight.
  */
 @Composable
 fun HighlightableText(
@@ -28,15 +34,20 @@ fun HighlightableText(
     highlights: List<ReaderHighlight>,
     textSettings: TextSettings,
     ttsSentence: Sentence? = null,
+    ttsWordStart: Int = -1,
+    ttsWordEnd: Int = -1,
+    ttsHighlightColor: Color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
     onLongPress: (selectedText: String, startOffset: Int, endOffset: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Build AnnotatedString with highlight spans and TTS sentence highlight applied
-    val ttsHighlightColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+    // Build AnnotatedString with highlight spans and TTS highlighting applied
     val annotatedText: androidx.compose.ui.text.AnnotatedString = remember(
         text,
         highlights,
-        ttsSentence
+        ttsSentence,
+        ttsWordStart,
+        ttsWordEnd,
+        ttsHighlightColor
     ) {
         buildAnnotatedString {
             append(text)
@@ -59,8 +70,35 @@ fun HighlightableText(
                 }
             }
 
-            // TTS sentence highlight — renders behind the text while TTS reads
-            if (ttsSentence != null) {
+            val hasWordHighlight = ttsWordStart >= 0 && ttsWordEnd > ttsWordStart
+
+            if (hasWordHighlight && ttsSentence != null) {
+                // Word-level highlighting available: sentence gets subtle bg,
+                // active word gets stronger highlight
+                val sentenceStart = ttsSentence.start.coerceIn(0, text.length)
+                val sentenceEnd = ttsSentence.end.coerceIn(0, text.length)
+                val wordStart = ttsWordStart.coerceIn(0, text.length)
+                val wordEnd = ttsWordEnd.coerceIn(0, text.length)
+
+                if (sentenceStart < sentenceEnd) {
+                    // Apply subtle sentence background
+                    addStyle(
+                        SpanStyle(background = ttsHighlightColor.copy(alpha = 0.3f)),
+                        sentenceStart,
+                        sentenceEnd
+                    )
+                }
+
+                if (wordStart < wordEnd) {
+                    // Apply stronger word highlight (overwrites the sentence bg in this range)
+                    addStyle(
+                        SpanStyle(background = ttsHighlightColor),
+                        wordStart,
+                        wordEnd
+                    )
+                }
+            } else if (ttsSentence != null) {
+                // No word-level data: fall back to full sentence highlight
                 val sentenceStart = ttsSentence.start.coerceIn(0, text.length)
                 val sentenceEnd = ttsSentence.end.coerceIn(0, text.length)
                 if (sentenceStart < sentenceEnd) {

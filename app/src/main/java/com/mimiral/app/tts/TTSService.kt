@@ -74,6 +74,12 @@ class TTSService : Service() {
         const val EXTRA_SENTENCE_TEXT = "extra_sentence_text"
         const val EXTRA_SENTENCE_ACTIVE = "extra_sentence_active"
 
+        /** Broadcast: word-level progress for TTS highlighting. */
+        const val ACTION_TTS_WORD = "com.mimiral.app.tts.ACTION_TTS_WORD"
+        const val EXTRA_WORD_START = "extra_word_start"
+        const val EXTRA_WORD_END = "extra_word_end"
+        const val EXTRA_WORD_ACTIVE = "extra_word_active"
+
         /** Broadcast: TTS state change (PLAYING, PAUSED, READY, IDLE, etc.). */
         const val ACTION_TTS_STATE = "com.mimiral.app.tts.ACTION_TTS_STATE"
         const val EXTRA_TTS_STATE = "extra_tts_state"
@@ -218,6 +224,12 @@ class TTSService : Service() {
             }
             onSentenceChanged.add { sentence ->
                 broadcastSentence(sentence)
+            }
+            onWordChanged.add { start, end ->
+                broadcastWord(start, end)
+            }
+            onWordCleared.add {
+                broadcastWordCleared()
             }
         }
         ttsManager?.initialize()
@@ -398,6 +410,24 @@ class TTSService : Service() {
                 putExtra(EXTRA_SENTENCE_END, sentence.end)
                 putExtra(EXTRA_SENTENCE_TEXT, sentence.text)
             }
+            setPackage(packageName)
+        }
+        sendBroadcast(broadcastIntent)
+    }
+
+    private fun broadcastWord(start: Int, end: Int) {
+        val broadcastIntent = Intent(ACTION_TTS_WORD).apply {
+            putExtra(EXTRA_WORD_ACTIVE, true)
+            putExtra(EXTRA_WORD_START, start)
+            putExtra(EXTRA_WORD_END, end)
+            setPackage(packageName)
+        }
+        sendBroadcast(broadcastIntent)
+    }
+
+    private fun broadcastWordCleared() {
+        val broadcastIntent = Intent(ACTION_TTS_WORD).apply {
+            putExtra(EXTRA_WORD_ACTIVE, false)
             setPackage(packageName)
         }
         sendBroadcast(broadcastIntent)
