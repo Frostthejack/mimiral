@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -86,6 +87,7 @@ import kotlinx.coroutines.launch
 fun EpubReaderScreen(
     bookId: Int,
     onNavigateBack: () -> Unit,
+    onNavigateToReadingMode: () -> Unit = {},
     viewModel: EpubReaderViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -432,6 +434,10 @@ fun EpubReaderScreen(
                                     contentDescription = "Read Aloud"
                                 )
                             }
+                        }
+                        // Reading Mode button
+                        IconButton(onClick = onNavigateToReadingMode) {
+                            Icon(Icons.Default.MenuBook, contentDescription = "Reading Mode")
                         }
                         IconButton(onClick = { viewModel.showToc() }) {
                             Icon(Icons.Default.List, contentDescription = "Table of Contents")

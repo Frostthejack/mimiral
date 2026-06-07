@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
@@ -126,7 +127,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun PdfReaderScreen(
     bookId: Int,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToReadingMode: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: PdfReaderViewModel = hiltViewModel()
@@ -391,7 +393,8 @@ fun PdfReaderScreen(
                             TtsControlsHelper.play(context, pageText)
                         }
                     }
-                }
+                },
+                onNavigateToReadingMode = onNavigateToReadingMode
             )
         }
 
@@ -873,7 +876,8 @@ private fun TopReaderBar(
     onCropClick: () -> Unit,
     isBookmarked: Boolean,
     ttsState: TTSState = TTSState.IDLE,
-    onReadAloud: () -> Unit = {}
+    onReadAloud: () -> Unit = {},
+    onNavigateToReadingMode: () -> Unit = {}
 ) {
     Surface(
         color = Color.Black.copy(alpha = 0.75f),
@@ -928,6 +932,15 @@ private fun TopReaderBar(
                 Icon(
                     imageVector = Icons.Default.Crop,
                     contentDescription = "Crop margins",
+                    tint = Color.White
+                )
+            }
+
+            // Reading Mode button
+            IconButton(onClick = onNavigateToReadingMode) {
+                Icon(
+                    imageVector = Icons.Default.MenuBook,
+                    contentDescription = "Reading Mode",
                     tint = Color.White
                 )
             }
