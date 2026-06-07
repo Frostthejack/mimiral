@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -51,6 +52,10 @@ class KavitaSetupViewModel @Inject constructor(
     application: Application,
     private val serverDao: ServerDao
 ) : AndroidViewModel(application) {
+
+    companion object {
+        private const val TAG = "KavitaSetupVM"
+    }
 
     private val _uiState = MutableStateFlow(KavitaSetupUiState())
     val uiState: StateFlow<KavitaSetupUiState> = _uiState.asStateFlow()
@@ -176,24 +181,28 @@ class KavitaSetupViewModel @Inject constructor(
                     }
                 }
             } catch (e: java.net.ConnectException) {
+                Log.e(TAG, "Connection refused", e)
                 _uiState.value = _uiState.value.copy(
                     isTestingConnection = false,
                     connectionStatus = ConnectionStatus.ERROR,
                     errorMessage = "Cannot connect to server — check URL and network"
                 )
             } catch (e: java.net.SocketTimeoutException) {
+                Log.e(TAG, "Connection timeout", e)
                 _uiState.value = _uiState.value.copy(
                     isTestingConnection = false,
                     connectionStatus = ConnectionStatus.ERROR,
                     errorMessage = "Server timed out — try again later"
                 )
             } catch (e: java.net.UnknownHostException) {
+                Log.e(TAG, "Unknown host", e)
                 _uiState.value = _uiState.value.copy(
                     isTestingConnection = false,
                     connectionStatus = ConnectionStatus.ERROR,
                     errorMessage = "Server not found — check the URL"
                 )
             } catch (e: Exception) {
+                Log.e(TAG, "testConnection unexpected error", e)
                 _uiState.value = _uiState.value.copy(
                     isTestingConnection = false,
                     connectionStatus = ConnectionStatus.ERROR,
@@ -372,6 +381,7 @@ class KavitaSetupViewModel @Inject constructor(
                 Exception("Cannot reach server at $baseUrl — check the URL and network")
             )
         } catch (e: Exception) {
+            Log.e(TAG, "testServerConnection failed", e)
             Result.failure(e)
         }
     }
