@@ -999,7 +999,7 @@ class ApiIntegrationTest {
         client.getLibraries()
 
         val request = mockServer.takeRequest()
-        assertEquals("/api/library", request.path)
+        assertEquals("/api/Library/libraries", request.path)
     }
 
     @Test
@@ -1014,9 +1014,12 @@ class ApiIntegrationTest {
         client.getSeries(libraryId = 5, pageNumber = 2, pageSize = 50)
 
         val request = mockServer.takeRequest()
-        assertTrue("Should contain libraryId", request.path!!.contains("libraryId=5"))
-        assertTrue("Should contain pageNumber", request.path!!.contains("pageNumber=2"))
-        assertTrue("Should contain pageSize", request.path!!.contains("pageSize=50"))
+        assertEquals("POST", request.method)
+        assertTrue("Should use v2 endpoint", request.path!!.contains("/api/Series/v2"))
+        val body = request.body.readUtf8()
+        assertTrue("Should contain libraryId", body.contains("\"libraryId\":5"))
+        assertTrue("Should contain pageNumber", body.contains("\"pageNumber\":2"))
+        assertTrue("Should contain pageSize", body.contains("\"pageSize\":50"))
     }
 
     @Test
@@ -1089,7 +1092,7 @@ class ApiIntegrationTest {
 
         val request = mockServer.takeRequest()
         assertTrue(request.path!!.contains("chapterId=7"))
-        assertTrue(request.path!!.contains("/api/download/book"))
+        assertTrue(request.path!!.contains("/api/download/chapter"))
     }
 
     @Test
