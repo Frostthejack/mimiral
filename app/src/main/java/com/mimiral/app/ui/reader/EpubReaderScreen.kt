@@ -835,7 +835,6 @@ fun EpubReaderScreen(
     // Voice picker dialog
     if (showVoicePicker) {
         VoicePickerDialog(
-            availableVoices = emptySet(), // TODO: get from TTS engine when bound
             currentVoiceName = ttsSettings.voiceName,
             onVoiceSelected = { voiceName ->
                 TtsControlsHelper.setVoice(context, voiceName)

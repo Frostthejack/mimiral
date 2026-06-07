@@ -514,7 +514,6 @@ fun PdfReaderScreen(
         // Voice picker dialog for TTS
         if (showVoicePicker) {
             VoicePickerDialog(
-                availableVoices = emptySet(),
                 currentVoiceName = ttsSettings.voiceName,
                 onVoiceSelected = { voiceName ->
                     TtsControlsHelper.setVoice(context, voiceName)

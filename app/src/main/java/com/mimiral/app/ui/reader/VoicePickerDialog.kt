@@ -1,6 +1,8 @@
 package com.mimiral.app.ui.reader
 
+import android.content.Context
 import android.speech.tts.Voice
+import android.speech.tts.TextToSpeech
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,47 +16,78 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mimiral.app.R
+import java.util.Locale
 
 /**
  * Dialog for selecting a TTS voice from available voices.
  *
- * Shows a scrollable list of available TTS voices grouped by locale.
- * Each voice shows its name, locale, and quality indicator.
+ * Self-initializes a TextToSpeech engine to query available voices,
+ * then displays them in a scrollable list grouped by locale.
  *
- * @param availableVoices Set of voices available from the TTS engine
  * @param currentVoiceName Name of the currently selected voice (empty = default)
  * @param onVoiceSelected Called when user selects a voice
  * @param onDismiss Called when dialog is dismissed
  */
 @Composable
 fun VoicePickerDialog(
-    availableVoices: Set<Voice>,
+    availableVoices: Set<Voice> = emptySet(),
     currentVoiceName: String,
     onVoiceSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val voicesList = remember(availableVoices) {
-        availableVoices.sortedWith(
+    val context = LocalContext.current
+    var voices by remember { mutableStateOf<Set<Voice>>(emptySet()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var ttsEngine by remember { mutableStateOf<TextToSpeech?>(null) }
+
+    // Initialize TTS engine to query voices
+    DisposableEffect(context) {
+        val tts = TextToSpeech(context.applicationContext, null)
+        ttsEngine = tts
+        onDispose {
+            tts.shutdown()
+        }
+    }
+
+    // Query voices once engine is ready
+    LaunchedEffect(ttsEngine) {
+        val engine = ttsEngine
+        if (engine != null) {
+            // Small delay to let engine initialize
+            kotlinx.coroutines.delay(500)
+            voices = engine.voices ?: emptySet()
+            isLoading = false
+        }
+    }
+
+    val voicesList = remember(voices) {
+        voices.sortedWith(
             compareBy<Voice> { it.locale.displayName }
                 .thenBy { it.name }
         )
     }
 
-    var selectedVoice by remember(currentVoiceName) { mutableStateOf(currentVoiceName) }
+    var selectedVoice by remember(currentVoiceName) {
+        mutableStateOf(currentVoiceName)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -62,7 +95,16 @@ fun VoicePickerDialog(
             Text(stringResource(R.string.tts_voice_picker_title))
         },
         text = {
-            if (voicesList.isEmpty()) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (voicesList.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
