@@ -9,9 +9,9 @@ package com.mimiral.app.data.reader
  * - `<h1>`–`<h6>` → [ContentBlock.Heading] with level 1–6
  * - `<p>` with `<strong>`/`<b>`/`<em>`/`<i>` → [ContentBlock.Paragraph] with [TextSpan]s
  * - `<blockquote>` → [ContentBlock.Quote]
- * - `<li>` inside `<ul>` → [ContentBlock.ListItem] with ordered=false
- * - `<li>` inside `<ol>` → [ContentBlock.ListItem] with ordered=true
- * - `<br>` → paragraph break (splits surrounding text into separate Paragraph blocks)
+ * - `<li>` inside `<ul>` → [ContentBlock.ListItem] with order=0
+ * - `<li>` inside `<ol>` → [ContentBlock.ListItem] with 1-based order
+ * - `<hr>` → [ContentBlock.Rule]
  *
  * The extractor uses a simple recursive descent approach over a pre-lexed token
  * stream, keeping it pure Kotlin and unit-testable without Android dependencies.
@@ -20,14 +20,7 @@ package com.mimiral.app.data.reader
  * ```
  * val extractor = EpubStructuredExtractor()
  * val blocks = extractor.extract(xhtml)
- * for (block in blocks) {
- *     when (block) {
- *         is ContentBlock.Heading -> println("${"#".repeat(block.level)} ${block.text}")
- *         is ContentBlock.Paragraph -> println(block.spans)
- *         is ContentBlock.Quote -> println("> ${block.text}")
- *         is ContentBlock.ListItem -> println("${if (block.ordered) "${block.index}." else "•"} ${block.text}")
- *     }
- * }
+ * // blocks: List<ContentBlock> — Heading, Paragraph, Quote, etc.
  * ```
  */
 class EpubStructuredExtractor {
@@ -36,7 +29,7 @@ class EpubStructuredExtractor {
      * Extracts structured content blocks from EPUB XHTML.
      *
      * @param html The raw XHTML content from an EPUB chapter.
-     * @return List of [ContentBlock]s in document order.
+     * @return List of [ContentBlock]s in document order, each with a sequential index.
      */
     fun extract(html: String): List<ContentBlock> {
         if (html.isBlank()) return emptyList()
@@ -50,7 +43,18 @@ class EpubStructuredExtractor {
         if (tokens.isEmpty()) return emptyList()
 
         // Parse the token stream into structured blocks
-        return parseTokens(tokens)
+        val rawBlocks = parseTokens(tokens)
+
+        // Assign sequential indices
+        return rawBlocks.mapIndexed { index, block ->
+            when (block) {
+                is ContentBlock.Heading -> block.copy(index = index)
+                is ContentBlock.Paragraph -> block.copy(index = index)
+                is ContentBlock.Quote -> block.copy(index = index)
+                is ContentBlock.ListItem -> block.copy(index = index)
+                is ContentBlock.Rule -> block.copy(index = index)
+            }
+        }
     }
 
     /**
@@ -58,14 +62,7 @@ class EpubStructuredExtractor {
      * Useful for TTS or fallback when structured rendering isn't needed.
      */
     fun extractPlainText(html: String): String {
-        return extract(html).joinToString("\n") { block ->
-            when (block) {
-                is ContentBlock.Heading -> block.text
-                is ContentBlock.Paragraph -> block.text
-                is ContentBlock.Quote -> block.text
-                is ContentBlock.ListItem -> block.text
-            }
-        }
+        return extract(html).joinToString("\n") { block -> block.text }
     }
 
     // ---- Tokenizer ----
@@ -100,9 +97,6 @@ class EpubStructuredExtractor {
                 val text = html.substring(lastIndex, match.range.first)
                 if (text.isNotEmpty()) {
                     val decoded = decodeEntities(text)
-                    // Collapse all whitespace (newlines, multi-spaces) to single spaces.
-                    // This preserves inline spaces ("Hello ") while removing
-                    // formatting whitespace (newlines between block tags).
                     val normalized = decoded.replace(Regex("\\s+"), " ")
                     if (normalized.isNotEmpty()) {
                         tokens.add(Token.Text(normalized))
@@ -142,11 +136,18 @@ class EpubStructuredExtractor {
     // ---- Parser ----
 
     /**
-     * Parses the token stream into a list of ContentBlocks.
-     *
-     * This is a simple top-down parser that walks the flat token list,
-     * tracking context (inside blockquote? inside list?) to produce
-     * the correct block types.
+     * Internal text-based span for parsing. Converted to offset-based
+     * [TextSpan] when producing [ContentBlock.Paragraph].
+     */
+    private data class ParsedSpan(
+        val text: String,
+        val bold: Boolean = false,
+        val italic: Boolean = false
+    )
+
+    /**
+     * Parses the token stream into a list of ContentBlocks (with placeholder index 0;
+     * indices are assigned by [extract] after parsing).
      */
     private fun parseTokens(tokens: List<Token>): List<ContentBlock> {
         val blocks = mutableListOf<ContentBlock>()
@@ -162,18 +163,25 @@ class EpubStructuredExtractor {
                     blocks.addAll(parsed)
                 }
                 is Token.CloseTag -> {
-                    // Close tag at top level — skip it
                     ctx.pos++
                 }
                 is Token.SelfClosingTag -> {
-                    // <br> at top level — skip (meaningful only inside paragraphs)
+                    if (token.name == "hr") {
+                        blocks.add(ContentBlock.Rule(index = 0))
+                    }
                     ctx.pos++
                 }
                 is Token.Text -> {
-                    // Bare text at top level (not inside any block tag) —
-                    // wrap in a paragraph, but skip whitespace-only text
                     if (token.content.isNotBlank()) {
-                        blocks.add(ContentBlock.Paragraph(listOf(TextSpan(token.content.trim()))))
+                        val plainText = token.content.trim()
+                        blocks.add(
+                            ContentBlock.Paragraph(
+                                index = 0,
+                                text = plainText,
+                                isBold = false,
+                                spans = emptyList()
+                            )
+                        )
                     }
                     ctx.pos++
                 }
@@ -193,53 +201,93 @@ class EpubStructuredExtractor {
 
     /**
      * Handles an open tag at the current position.
-     * Returns a list of ContentBlocks (may be empty for unrecognized tags, or
-     * multiple for list elements). Advances ctx.pos past the consumed tokens.
+     * Returns a list of ContentBlocks. Advances ctx.pos past the consumed tokens.
      */
     private fun parseOpenTag(tag: Token.OpenTag, ctx: ParseContext): List<ContentBlock> {
         return when (tag.name) {
             in HEADING_TAGS -> {
                 val level = tag.name.removePrefix("h").toIntOrNull() ?: 1
-                ctx.pos++ // skip the open tag
+                ctx.pos++
                 val text = collectTextUntilClose(tag.name, ctx)
-                listOf(ContentBlock.Heading(level = level, text = text))
+                listOf(ContentBlock.Heading(index = 0, text = text, level = level))
             }
             "p" -> {
-                ctx.pos++ // skip <p>
-                val spans = parseSpansUntilClose("p", ctx)
-                if (spans.isNotEmpty() && spans.any { it.text.isNotBlank() }) {
-                    listOf(ContentBlock.Paragraph(spans))
-                } else {
-                    emptyList()
-                }
+                ctx.pos++
+                val parsedSpans = parseSpansUntilClose("p", ctx)
+                parsedSpansToParagraph(parsedSpans)
             }
             "blockquote" -> {
-                ctx.pos++ // skip <blockquote>
-                // Collect all inner text (flattening nested structure)
+                ctx.pos++
                 val innerText = collectTextUntilClose("blockquote", ctx)
                 if (innerText.isNotBlank()) {
-                    listOf(ContentBlock.Quote(innerText.trim()))
+                    listOf(ContentBlock.Quote(index = 0, text = innerText.trim()))
                 } else {
                     emptyList()
                 }
             }
             "ul", "ol" -> {
                 val ordered = tag.name == "ol"
-                ctx.pos++ // skip <ul> or <ol>
+                ctx.pos++
                 parseListItems(ordered, ctx)
             }
-            // Container tags: div, section, article — parse children inside
             "div", "section", "article" -> {
-                ctx.pos++ // skip open tag
+                ctx.pos++
                 parseChildrenUntilClose(tag.name, ctx)
             }
             else -> {
-                // Not a block tag we handle — skip it (inline tags handled
-                // inside parseSpans; other unknown tags are just ignored)
                 ctx.pos++
                 emptyList()
             }
         }
+    }
+
+    /**
+     * Converts parsed text-based spans to a [ContentBlock.Paragraph].
+     * Text-based [ParsedSpan]s are converted to offset-based [TextSpan]s.
+     *
+     * Bold detection: if ALL spans are bold, the paragraph itself is marked bold
+     * and no individual TextSpans are emitted (reduces redundant markup).
+     */
+    private fun parsedSpansToParagraph(parsedSpans: List<ParsedSpan>): List<ContentBlock.Paragraph> {
+        if (parsedSpans.isEmpty() || parsedSpans.all { it.text.isBlank() }) {
+            return emptyList()
+        }
+
+        // Filter out blank spans
+        val nonBlank = parsedSpans.filter { it.text.isNotBlank() }
+        if (nonBlank.isEmpty()) return emptyList()
+
+        // Build full text and offset-based TextSpans
+        val fullText = nonBlank.joinToString("") { it.text }
+        val allBold = nonBlank.isNotEmpty() && nonBlank.all { it.bold }
+
+        val textSpans = mutableListOf<TextSpan>()
+        if (!allBold) {
+            // Only emit spans for styled text; plain text doesn't need a span
+            var offset = 0
+            for (span in nonBlank) {
+                if (span.bold || span.italic) {
+                    textSpans.add(
+                        TextSpan(
+                            start = offset,
+                            end = offset + span.text.length,
+                            isBold = span.bold,
+                            isItalic = span.italic
+                        )
+                    )
+                }
+                offset += span.text.length
+            }
+        }
+
+        return listOf(
+            ContentBlock.Paragraph(
+                index = 0,
+                text = fullText,
+                isBold = allBold,
+                spans = textSpans
+            )
+        )
     }
 
     /**
@@ -248,31 +296,31 @@ class EpubStructuredExtractor {
      */
     private fun parseListItems(ordered: Boolean, ctx: ParseContext): List<ContentBlock.ListItem> {
         val items = mutableListOf<ContentBlock.ListItem>()
-        var itemIndex = 1
+        var itemNumber = 1
 
         while (ctx.pos < ctx.tokens.size) {
             val token = ctx.tokens[ctx.pos]
 
             when {
                 token is Token.CloseTag && (token.name == "ul" || token.name == "ol") -> {
-                    ctx.pos++ // consume the close tag
+                    ctx.pos++
                     break
                 }
                 token is Token.OpenTag && token.name == "li" -> {
-                    ctx.pos++ // skip <li>
+                    ctx.pos++
                     val text = collectTextUntilClose("li", ctx).trim()
                     if (text.isNotEmpty()) {
                         items.add(
                             ContentBlock.ListItem(
+                                index = 0,
                                 text = text,
-                                ordered = ordered,
-                                index = itemIndex
+                                order = if (ordered) itemNumber else 0
                             )
                         )
                     }
-                    itemIndex++
+                    itemNumber++
                 }
-                else -> ctx.pos++ // skip unknown tokens inside list
+                else -> ctx.pos++
             }
         }
 
@@ -285,21 +333,21 @@ class EpubStructuredExtractor {
      */
     private fun collectTextUntilClose(closeTagName: String, ctx: ParseContext): String {
         val parts = mutableListOf<String>()
-        var depth = 1 // We're already inside the opening tag
+        var depth = 1
 
         while (ctx.pos < ctx.tokens.size && depth > 0) {
             val token = ctx.tokens[ctx.pos]
 
             when (token) {
                 is Token.OpenTag -> {
-                    if (token.name == closeTagName) depth++ // nested same tag
+                    if (token.name == closeTagName) depth++
                     ctx.pos++
                 }
                 is Token.CloseTag -> {
                     if (token.name == closeTagName) {
                         depth--
                         if (depth == 0) {
-                            ctx.pos++ // consume the close tag
+                            ctx.pos++
                             break
                         }
                     }
@@ -321,10 +369,10 @@ class EpubStructuredExtractor {
 
     /**
      * Parses inline content inside a `<p>` tag, preserving bold/italic spans.
-     * Returns a list of [TextSpan] entries.
+     * Returns a list of [ParsedSpan] entries (text-based; converted later).
      */
-    private fun parseSpansUntilClose(closeTagName: String, ctx: ParseContext): List<TextSpan> {
-        val spans = mutableListOf<TextSpan>()
+    private fun parseSpansUntilClose(closeTagName: String, ctx: ParseContext): List<ParsedSpan> {
+        val spans = mutableListOf<ParsedSpan>()
         val styleStack = mutableListOf<InlineStyle>()
         val currentText = StringBuilder()
 
@@ -335,17 +383,16 @@ class EpubStructuredExtractor {
                 is Token.OpenTag -> {
                     when (token.name) {
                         in BOLD_TAGS -> {
-                            flushText(currentText, spans, styleStack)
+                            flushSpanText(currentText, spans, styleStack)
                             styleStack.add(InlineStyle.BOLD)
                             ctx.pos++
                         }
                         in ITALIC_TAGS -> {
-                            flushText(currentText, spans, styleStack)
+                            flushSpanText(currentText, spans, styleStack)
                             styleStack.add(InlineStyle.ITALIC)
                             ctx.pos++
                         }
                         else -> {
-                            // Unknown inline open tag — skip it, text continues
                             ctx.pos++
                         }
                     }
@@ -353,21 +400,21 @@ class EpubStructuredExtractor {
                 is Token.CloseTag -> {
                     when (token.name) {
                         closeTagName -> {
-                            flushText(currentText, spans, styleStack)
-                            ctx.pos++ // consume close tag
+                            flushSpanText(currentText, spans, styleStack)
+                            ctx.pos++
                             return spans
                         }
                         in BOLD_TAGS -> {
-                            flushText(currentText, spans, styleStack)
+                            flushSpanText(currentText, spans, styleStack)
                             styleStack.remove(InlineStyle.BOLD)
                             ctx.pos++
                         }
                         in ITALIC_TAGS -> {
-                            flushText(currentText, spans, styleStack)
+                            flushSpanText(currentText, spans, styleStack)
                             styleStack.remove(InlineStyle.ITALIC)
                             ctx.pos++
                         }
-                        else -> ctx.pos++ // skip unknown close tag
+                        else -> ctx.pos++
                     }
                 }
                 is Token.Text -> {
@@ -376,8 +423,6 @@ class EpubStructuredExtractor {
                 }
                 is Token.SelfClosingTag -> {
                     if (token.name == "br") {
-                        // <br> inside a paragraph: flush current text and add a
-                        // newline marker (we split at newlines after flushing)
                         currentText.append("\n")
                     }
                     ctx.pos++
@@ -385,17 +430,16 @@ class EpubStructuredExtractor {
             }
         }
 
-        // Reached end of tokens without finding the close tag
-        flushText(currentText, spans, styleStack)
+        flushSpanText(currentText, spans, styleStack)
         return spans
     }
 
     /**
-     * Flushes the current text buffer into a TextSpan with the current style stack.
+     * Flushes the current text buffer into a [ParsedSpan] with the current style stack.
      */
-    private fun flushText(
+    private fun flushSpanText(
         buf: StringBuilder,
-        spans: MutableList<TextSpan>,
+        spans: MutableList<ParsedSpan>,
         styleStack: List<InlineStyle>
     ) {
         if (buf.isEmpty()) return
@@ -405,15 +449,14 @@ class EpubStructuredExtractor {
         val isBold = InlineStyle.BOLD in styleStack
         val isItalic = InlineStyle.ITALIC in styleStack
 
-        // Handle <br>-induced line breaks by splitting
         if ("\n" in text) {
             for (segment in text.split("\n")) {
                 if (segment.isNotEmpty()) {
-                    spans.add(TextSpan(text = segment, bold = isBold, italic = isItalic))
+                    spans.add(ParsedSpan(text = segment, bold = isBold, italic = isItalic))
                 }
             }
         } else {
-            spans.add(TextSpan(text = text, bold = isBold, italic = isItalic))
+            spans.add(ParsedSpan(text = text, bold = isBold, italic = isItalic))
         }
     }
 
@@ -432,16 +475,30 @@ class EpubStructuredExtractor {
 
             when {
                 token is Token.CloseTag && token.name == closeTagName -> {
-                    ctx.pos++ // consume close tag
+                    ctx.pos++
                     break
                 }
                 token is Token.OpenTag -> {
                     val parsed = parseOpenTag(token, ctx)
                     blocks.addAll(parsed)
                 }
+                token is Token.SelfClosingTag -> {
+                    if (token.name == "hr") {
+                        blocks.add(ContentBlock.Rule(index = 0))
+                    }
+                    ctx.pos++
+                }
                 token is Token.Text -> {
                     if (token.content.isNotBlank()) {
-                        blocks.add(ContentBlock.Paragraph(listOf(TextSpan(token.content.trim()))))
+                        val plainText = token.content.trim()
+                        blocks.add(
+                            ContentBlock.Paragraph(
+                                index = 0,
+                                text = plainText,
+                                isBold = false,
+                                spans = emptyList()
+                            )
+                        )
                     }
                     ctx.pos++
                 }
@@ -464,19 +521,11 @@ class EpubStructuredExtractor {
     private fun stripNonContent(html: String): String {
         var result = html
 
-        // Remove XML declaration
         result = result.replace(Regex("""<\?xml[^?]*\?>""", RegexOption.IGNORE_CASE), "")
-
-        // Remove DOCTYPE
         result = result.replace(Regex("""<!DOCTYPE[^>]*>""", RegexOption.IGNORE_CASE), "")
-
-        // Remove HTML comments
         result = result.replace(Regex("""<!--.*?-->""", RegexOption.DOT_MATCHES_ALL), "")
-
-        // Remove CDATA sections
         result = result.replace(Regex("""<!\[CDATA\[.*?\]>""", RegexOption.DOT_MATCHES_ALL), "")
 
-        // Remove script/style/head/nav blocks entirely
         for (tag in removeTags) {
             result = result.replace(
                 Regex(
@@ -499,19 +548,16 @@ class EpubStructuredExtractor {
     private fun decodeEntities(text: String): String {
         var result = text
 
-        // Decode hex entities (&#xHHHH;)
         result = result.replace(Regex("""&#x([0-9a-fA-F]+);""")) { match ->
             runCatching { String(Character.toChars(match.groupValues[1].toInt(16))) }
                 .getOrDefault(match.value)
         }
 
-        // Decode numeric entities (&#DDDD;)
         result = result.replace(Regex("""&#(\d+);""")) { match ->
             runCatching { String(Character.toChars(match.groupValues[1].toInt())) }
                 .getOrDefault(match.value)
         }
 
-        // Decode named entities using the shared map
         result = result.replace(Regex("""&([a-zA-Z][a-zA-Z0-9]*);""")) { match ->
             val name = match.groupValues[1].lowercase()
             EpubTextPreprocessor.HTML_ENTITY_MAP[name] ?: match.value

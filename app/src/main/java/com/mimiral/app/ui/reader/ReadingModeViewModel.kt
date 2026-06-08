@@ -8,6 +8,7 @@ import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ReadingTimeTracker
 import com.mimiral.app.data.reader.ChapterExtractor
 import com.mimiral.app.data.reader.ChapterExtractionResult
+import com.mimiral.app.data.reader.StructuredChapterExtractionResult
 import com.mimiral.app.data.reader.EpubParser
 import com.mimiral.app.data.reader.EpubState
 import com.mimiral.app.data.reader.TxtParseResult
@@ -48,12 +49,15 @@ data class ReadingParagraph(
  * @param title Chapter title from TOC or derived.
  * @param paragraphs Paragraphs within this chapter.
  * @param totalCharacters Total character count in this chapter.
+ * @param contentBlocks Structured content blocks for rich Typography rendering.
+ *                       When non-empty, used instead of flat paragraphs.
  */
 data class ReadingChapter(
     val index: Int,
     val title: String,
     val paragraphs: List<ReadingParagraph>,
-    val totalCharacters: Int
+    val totalCharacters: Int,
+    val contentBlocks: List<com.mimiral.app.data.reader.ContentBlock> = emptyList()
 )
 
 /**
@@ -61,14 +65,17 @@ data class ReadingChapter(
  *
  * @param pageIndex Zero-based page index across all chapters.
  * @param chapterIndex The chapter this page belongs to.
- * @param text The text content for this page.
+ * @param text The text content for this page (flat, for TTS/bookmark compat).
  * @param startCharOffset Character offset from the start of the chapter.
+ * @param contentBlocks Structured content blocks for rich Typography rendering.
+ *                       When non-empty, used instead of splitting raw text.
  */
 data class ReadingPage(
     val pageIndex: Int,
     val chapterIndex: Int,
     val text: String,
-    val startCharOffset: Int
+    val startCharOffset: Int,
+    val contentBlocks: List<com.mimiral.app.data.reader.ContentBlock> = emptyList()
 )
 
 /**
@@ -421,7 +428,9 @@ class ReadingModeViewModel @Inject constructor(
     }
 
     /**
-     * Extract chapters from an EPUB file using the existing EpubParser + ChapterExtractor.
+     * Extract chapters from an EPUB file using structured extraction.
+     * Uses EpubStructuredExtractor to produce ContentBlocks (headings, paragraphs
+     * with inline spans, quotes, list items) instead of flat text.
      */
     private suspend fun loadEpubChapters(filePath: String): List<ReadingChapter> =
         withContext(Dispatchers.IO) {
@@ -443,31 +452,52 @@ class ReadingModeViewModel @Inject constructor(
                 val result = mutableListOf<ReadingChapter>()
 
                 for (i in epubChapters.indices) {
-                    val chapterResult = extractor.getChapter(i)
-                    when (chapterResult) {
-                        is ChapterExtractionResult.Success -> {
-                            val paragraphs = splitIntoParagraphs(
-                                chapterResult.text,
-                                chapterResult.chapterIndex
-                            )
+                    val structuredResult = extractor.getStructuredChapter(i)
+                    when (structuredResult) {
+                        is StructuredChapterExtractionResult.Success -> {
+                            val blocks = structuredResult.blocks
+                            val paragraphs = blocksToParagraphs(blocks, i)
                             result.add(
                                 ReadingChapter(
                                     index = i,
-                                    title = chapterResult.chapterTitle,
+                                    title = structuredResult.chapterTitle,
                                     paragraphs = paragraphs,
-                                    totalCharacters = chapterResult.characterCount
+                                    totalCharacters = structuredResult.characterCount,
+                                    contentBlocks = blocks
                                 )
                             )
                         }
-                        is ChapterExtractionResult.Error -> {
-                            result.add(
-                                ReadingChapter(
-                                    index = i,
-                                    title = epubChapters[i].title,
-                                    paragraphs = emptyList(),
-                                    totalCharacters = 0
-                                )
-                            )
+                        is StructuredChapterExtractionResult.Error -> {
+                            // Fallback: try raw text extraction
+                            val chapterResult = extractor.getChapter(i)
+                            when (chapterResult) {
+                                is ChapterExtractionResult.Success -> {
+                                    val paragraphs = splitIntoParagraphs(
+                                        chapterResult.text,
+                                        chapterResult.chapterIndex
+                                    )
+                                    val contentBlocks = parseContentBlocks(chapterResult.text)
+                                    result.add(
+                                        ReadingChapter(
+                                            index = i,
+                                            title = chapterResult.chapterTitle,
+                                            paragraphs = paragraphs,
+                                            totalCharacters = chapterResult.characterCount,
+                                            contentBlocks = contentBlocks
+                                        )
+                                    )
+                                }
+                                is ChapterExtractionResult.Error -> {
+                                    result.add(
+                                        ReadingChapter(
+                                            index = i,
+                                            title = epubChapters[i].title,
+                                            paragraphs = emptyList(),
+                                            totalCharacters = 0
+                                        )
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -481,8 +511,9 @@ class ReadingModeViewModel @Inject constructor(
         }
 
     /**
-     * Extract chapters from a PDF file using PDFBox text extraction.
-     * Pages are grouped into sections for comfortable reading.
+     * Extract chapters from a PDF file using structured PdfStructuredExtractor.
+     * Pages are grouped into sections for comfortable reading; each section
+     * is extracted as structured ContentBlocks (headings, bold, quotes).
      */
     private suspend fun loadPdfChapters(filePath: String): List<ReadingChapter> =
         withContext(Dispatchers.IO) {
@@ -491,6 +522,7 @@ class ReadingModeViewModel @Inject constructor(
                 if (!file.exists()) return@withContext emptyList<ReadingChapter>()
 
                 val chapters = mutableListOf<ReadingChapter>()
+                val structuredExtractor = com.mimiral.app.data.reader.PdfStructuredExtractor()
                 val document = PDDocument.load(file)
 
                 try {
@@ -505,23 +537,48 @@ class ReadingModeViewModel @Inject constructor(
 
                     while (pageStart < totalPages) {
                         val pageEnd = minOf(pageStart + pagesPerChapter, totalPages)
-                        val stripper = PDFTextStripper()
-                        stripper.startPage = pageStart + 1 // 1-indexed
-                        stripper.endPage = pageEnd
-                        val text = stripper.getText(document).trim()
 
-                        if (text.isNotEmpty()) {
-                            val paragraphs = splitIntoParagraphs(text, chapterIndex)
+                        // Use structured extractor for richer content
+                        val blocks = structuredExtractor.extractPages(
+                            file, pageStart, pageEnd - 1
+                        )
+
+                        if (blocks.isNotEmpty()) {
+                            val paragraphs = blocksToParagraphs(blocks, chapterIndex)
+                            val charCount = blocks.sumOf { it.text.length }
                             chapters.add(
                                 ReadingChapter(
                                     index = chapterIndex,
                                     title = if (totalPages <= 20) "Page ${pageStart + 1}"
                                     else "Section ${chapterIndex + 1}",
                                     paragraphs = paragraphs,
-                                    totalCharacters = text.length
+                                    totalCharacters = charCount,
+                                    contentBlocks = blocks
                                 )
                             )
                             chapterIndex++
+                        } else {
+                            // Fallback to raw text extraction
+                            val stripper = PDFTextStripper()
+                            stripper.startPage = pageStart + 1
+                            stripper.endPage = pageEnd
+                            val text = stripper.getText(document).trim()
+
+                            if (text.isNotEmpty()) {
+                                val paragraphs = splitIntoParagraphs(text, chapterIndex)
+                                val contentBlocks = parseContentBlocks(text)
+                                chapters.add(
+                                    ReadingChapter(
+                                        index = chapterIndex,
+                                        title = if (totalPages <= 20) "Page ${pageStart + 1}"
+                                        else "Section ${chapterIndex + 1}",
+                                        paragraphs = paragraphs,
+                                        totalCharacters = text.length,
+                                        contentBlocks = contentBlocks
+                                    )
+                                )
+                                chapterIndex++
+                            }
                         }
                         pageStart = pageEnd
                     }
@@ -555,12 +612,14 @@ class ReadingModeViewModel @Inject constructor(
                         val breaks = result.chapterBreaks
                         if (breaks.isEmpty() || breaks.size <= 1) {
                             val paragraphs = splitIntoParagraphs(text, 0)
+                            val contentBlocks = parseContentBlocks(text)
                             listOf(
                                 ReadingChapter(
                                     index = 0,
                                     title = result.title.ifBlank { "Chapter 1" },
                                     paragraphs = paragraphs,
-                                    totalCharacters = text.length
+                                    totalCharacters = text.length,
+                                    contentBlocks = contentBlocks
                                 )
                             )
                         } else {
@@ -572,6 +631,7 @@ class ReadingModeViewModel @Inject constructor(
                                 val chapterText = text.substring(start, end).trim()
                                 if (chapterText.isNotEmpty()) {
                                     val paragraphs = splitIntoParagraphs(chapterText, i)
+                                    val contentBlocks = parseContentBlocks(chapterText)
                                     val firstLine = chapterText.lines()
                                         .firstOrNull { it.isNotBlank() }
                                         ?.trim()
@@ -582,7 +642,8 @@ class ReadingModeViewModel @Inject constructor(
                                             index = i,
                                             title = firstLine,
                                             paragraphs = paragraphs,
-                                            totalCharacters = chapterText.length
+                                            totalCharacters = chapterText.length,
+                                            contentBlocks = contentBlocks
                                         )
                                     )
                                 }
@@ -596,6 +657,34 @@ class ReadingModeViewModel @Inject constructor(
                 emptyList<ReadingChapter>()
             }
         }
+
+    /**
+     * Convert ContentBlocks to ReadingParagraphs for backward compatibility.
+     * Used by bookmark/progress tracking and TTS which still rely on paragraphs.
+     */
+    private fun blocksToParagraphs(
+        blocks: List<com.mimiral.app.data.reader.ContentBlock>,
+        chapterIndex: Int
+    ): List<ReadingParagraph> {
+        val paragraphs = mutableListOf<ReadingParagraph>()
+        var charOffset = 0
+
+        for (block in blocks) {
+            val text = block.text
+            if (text.isEmpty()) continue
+
+            paragraphs.add(
+                ReadingParagraph(
+                    index = paragraphs.size,
+                    text = text,
+                    charOffset = charOffset
+                )
+            )
+            charOffset += text.length + 2 // +2 for paragraph separator
+        }
+
+        return paragraphs
+    }
 
     /**
      * Split text into paragraphs. A paragraph is delimited by double newlines
@@ -669,6 +758,206 @@ class ReadingModeViewModel @Inject constructor(
         }
 
         return paragraphs
+    }
+
+    /**
+     * Parse a chapter's text into structured ContentBlocks using heuristics.
+     *
+     * Headings: short single-line text (< 80 chars), or ALL CAPS, or lines that
+     *           look like section titles numerically ("1.", "Chapter 3", etc.).
+     * List items: lines starting with bullet/number markers.
+     * Quotes: lines starting with ">" or wrapped in quotation marks.
+     * Everything else: regular Paragraph blocks.
+     */
+    private fun parseContentBlocks(text: String): List<com.mimiral.app.data.reader.ContentBlock> {
+        if (text.isBlank()) return emptyList()
+
+        val blocks = mutableListOf<com.mimiral.app.data.reader.ContentBlock>()
+        var index = 0
+
+        // Split on double newlines (paragraph breaks)
+        val rawBlocks = text.split(Regex("\\n\\s*\\n"))
+
+        for (rawBlock in rawBlocks) {
+            val trimmed = rawBlock.trim()
+            if (trimmed.isEmpty()) continue
+
+            // For multi-line blocks, process each line
+            val lines = trimmed.lines().filter { it.isNotBlank() }
+
+            if (lines.size == 1) {
+                // Single line — could be heading, list item, quote, or paragraph
+                val line = lines[0].trim()
+                blocks.add(classifySingleLine(line, index++))
+            } else {
+                // Multi-line block — check first line for heading/list context
+                for (line in lines) {
+                    val trimmedLine = line.trim()
+                    if (trimmedLine.isEmpty()) continue
+                    blocks.add(classifySingleLine(trimmedLine, index++))
+                }
+            }
+        }
+
+        return blocks
+    }
+
+    private fun classifySingleLine(
+        line: String,
+        index: Int
+    ): com.mimiral.app.data.reader.ContentBlock {
+        // Horizontal rule
+        if (line.matches(Regex("^[-=_*]{3,}$"))) {
+            return com.mimiral.app.data.reader.ContentBlock.Rule(index = index)
+        }
+
+        // List item: starts with bullet, dash, asterisk, or numbered prefix
+        val listMatch = Regex("^(?:[-*•]│\\d+[.)]\\s+)(.*)$").find(line)
+        if (listMatch != null) {
+            val content = listMatch.groupValues[1]
+            val orderMatch = Regex("^(\\d+)[.)]").find(line)
+            val order = orderMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+            return com.mimiral.app.data.reader.ContentBlock.ListItem(
+                index = index,
+                text = content.ifBlank { line },
+                order = order
+            )
+        }
+
+        // Quote: starts with ">" or is wrapped in quotation marks
+        if (line.startsWith(">") || line.startsWith("»")) {
+            return com.mimiral.app.data.reader.ContentBlock.Quote(
+                index = index,
+                text = line.removePrefix(">").removePrefix("»").trim()
+            )
+        }
+
+        // Heading heuristics
+        // 1. ALL CAPS short lines → heading
+        // 2. Lines starting with # (markdown) → heading level
+        // 3. Short lines (< 80 chars) that are standalone → possible heading
+        val markdownHeading = Regex("^(#{1,6})\\s+(.+)$").find(line)
+        if (markdownHeading != null) {
+            val level = markdownHeading.groupValues[1].length.coerceIn(1, 6)
+            return com.mimiral.app.data.reader.ContentBlock.Heading(
+                index = index,
+                text = markdownHeading.groupValues[2].trim(),
+                level = level
+            )
+        }
+
+        if (line.length <= 80 && line == line.uppercase() && line.any { it.isLetter() }) {
+            // ALL CAPS — treat as h3
+            return com.mimiral.app.data.reader.ContentBlock.Heading(
+                index = index,
+                text = line,
+                level = 3
+            )
+        }
+
+        // Chapter/Section prefix headings: "Chapter 1", "1.", "Section 1"
+        val chapterHeading = Regex("^(?:Chapter|Section|Part)\\s+\\d", RegexOption.IGNORE_CASE)
+            .find(line)
+        if (chapterHeading != null && line.length <= 80) {
+            return com.mimiral.app.data.reader.ContentBlock.Heading(
+                index = index,
+                text = line,
+                level = 2
+            )
+        }
+
+        val numericHeading = Regex("^(\\d+)[.)]\\s+\\S").find(line)
+        if (numericHeading != null && line.length <= 60) {
+            return com.mimiral.app.data.reader.ContentBlock.Heading(
+                index = index,
+                text = line,
+                level = 2
+            )
+        }
+
+        // Bold paragraph: if line is wrapped in ** or __ (markdown bold)
+        val boldMatch = Regex("^[*_]{2}(.+)[*_]{2}$").find(line)
+        if (boldMatch != null) {
+            return com.mimiral.app.data.reader.ContentBlock.Paragraph(
+                index = index,
+                text = boldMatch.groupValues[1],
+                isBold = true
+            )
+        }
+
+        // Default: regular paragraph — parse inline spans (bold/italic)
+        val (cleanText, spans) = parseInlineSpans(line)
+        return com.mimiral.app.data.reader.ContentBlock.Paragraph(
+            index = index,
+            text = cleanText,
+            spans = spans
+        )
+    }
+
+    /**
+     * Parse inline markdown-style spans (bold **text**, italic *text*) from a line.
+     * Returns the cleaned text (with markers removed) and a list of TextSpans.
+     */
+    private fun parseInlineSpans(
+        text: String
+    ): Pair<String, List<com.mimiral.app.data.reader.TextSpan>> {
+        val spans = mutableListOf<com.mimiral.app.data.reader.TextSpan>()
+        val result = StringBuilder()
+        var i = 0
+        var offset = 0
+
+        while (i < text.length) {
+            // Check for bold (** or __)
+            if ((i + 1 < text.length) &&
+                ((text[i] == '*' && text[i + 1] == '*') ||
+                    (text[i] == '_' && text[i + 1] == '_'))
+            ) {
+                val marker = text[i]
+                val closeIdx = text.indexOf("$marker$marker", i + 2)
+                if (closeIdx > i + 1) {
+                    val content = text.substring(i + 2, closeIdx)
+                    spans.add(
+                        com.mimiral.app.data.reader.TextSpan(
+                            start = offset,
+                            end = offset + content.length,
+                            isBold = true
+                        )
+                    )
+                    result.append(content)
+                    offset += content.length
+                    i = closeIdx + 2
+                    continue
+                }
+            }
+
+            // Check for italic (* or _, single)
+            if ((text[i] == '*' || text[i] == '_') &&
+                (i + 1 < text.length && text[i + 1] != text[i])
+            ) {
+                val marker = text[i]
+                val closeIdx = text.indexOf(marker, i + 1)
+                if (closeIdx > i + 1) {
+                    val content = text.substring(i + 1, closeIdx)
+                    spans.add(
+                        com.mimiral.app.data.reader.TextSpan(
+                            start = offset,
+                            end = offset + content.length,
+                            isItalic = true
+                        )
+                    )
+                    result.append(content)
+                    offset += content.length
+                    i = closeIdx + 1
+                    continue
+                }
+            }
+
+            result.append(text[i])
+            offset++
+            i++
+        }
+
+        return Pair(result.toString(), spans)
     }
 
     private fun calculateCharsInPreviousChapters(chapterIndex: Int): Long {
@@ -787,8 +1076,15 @@ class ReadingModeViewModel @Inject constructor(
 
     /**
      * Get the full text of the current chapter for TTS.
+     * Prefers contentBlocks (structured) if available, falls back to paragraphs.
      */
     fun getFullText(): String {
+        val chapters = _uiState.value.chapters
+        val chapterIdx = _uiState.value.currentChapterIndex
+        val chapter = chapters.getOrNull(chapterIdx)
+        if (chapter != null && chapter.contentBlocks.isNotEmpty()) {
+            return chapter.contentBlocks.joinToString("\n\n") { it.text }
+        }
         return _uiState.value.paragraphs.joinToString("\n\n") { it.text }
     }
 

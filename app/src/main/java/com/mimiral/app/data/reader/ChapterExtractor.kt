@@ -22,6 +22,20 @@ sealed class ChapterExtractionResult {
 }
 
 /**
+ * Result of a structured chapter extraction (produces ContentBlocks, not raw text).
+ */
+sealed class StructuredChapterExtractionResult {
+    data class Success(
+        val blocks: List<ContentBlock>,
+        val chapterIndex: Int,
+        val chapterTitle: String,
+        val characterCount: Int
+    ) : StructuredChapterExtractionResult()
+
+    data class Error(val message: String, val chapterIndex: Int) : StructuredChapterExtractionResult()
+}
+
+/**
  * A cached chapter in the memory pool.
  *
  * @param chapterIndex The chapter's position in the spine.
@@ -94,6 +108,9 @@ class ChapterExtractor(
 
     private val mutex = Mutex()
 
+    /** Structured extractor for producing ContentBlocks from XHTML. */
+    private val structuredExtractor = EpubStructuredExtractor()
+
     /**
      * Memory pool: maps chapter index to cached chapter content.
      * Uses LinkedHashMap for ordered iteration (oldest first).
@@ -144,6 +161,84 @@ class ChapterExtractor(
             } catch (e: Exception) {
                 ChapterExtractionResult.Error(
                     "Failed to extract chapter $chapterIndex: ${e.message}",
+                    chapterIndex
+                )
+            }
+        }
+    }
+
+    /**
+     * Extracts a chapter as structured [ContentBlock]s using [EpubStructuredExtractor].
+     *
+     * This preserves HTML semantic structure (headings, paragraphs with inline
+     * styles, blockquotes, list items) instead of flattening to plain text.
+     *
+     * @param chapterIndex Zero-based chapter index.
+     * @return [StructuredChapterExtractionResult.Success] with ContentBlocks, or Error.
+     */
+    suspend fun getStructuredChapter(chapterIndex: Int): StructuredChapterExtractionResult = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            try {
+                val chapters = epubParser.getChapters()
+                if (chapterIndex < 0 || chapterIndex >= chapters.size) {
+                    return@withContext StructuredChapterExtractionResult.Error(
+                        "Chapter index $chapterIndex out of bounds",
+                        chapterIndex
+                    )
+                }
+
+                val chapter = chapters[chapterIndex]
+                val pub = epubParser.getPublication()
+                if (pub == null) {
+                    return@withContext StructuredChapterExtractionResult.Error(
+                        "Publication not loaded",
+                        chapterIndex
+                    )
+                }
+
+                val link = pub.readingOrder.getOrNull(chapterIndex)
+                    ?: return@withContext StructuredChapterExtractionResult.Error(
+                        "No spine item for chapter $chapterIndex",
+                        chapterIndex
+                    )
+
+                val resource = pub.get(link)
+                    ?: return@withContext StructuredChapterExtractionResult.Error(
+                        "Failed to get resource for chapter ${chapter.title}",
+                        chapterIndex
+                    )
+
+                val readResult = resource.read()
+                val bytes = when (readResult) {
+                    is Try.Success -> readResult.value
+                    is Try.Failure -> {
+                        return@withContext StructuredChapterExtractionResult.Error(
+                            "Failed to read resource: ${readResult.value.message}",
+                            chapterIndex
+                        )
+                    }
+                }
+
+                if (bytes.isEmpty()) {
+                    return@withContext StructuredChapterExtractionResult.Error(
+                        "Empty resource for chapter ${chapter.title}",
+                        chapterIndex
+                    )
+                }
+
+                val xhtml = String(bytes, Charsets.UTF_8)
+                val blocks = structuredExtractor.extract(xhtml)
+                val charCount = blocks.sumOf { it.text.length }
+
+                StructuredChapterExtractionResult.Success(
+                    blocks = blocks,
+                    chapterIndex = chapterIndex,
+                    chapterTitle = chapter.title,
+                    characterCount = charCount
+                )
+            } catch (e: Exception) {
+                StructuredChapterExtractionResult.Error(
+                    "Failed to extract structured chapter $chapterIndex: ${e.message}",
                     chapterIndex
                 )
             }

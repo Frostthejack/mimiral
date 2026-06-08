@@ -1,93 +1,87 @@
 package com.mimiral.app.data.reader
 
 /**
- * A styled span of text within a [ContentBlock.Paragraph].
+ * Sealed class representing a structured content block extracted from a document.
  *
- * Each span represents a contiguous run of text with consistent formatting.
- * Multiple spans within a paragraph can represent mixed bold/italic styling
- * extracted from HTML elements like `<strong>`, `<b>`, `<em>`, and `<i>`.
+ * Used by both EPUB (HTML-heading-based) and PDF (font-metadata-based) extractors
+ * to represent the semantic structure of a document's content.
  *
- * @param text The text content of this span.
- * @param bold Whether this span should be rendered in bold.
- * @param italic Whether this span should be rendered in italic.
- */
-data class TextSpan(
-    val text: String,
-    val bold: Boolean = false,
-    val italic: Boolean = false
-)
-
-/**
- * Sealed class hierarchy representing structured content extracted from book HTML.
- *
- * Each subclass corresponds to a distinct semantic element found in EPUB XHTML:
- * - [Heading]: `<h1>` through `<h6>` elements
- * - [Paragraph]: `<p>` elements with inline formatting preserved as [TextSpan]s
- * - [Quote]: `<blockquote>` elements
- * - [ListItem]: `<li>` elements within `<ul>` or `<ol>`
- *
- * The hierarchy is designed so that a `List<ContentBlock>` replaces raw `String`
- * output, giving the UI layer enough structure to render headings at different
- * sizes, apply bold/italic spans, style quotes distinctly, and prefix list items
- * with appropriate markers.
+ * Each block carries its text content and enough metadata for the reading-mode
+ * UI to render headings, paragraphs, quotes, and formatted spans appropriately.
  */
 sealed class ContentBlock {
+    /** Zero-based index of this block in the page/chapter sequence. */
+    abstract val index: Int
+
+    /** The text content of this block. */
+    abstract val text: String
 
     /**
-     * A heading element extracted from `<h1>` through `<h6>` tags.
+     * A heading block detected from large font size, bold font, or ALL CAPS lines.
      *
-     * @param level Heading level, 1–6 (maps from h1–h6).
-     * @param text The heading text content.
+     * @param level Heading level (1 = largest/most important, 6 = smallest).
+     *               Derived proportionally from font-size ratio to body font.
      */
     data class Heading(
-        val level: Int,
-        val text: String
-    ) : ContentBlock() {
-        init {
-            require(level in 1..6) { "Heading level must be 1-6, got $level" }
-        }
-    }
+        override val index: Int,
+        override val text: String,
+        val level: Int
+    ) : ContentBlock()
 
     /**
-     * A paragraph element extracted from `<p>` tags, preserving inline formatting.
+     * A normal paragraph block — body text in the default font.
      *
-     * Inline `<strong>`/`<b>` and `<em>`/`<i>` tags are preserved as [TextSpan]
-     * entries, while the overall paragraph structure is maintained.
-     *
-     * @param spans The styled text spans within this paragraph.
+     * @param isBold Whether the paragraph uses a bold/semibold font throughout.
+     * @param spans Inline spans (bold, italic) within the paragraph text.
+     *              Each span describes a contiguous range with formatting.
      */
     data class Paragraph(
-        val spans: List<TextSpan>
-    ) : ContentBlock() {
-        /** Convenience: the plain text of this paragraph (all spans concatenated). */
-        val text: String get() = spans.joinToString("") { it.text }
-
-        /** Whether this paragraph contains any styled (bold or italic) spans. */
-        val hasStyle: Boolean get() = spans.any { it.bold || it.italic }
-    }
+        override val index: Int,
+        override val text: String,
+        val isBold: Boolean = false,
+        val spans: List<TextSpan> = emptyList()
+    ) : ContentBlock()
 
     /**
-     * A block quote element extracted from `<blockquote>` tags.
-     *
-     * @param text The quote text content.
+     * A block quote — indented text, typically in italic font.
      */
     data class Quote(
-        val text: String
+        override val index: Int,
+        override val text: String
     ) : ContentBlock()
 
     /**
-     * A list item element extracted from `<li>` tags.
+     * A list item block.
      *
-     * The [ordered] flag indicates whether the parent list was `<ol>` or `<ul>`,
-     * and [index] provides the 1-based position for ordered lists.
-     *
-     * @param text The list item text content.
-     * @param ordered Whether this item belongs to an ordered list (`<ol>`).
-     * @param index 1-based position within the list (for ordered lists).
+     * @param order 1-based item number, or 0 for unordered (bullet).
      */
     data class ListItem(
-        val text: String,
-        val ordered: Boolean,
-        val index: Int
+        override val index: Int,
+        override val text: String,
+        val order: Int = 0
     ) : ContentBlock()
+
+    /**
+     * A horizontal rule / separator.
+     */
+    data class Rule(
+        override val index: Int
+    ) : ContentBlock() {
+        override val text: String get() = ""
+    }
 }
+
+/**
+ * Represents an inline span within a ContentBlock.Paragraph.
+ *
+ * @param start Inclusive start offset within the paragraph text.
+ * @param end Exclusive end offset within the paragraph text.
+ * @param isBold Whether this span should be rendered as bold.
+ * @param isItalic Whether this span should be rendered as italic.
+ */
+data class TextSpan(
+    val start: Int,
+    val end: Int,
+    val isBold: Boolean = false,
+    val isItalic: Boolean = false
+)
