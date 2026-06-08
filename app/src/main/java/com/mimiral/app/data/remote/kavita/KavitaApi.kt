@@ -20,27 +20,65 @@ interface KavitaApi {
 
     /**
      * Authenticate with username and password to receive a JWT token.
+     * POST /api/Account/login (Kavita v0.7+).
+     *
+     * @param request Login credentials
+     * @return JWT token response
+     */
+    @POST("api/Account/login")
+    suspend fun login(@Body request: KavitaLoginRequest): Response<KavitaLoginResponse>
+
+    /**
+     * Fallback login endpoint for Kavita versions before v0.7.
      * POST /api/Auth/login
      *
      * @param request Login credentials
      * @return JWT token response
      */
     @POST("api/Auth/login")
-    suspend fun login(@Body request: KavitaLoginRequest): Response<KavitaLoginResponse>
+    suspend fun loginLegacy(@Body request: KavitaLoginRequest): Response<KavitaLoginResponse>
+
+    /**
+     * Authenticate via API key to receive a JWT token.
+     * GET /api/Plugin/authenticate — the API key is sent as X-Api-Key header,
+     * the server returns a JWT token in the response body.
+     *
+     * @param apiKey The plugin API key (sent as X-Api-Key header)
+     * @return JWT token string in response body
+     */
+    @GET("api/Plugin/authenticate")
+    suspend fun authenticateWithApiKey(
+        @Header("X-Api-Key") apiKey: String
+    ): Response<String>
 
     /**
      * Refresh an expired JWT token.
-     * POST /api/Auth/refresh-token
+     * POST /api/Account/refresh-token (Kavita v0.7+).
      *
-     * @param token The current/expiring JWT token (Bearer)
+     * The Authorization header carries the Bearer JWT (even if expired),
+     * and the Refresh-Token header carries the refresh token.
+     *
+     * @param token The Bearer JWT (even if expired)
      * @param refreshToken The refresh token
      * @return New JWT token response
      */
-    @POST("api/Auth/refresh-token")
+    @POST("api/Account/refresh-token")
     suspend fun refreshToken(
         @Header("Authorization") token: String,
         @Header("Refresh-Token") refreshToken: String
     ): Response<KavitaLoginResponse>
+
+    /**
+     * Get the OPDS feed URL for the authenticated user.
+     * GET /api/Account/opds-url
+     *
+     * Returns the full OPDS URL including the API key path segment,
+     * e.g. "https://kavita.example.com/api/opds/{apiKey}"
+     *
+     * @return OPDS URL string
+     */
+    @GET("api/Account/opds-url")
+    suspend fun getOpdsUrl(): Response<String>
 
     // ==================== Server Info ====================
 

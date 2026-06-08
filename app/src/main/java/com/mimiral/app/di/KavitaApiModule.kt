@@ -2,6 +2,9 @@ package com.mimiral.app.di
 
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.remote.KavitaSyncApi
+import com.mimiral.app.data.remote.kavita.KavitaApi
+import com.mimiral.app.data.remote.kavita.KavitaAuthInterceptor
+import com.mimiral.app.data.remote.kavita.KavitaAuthService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,11 +26,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 annotation class KavitaApiClient
 
 /**
- * Dagger Hilt module providing the Kavita Retrofit API client.
+ * Dagger Hilt module providing the Kavita Retrofit API client and auth services.
  *
  * Uses a dynamic base URL interceptor that resolves the active Kavita server
- * from the database on each request. This avoids blocking the DI graph on
- * a database read at creation time (which caused the startup ANR).
+ * from the database on each request, plus [KavitaAuthInterceptor] for token
+ * injection and 401 refresh retry.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -44,13 +47,16 @@ object KavitaApiModule {
     @Singleton
     @KavitaApiClient
     fun provideOkHttpClient(
-        serverDao: ServerDao
+        serverDao: ServerDao,
+        authInterceptor: KavitaAuthInterceptor
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
         return OkHttpClient.Builder()
+            // Order matters: base URL resolves first, then auth, then logging
             .addInterceptor(KavitaBaseUrlInterceptor(serverDao))
+            .addInterceptor(authInterceptor)
             .addInterceptor(logging)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
@@ -73,6 +79,27 @@ object KavitaApiModule {
             .build()
         return retrofit.create(KavitaSyncApi::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideKavitaApi(
+        @KavitaApiClient okHttpClient: OkHttpClient
+    ): KavitaApi {
+        val retrofit = Retrofit.Builder()
+            .baseUrl(PLACEHOLDER_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        return retrofit.create(KavitaApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthFailedCallback(
+        authService: KavitaAuthService
+    ): () -> Unit {
+        return { authService.clearTokens() }
+    }
 }
 
 /**
@@ -83,6 +110,10 @@ object KavitaApiModule {
  * (which used runBlocking on the main thread and caused ANR).
  * The interceptor runs on OkHttp's background thread, so the database
  * read does not block the UI.
+ *
+ * NOTE: Auth header injection (JWT + API key) is handled by
+ * [KavitaAuthInterceptor] which runs after this interceptor.
+ * This interceptor only resolves the base URL.
  */
 class KavitaBaseUrlInterceptor(
     private val serverDao: ServerDao
@@ -95,7 +126,7 @@ class KavitaBaseUrlInterceptor(
     override fun intercept(chain: Interceptor.Chain): okhttp3.Response {
         val originalRequest = chain.request()
 
-        // Resolve the active Kavita server URL and API key on OkHttp's background thread
+        // Resolve the active Kavita server URL on OkHttp's background thread
         val server = try {
             runBlocking(Dispatchers.IO) {
                 serverDao.getActiveServerByType("KAVITA")
@@ -125,10 +156,9 @@ class KavitaBaseUrlInterceptor(
         val requestBuilder = originalRequest.newBuilder()
             .url(newUrl)
 
-        // Add X-Api-Key header if the server has an API key configured
-        if (!server.apiKey.isNullOrBlank()) {
-            requestBuilder.header("X-Api-Key", server.apiKey)
-        }
+        // NOTE: Auth headers (Authorization + X-Api-Key) are now injected by
+        // KavitaAuthInterceptor which runs after this interceptor in the chain.
+        // We no longer add X-Api-Key here to avoid duplication.
 
         return chain.proceed(requestBuilder.build())
     }
