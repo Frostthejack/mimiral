@@ -6,6 +6,7 @@ import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ServerEntity
+import com.mimiral.app.data.remote.kavita.KavitaReadingProgressRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -33,6 +34,9 @@ class KavitaSyncRepositoryTest {
     @Mock
     private lateinit var serverDao: ServerDao
 
+    @Mock
+    private lateinit var progressSyncRepository: KavitaReadingProgressRepository
+
     private lateinit var repository: KavitaSyncRepository
 
     @Before
@@ -42,7 +46,8 @@ class KavitaSyncRepositoryTest {
             kavitaApi = kavitaApi,
             bookDao = bookDao,
             readingProgressDao = readingProgressDao,
-            serverDao = serverDao
+            serverDao = serverDao,
+            progressSyncRepository = progressSyncRepository
         )
     }
 
