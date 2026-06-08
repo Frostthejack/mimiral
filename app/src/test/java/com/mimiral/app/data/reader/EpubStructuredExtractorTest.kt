@@ -1,7 +1,6 @@
 package com.mimiral.app.data.reader
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -112,7 +111,7 @@ class EpubStructuredExtractorTest {
         assertEquals(3, blocks.size)
         val items = blocks.map { it as ContentBlock.ListItem }
         assertEquals("First", items[0].text)
-        assertEquals(0, items[0].order)  // unordered = order 0
+        assertEquals(0, items[0].order) // unordered = order 0
         assertEquals("Second", items[1].text)
         assertEquals("Third", items[2].text)
     }

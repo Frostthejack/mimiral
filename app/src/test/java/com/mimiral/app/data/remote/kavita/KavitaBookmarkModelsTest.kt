@@ -1,11 +1,6 @@
 package com.mimiral.app.data.remote.kavita
 
-import com.mimiral.app.data.local.entity.BookmarkEntity
-import com.mimiral.app.data.local.entity.ServerEntity
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 
 class KavitaBookmarkModelsTest {
