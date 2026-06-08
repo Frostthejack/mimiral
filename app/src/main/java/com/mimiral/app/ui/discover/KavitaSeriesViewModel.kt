@@ -48,7 +48,9 @@ class KavitaSeriesViewModel @Inject constructor(
         // Observe mark-read operations to trigger refresh
         viewModelScope.launch {
             markReadRepository.uiState.collect { state ->
-                if (state.lastOperation != null && _uiState.value.lastMarkReadOperation != state.lastOperation) {
+                if (state.lastOperation != null &&
+                    _uiState.value.lastMarkReadOperation != state.lastOperation
+                ) {
                     _uiState.value = _uiState.value.copy(
                         lastMarkReadOperation = state.lastOperation
                     )

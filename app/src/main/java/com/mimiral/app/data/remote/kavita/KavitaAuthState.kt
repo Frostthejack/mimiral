@@ -30,7 +30,8 @@ data class KavitaAuthState(
 ) {
     /** Whether we have a valid JWT token that hasn't expired. */
     val hasValidJwt: Boolean
-        get() = !jwtToken.isNullOrBlank() && (tokenExpiry == null || tokenExpiry > System.currentTimeMillis())
+        get() = !jwtToken.isNullOrBlank() &&
+            (tokenExpiry == null || tokenExpiry > System.currentTimeMillis())
 
     /** Whether we have a refresh token available. */
     val canRefresh: Boolean

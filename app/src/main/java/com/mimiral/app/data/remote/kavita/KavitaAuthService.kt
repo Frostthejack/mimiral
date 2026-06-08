@@ -302,7 +302,10 @@ class KavitaAuthService @Inject constructor(
             val currentRefresh = _authState.refreshToken
             val baseUrl = _authState.serverUrl?.trimEnd('/')
 
-            if (currentToken.isNullOrBlank() || currentRefresh.isNullOrBlank() || baseUrl.isNullOrBlank()) {
+            if (currentToken.isNullOrBlank() ||
+                currentRefresh.isNullOrBlank() ||
+                baseUrl.isNullOrBlank()
+            ) {
                 Log.w(TAG, "Cannot refresh: missing token, refresh token, or server URL")
                 return@withLock false
             }

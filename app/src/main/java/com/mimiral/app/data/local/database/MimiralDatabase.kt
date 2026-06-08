@@ -447,7 +447,8 @@ abstract class MimiralDatabase : RoomDatabase() {
                 )
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS " +
-                        "`index_pending_operations_created_at` ON `pending_operations` (`created_at`)"
+                        "`index_pending_operations_created_at` " +
+                        "ON `pending_operations` (`created_at`)"
                 )
             }
         }
