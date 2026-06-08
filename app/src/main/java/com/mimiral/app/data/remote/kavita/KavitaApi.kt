@@ -174,4 +174,72 @@ interface KavitaApi {
     suspend fun getProgress(
         @Query("chapterId") chapterId: Int
     ): Response<KavitaReadingProgress>
+
+    // ==================== Bookmarks ====================
+
+    /**
+     * Create (toggle on) a bookmark for a page in a chapter.
+     * POST /api/Reader/bookmark
+     *
+     * @param request The bookmark data (page, chapterId, seriesId, libraryId)
+     */
+    @POST("api/Reader/bookmark")
+    suspend fun createBookmark(
+        @Body request: KavitaBookmarkRequest
+    ): Response<Unit>
+
+    /**
+     * Remove (toggle off) a bookmark for a page in a chapter.
+     * POST /api/Reader/unbookmark
+     *
+     * @param request The unbookmark data (page, chapterId, seriesId, libraryId)
+     */
+    @POST("api/Reader/unbookmark")
+    suspend fun removeBookmark(
+        @Body request: KavitaUnbookmarkRequest
+    ): Response<Unit>
+
+    /**
+     * Get all bookmarks for a specific chapter.
+     * GET /api/Reader/chapter-bookmarks?chapterId={chapterId}
+     *
+     * @param chapterId The chapter ID
+     * @return List of chapter bookmarks (page numbers)
+     */
+    @GET("api/Reader/chapter-bookmarks")
+    suspend fun getChapterBookmarks(
+        @Query("chapterId") chapterId: Int
+    ): Response<List<KavitaChapterBookmark>>
+
+    /**
+     * Get all bookmarks for the current user.
+     * GET /api/Reader/all-bookmarks
+     * Returns bookmarks grouped with series/volume/chapter context.
+     *
+     * @return List of all bookmarks with full context
+     */
+    @GET("api/Reader/all-bookmarks")
+    suspend fun getAllBookmarks(): Response<List<KavitaBookmarkDto>>
+
+    /**
+     * Get all bookmarks for a specific series.
+     * GET /api/Reader/series-bookmarks?seriesId={seriesId}
+     *
+     * @param seriesId The series ID
+     * @return Series bookmarks with context
+     */
+    @GET("api/Reader/series-bookmarks")
+    suspend fun getSeriesBookmarks(
+        @Query("seriesId") seriesId: Int
+    ): Response<KavitaSeriesBookmarksDto>
+
+    /**
+     * Export all bookmarks.
+     * GET /api/Download/bookmarks
+     * Returns bookmarks as a downloadable file.
+     *
+     * @return Raw response body for file download
+     */
+    @GET("api/Download/bookmarks")
+    suspend fun exportBookmarks(): Response<okhttp3.ResponseBody>
 }

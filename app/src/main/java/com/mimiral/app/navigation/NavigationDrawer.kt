@@ -67,7 +67,8 @@ val drawerSections = listOf(
     DrawerSection(
         title = "Discover",
         items = listOf(
-            DrawerNavItem(Screen.Discover, "Discover", Icons.Filled.Explore)
+            DrawerNavItem(Screen.Discover, "Discover", Icons.Filled.Explore),
+            DrawerNavItem(Screen.KavitaBookmarks, "Bookmarks", Icons.Filled.Bookmarks)
         )
     ),
     DrawerSection(

@@ -1,6 +1,6 @@
 package com.mimiral.app.di
 
-import com.mimiral.app.data.remote.kavita.KavitaBookmarkClient
+import com.mimiral.app.data.remote.kavita.KavitaApi
 import com.mimiral.app.data.remote.kavita.KavitaBookmarkRepository
 import dagger.Module
 import dagger.Provides
@@ -10,6 +10,7 @@ import javax.inject.Singleton
 
 /**
  * Hilt DI module for Kavita bookmark sync dependencies.
+ * Uses the Retrofit-based KavitaApi for all bookmark network operations.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -17,17 +18,10 @@ object KavitaBookmarkModule {
 
     @Provides
     @Singleton
-    fun provideKavitaBookmarkClient(): KavitaBookmarkClient {
-        return KavitaBookmarkClient()
-    }
-
-    @Provides
-    @Singleton
     fun provideKavitaBookmarkRepository(
-        client: KavitaBookmarkClient,
-        bookmarkDao: com.mimiral.app.data.local.dao.BookmarkDao,
-        serverDao: com.mimiral.app.data.local.dao.ServerDao
+        kavitaApi: KavitaApi,
+        bookmarkDao: com.mimiral.app.data.local.dao.BookmarkDao
     ): KavitaBookmarkRepository {
-        return KavitaBookmarkRepository(client, bookmarkDao, serverDao)
+        return KavitaBookmarkRepository(kavitaApi, bookmarkDao)
     }
 }

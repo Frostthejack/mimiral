@@ -2,6 +2,7 @@ package com.mimiral.app.di
 
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.remote.KavitaSyncApi
+import com.mimiral.app.data.remote.kavita.KavitaApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -72,6 +73,19 @@ object KavitaApiModule {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         return retrofit.create(KavitaSyncApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideKavitaApi(
+        @KavitaApiClient okHttpClient: OkHttpClient
+    ): KavitaApi {
+        val retrofit = Retrofit.Builder()
+            .baseUrl(PLACEHOLDER_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        return retrofit.create(KavitaApi::class.java)
     }
 }
 
