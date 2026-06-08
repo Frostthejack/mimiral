@@ -249,4 +249,94 @@ interface KavitaApi {
      */
     @GET("api/Reader/continue-point")
     suspend fun getContinuePoint(): Response<KavitaContinuePointDto>
+
+    // ==================== Mark Read / Unread ====================
+
+    /**
+     * Mark a chapter as read.
+     * POST /api/Reader/mark-chapter-read
+     *
+     * @param request Chapter read request
+     */
+    @POST("api/Reader/mark-chapter-read")
+    suspend fun markChapterRead(
+        @Body request: KavitaMarkChapterReadRequest
+    ): Response<Unit>
+
+    /**
+     * Mark a volume as read.
+     * POST /api/Reader/mark-volume-read
+     *
+     * @param request Volume read request
+     */
+    @POST("api/Reader/mark-volume-read")
+    suspend fun markVolumeRead(
+        @Body request: KavitaMarkVolumeReadRequest
+    ): Response<Unit>
+
+    /**
+     * Mark a volume as unread.
+     * POST /api/Reader/mark-volume-unread
+     *
+     * @param request Volume unread request
+     */
+    @POST("api/Reader/mark-volume-unread")
+    suspend fun markVolumeUnread(
+        @Body request: KavitaMarkVolumeReadRequest
+    ): Response<Unit>
+
+    /**
+     * Mark a series as read.
+     * POST /api/Series/mark-read
+     *
+     * @param request Series read request
+     */
+    @POST("api/Series/mark-read")
+    suspend fun markSeriesRead(
+        @Body request: KavitaMarkSeriesReadRequest
+    ): Response<Unit>
+
+    /**
+     * Mark a series as unread.
+     * POST /api/Series/mark-unread
+     *
+     * @param request Series unread request
+     */
+    @POST("api/Series/mark-unread")
+    suspend fun markSeriesUnread(
+        @Body request: KavitaMarkSeriesReadRequest
+    ): Response<Unit>
+
+    /**
+     * Bulk mark multiple series as read.
+     * POST /api/Series/mark-multiple-series-read
+     *
+     * @param request Multiple series read request
+     */
+    @POST("api/Series/mark-multiple-series-read")
+    suspend fun markMultipleSeriesRead(
+        @Body request: KavitaMarkMultipleSeriesReadRequest
+    ): Response<Unit>
+
+    /**
+     * Bulk mark multiple series as unread.
+     * POST /api/Series/mark-multiple-series-unread
+     *
+     * @param request Multiple series unread request
+     */
+    @POST("api/Series/mark-multiple-series-unread")
+    suspend fun markMultipleSeriesUnread(
+        @Body request: KavitaMarkMultipleSeriesReadRequest
+    ): Response<Unit>
+
+    /**
+     * Catch-up: mark all chapters up to a point as read.
+     * POST /api/Tachiyomi/mark-chapter-until-as-read
+     *
+     * @param request Catch-up read request
+     */
+    @POST("api/Tachiyomi/mark-chapter-until-as-read")
+    suspend fun markChapterUntilRead(
+        @Body request: KavitaMarkChapterUntilReadRequest
+    ): Response<Unit>
 }

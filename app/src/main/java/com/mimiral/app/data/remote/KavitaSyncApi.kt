@@ -87,4 +87,78 @@ interface KavitaSyncApi {
     suspend fun getSeries(
         @Path("seriesId") seriesId: Int
     ): Response<SeriesDto>
+
+    // ── Mark Read / Unread endpoints ──
+
+    /**
+     * Mark a chapter as read.
+     * POST /api/Reader/mark-chapter-read
+     */
+    @POST("api/Reader/mark-chapter-read")
+    suspend fun markChapterRead(
+        @Body request: KavitaMarkReadChapterRequest
+    ): Response<Unit>
+
+    /**
+     * Mark a volume as read.
+     * POST /api/Reader/mark-volume-read
+     */
+    @POST("api/Reader/mark-volume-read")
+    suspend fun markVolumeRead(
+        @Body request: KavitaMarkReadVolumeRequest
+    ): Response<Unit>
+
+    /**
+     * Mark a volume as unread.
+     * POST /api/Reader/mark-volume-unread
+     */
+    @POST("api/Reader/mark-volume-unread")
+    suspend fun markVolumeUnread(
+        @Body request: KavitaMarkReadVolumeRequest
+    ): Response<Unit>
+
+    /**
+     * Mark a series as read.
+     * POST /api/Series/mark-read
+     */
+    @POST("api/Series/mark-read")
+    suspend fun markSeriesRead(
+        @Body request: KavitaMarkReadSeriesRequest
+    ): Response<Unit>
+
+    /**
+     * Mark a series as unread.
+     * POST /api/Series/mark-unread
+     */
+    @POST("api/Series/mark-unread")
+    suspend fun markSeriesUnread(
+        @Body request: KavitaMarkReadSeriesRequest
+    ): Response<Unit>
+
+    /**
+     * Bulk mark multiple series as read.
+     * POST /api/Series/mark-multiple-series-read
+     */
+    @POST("api/Series/mark-multiple-series-read")
+    suspend fun markMultipleSeriesRead(
+        @Body request: KavitaMarkReadMultipleSeriesRequest
+    ): Response<Unit>
+
+    /**
+     * Bulk mark multiple series as unread.
+     * POST /api/Series/mark-multiple-series-unread
+     */
+    @POST("api/Series/mark-multiple-series-unread")
+    suspend fun markMultipleSeriesUnread(
+        @Body request: KavitaMarkReadMultipleSeriesRequest
+    ): Response<Unit>
+
+    /**
+     * Catch-up: mark all chapters up to a point as read.
+     * POST /api/Tachiyomi/mark-chapter-until-as-read
+     */
+    @POST("api/Tachiyomi/mark-chapter-until-as-read")
+    suspend fun markChapterUntilRead(
+        @Body request: KavitaMarkReadChapterUntilRequest
+    ): Response<Unit>
 }

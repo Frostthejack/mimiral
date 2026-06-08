@@ -8,6 +8,9 @@ import com.mimiral.app.data.remote.KavitaBrowseRepository
 import com.mimiral.app.data.remote.SeriesDetailDto
 import com.mimiral.app.data.remote.SeriesDto
 import com.mimiral.app.data.remote.VolumeDto
+import com.mimiral.app.data.remote.kavita.KavitaMarkReadRepository
+import com.mimiral.app.data.remote.kavita.KavitaRepository
+import com.mimiral.app.data.remote.kavita.MarkReadOperation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,13 +24,15 @@ data class KavitaSeriesUiState(
     val volumes: List<VolumeDto> = emptyList(),
     val selectedSeries: SeriesDto? = null,
     val selectedVolume: VolumeDto? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val lastMarkReadOperation: MarkReadOperation? = null
 )
 
 @HiltViewModel
 class KavitaSeriesViewModel @Inject constructor(
     private val browseRepository: KavitaBrowseRepository,
-    private val kavitaRepository: com.mimiral.app.data.remote.kavita.KavitaRepository,
+    private val kavitaRepository: KavitaRepository,
+    private val markReadRepository: KavitaMarkReadRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -39,6 +44,18 @@ class KavitaSeriesViewModel @Inject constructor(
     init {
         if (seriesId > 0) {
             loadSeriesDetail(seriesId)
+        }
+        // Observe mark-read operations to trigger refresh
+        viewModelScope.launch {
+            markReadRepository.uiState.collect { state ->
+                if (state.lastOperation != null && _uiState.value.lastMarkReadOperation != state.lastOperation) {
+                    _uiState.value = _uiState.value.copy(
+                        lastMarkReadOperation = state.lastOperation
+                    )
+                    // Refresh volumes after any mark read/unread operation
+                    reloadVolumes()
+                }
+            }
         }
     }
 

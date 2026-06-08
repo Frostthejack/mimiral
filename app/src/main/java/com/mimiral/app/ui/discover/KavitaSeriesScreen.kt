@@ -19,21 +19,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,6 +61,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.mimiral.app.data.remote.ChapterDto
 import com.mimiral.app.data.remote.VolumeDto
+import com.mimiral.app.data.remote.kavita.KavitaMarkReadUiState
+import com.mimiral.app.data.remote.kavita.MarkReadOperation
 
 // ── Series List Screen ──
 
@@ -61,12 +70,16 @@ import com.mimiral.app.data.remote.VolumeDto
 @Composable
 fun KavitaSeriesScreen(
     viewModel: KavitaSeriesViewModel = hiltViewModel(),
+    markReadViewModel: KavitaMarkReadViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
     onNavigateToReader: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val markReadState by markReadViewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -85,6 +98,15 @@ fun KavitaSeriesScreen(
                         }
                     }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    // Series-level mark read/unread menu (only when viewing volumes)
+                    if (uiState.selectedSeries != null && uiState.selectedVolume == null) {
+                        SeriesMarkReadMenu(
+                            seriesId = uiState.selectedSeries!!.id,
+                            markReadViewModel = markReadViewModel
+                        )
                     }
                 }
             )
@@ -129,6 +151,7 @@ fun KavitaSeriesScreen(
                     VolumeDetailView(
                         volume = uiState.selectedVolume!!,
                         viewModel = viewModel,
+                        markReadViewModel = markReadViewModel,
                         onNavigateToReader = onNavigateToReader
                     )
                 }
@@ -137,10 +160,97 @@ fun KavitaSeriesScreen(
                     VolumesListView(
                         volumes = uiState.volumes,
                         seriesDetail = uiState.seriesDetail,
-                        onVolumeClick = { viewModel.selectVolume(it) }
+                        seriesId = uiState.selectedSeries?.id ?: 0,
+                        onVolumeClick = { viewModel.selectVolume(it) },
+                        markReadViewModel = markReadViewModel
                     )
                 }
             }
+
+            // Show marking-in-progress indicator
+            if (markReadState.isMarking) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 80.dp),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Text(
+                                text = "Updating...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Series-level Mark Read/Unread Dropdown Menu ──
+
+@Composable
+private fun SeriesMarkReadMenu(
+    seriesId: Int,
+    markReadViewModel: KavitaMarkReadViewModel
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "More options"
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Mark all as read") },
+                onClick = {
+                    expanded = false
+                    markReadViewModel.markSeriesRead(seriesId)
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Mark all as unread") },
+                onClick = {
+                    expanded = false
+                    markReadViewModel.markSeriesUnread(seriesId)
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.RadioButtonUnchecked,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            )
         }
     }
 }
@@ -151,7 +261,9 @@ fun KavitaSeriesScreen(
 private fun VolumesListView(
     volumes: List<VolumeDto>,
     seriesDetail: com.mimiral.app.data.remote.SeriesDetailDto?,
-    onVolumeClick: (VolumeDto) -> Unit
+    seriesId: Int,
+    onVolumeClick: (VolumeDto) -> Unit,
+    markReadViewModel: KavitaMarkReadViewModel
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -175,7 +287,9 @@ private fun VolumesListView(
         items(volumes, key = { "vol_${it.id}" }) { volume ->
             VolumeCard(
                 volume = volume,
-                onClick = { onVolumeClick(volume) }
+                seriesId = seriesId,
+                onClick = { onVolumeClick(volume) },
+                markReadViewModel = markReadViewModel
             )
         }
 
@@ -193,6 +307,8 @@ private fun VolumesListView(
             items(seriesDetail.specials, key = { "special_${it.id}" }) { chapter ->
                 ChapterRow(
                     chapter = chapter,
+                    seriesId = seriesId,
+                    markReadViewModel = markReadViewModel,
                     onClick = { /* Navigate to reader */ }
                 )
             }
@@ -289,8 +405,13 @@ private fun StatChip(label: String, value: String) {
 @Composable
 private fun VolumeCard(
     volume: VolumeDto,
-    onClick: () -> Unit
+    seriesId: Int,
+    onClick: () -> Unit,
+    markReadViewModel: KavitaMarkReadViewModel
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val isFullyRead = volume.pages > 0 && volume.pagesRead >= volume.pages
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -372,11 +493,52 @@ private fun VolumeCard(
                 }
             }
 
-            Icon(
-                imageVector = Icons.Default.ExpandMore,
-                contentDescription = "View chapters",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Context menu for volume
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Volume options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    if (isFullyRead) {
+                        DropdownMenuItem(
+                            text = { Text("Mark as unread") },
+                            onClick = {
+                                menuExpanded = false
+                                markReadViewModel.markVolumeUnread(volume.id, seriesId)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.RadioButtonUnchecked,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text("Mark as read") },
+                            onClick = {
+                                menuExpanded = false
+                                markReadViewModel.markVolumeRead(volume.id, seriesId)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -387,9 +549,11 @@ private fun VolumeCard(
 private fun VolumeDetailView(
     volume: VolumeDto,
     viewModel: KavitaSeriesViewModel,
+    markReadViewModel: KavitaMarkReadViewModel,
     onNavigateToReader: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(true) }
+    val isFullyRead = volume.pages > 0 && volume.pagesRead >= volume.pages
 
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -444,6 +608,37 @@ private fun VolumeDetailView(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        // Mark read/unread button for volume
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(
+                                onClick = {
+                                    if (isFullyRead) {
+                                        markReadViewModel.markVolumeUnread(
+                                            volume.id, volume.seriesId
+                                        )
+                                    } else {
+                                        markReadViewModel.markVolumeRead(
+                                            volume.id, volume.seriesId
+                                        )
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = if (isFullyRead) {
+                                        Icons.Default.RadioButtonUnchecked
+                                    } else {
+                                        Icons.Default.CheckCircle
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    if (isFullyRead) "Mark unread" else "Mark read"
+                                )
+                            }
+                        }
                     }
                     Icon(
                         imageVector = if (expanded) {
@@ -463,6 +658,8 @@ private fun VolumeDetailView(
             items(volume.chapters, key = { "ch_${it.id}" }) { chapter ->
                 ChapterRow(
                     chapter = chapter,
+                    seriesId = volume.seriesId,
+                    markReadViewModel = markReadViewModel,
                     onClick = {
                         val chapterTitle = chapter.title.ifBlank {
                             chapter.titleName ?: "Chapter ${chapter.number}"
@@ -491,8 +688,13 @@ private fun VolumeDetailView(
 @Composable
 private fun ChapterRow(
     chapter: ChapterDto,
+    seriesId: Int,
+    markReadViewModel: KavitaMarkReadViewModel,
     onClick: () -> Unit
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val isFullyRead = chapter.pages > 0 && chapter.pagesRead >= chapter.pages
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -539,14 +741,65 @@ private fun ChapterRow(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
+                    if (isFullyRead) {
+                        Text(
+                            text = "\u2713 Read",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
-            Icon(
-                imageVector = Icons.Default.MenuBook,
-                contentDescription = "Read",
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Chapter context menu
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Chapter options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    if (!isFullyRead) {
+                        DropdownMenuItem(
+                            text = { Text("Mark as read") },
+                            onClick = {
+                                menuExpanded = false
+                                markReadViewModel.markChapterRead(chapter.id, seriesId)
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        )
+                        // Catch-up option: mark chapters up to this one
+                        DropdownMenuItem(
+                            text = { Text("Mark up to here as read") },
+                            onClick = {
+                                menuExpanded = false
+                                markReadViewModel.markChapterUntilRead(
+                                    seriesId = seriesId,
+                                    chapterId = chapter.id
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.LibraryBooks,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }
