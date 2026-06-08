@@ -18,6 +18,7 @@ import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.dao.ReadingTimeDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.dao.TagDao
+import com.mimiral.app.data.local.dao.PendingOperationDao
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookReadingListCrossRef
@@ -36,6 +37,7 @@ import com.mimiral.app.data.local.entity.ReadingSessionEntity
 import com.mimiral.app.data.local.entity.ReadingTimeEntity
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.local.entity.TagEntity
+import com.mimiral.app.data.local.entity.PendingOperationEntity
 
 @Database(
     entities = [
@@ -56,9 +58,10 @@ import com.mimiral.app.data.local.entity.TagEntity
         ReadingListEntity::class,
         BookReadingListCrossRef::class,
         ReadingTimeEntity::class,
-        ReadingGoalEntity::class
+        ReadingGoalEntity::class,
+        PendingOperationEntity::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -76,6 +79,7 @@ abstract class MimiralDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun readingTimeDao(): ReadingTimeDao
     abstract fun readingGoalDao(): ReadingGoalDao
+    abstract fun pendingOperationDao(): PendingOperationDao
 
     companion object {
         /**
@@ -418,6 +422,32 @@ abstract class MimiralDatabase : RoomDatabase() {
                         "`target_value` INTEGER NOT NULL, " +
                         "`is_active` INTEGER NOT NULL, " +
                         "`created_at` INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        /**
+         * Migration from v11 to v12:
+         * - Create pending_operations table for offline Kavita sync queue
+         */
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `pending_operations` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`operation_type` TEXT NOT NULL, " +
+                        "`series_id` INTEGER NOT NULL, " +
+                        "`library_id` INTEGER NOT NULL, " +
+                        "`volume_id` INTEGER NOT NULL, " +
+                        "`chapter_id` INTEGER NOT NULL, " +
+                        "`page_num` INTEGER NOT NULL, " +
+                        "`book_scroll_id` TEXT, " +
+                        "`created_at` INTEGER NOT NULL, " +
+                        "`attempts` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_pending_operations_created_at` ON `pending_operations` (`created_at`)"
                 )
             }
         }

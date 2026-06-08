@@ -193,7 +193,7 @@ interface KavitaApi {
     // ==================== Reading Progress ====================
 
     /**
-     * Save reading progress for a chapter.
+     * Save reading progress for a chapter (legacy/simple model).
      * POST /api/Reader/progress
      *
      * @param progress The reading progress to save
@@ -202,7 +202,7 @@ interface KavitaApi {
     suspend fun saveProgress(@Body progress: KavitaReadingProgress): Response<Unit>
 
     /**
-     * Get reading progress for a chapter.
+     * Get reading progress for a chapter (legacy/simple model).
      * GET /api/Reader/progress?chapterId={chapterId}
      *
      * @param chapterId The chapter ID
@@ -212,4 +212,41 @@ interface KavitaApi {
     suspend fun getProgress(
         @Query("chapterId") chapterId: Int
     ): Response<KavitaReadingProgress>
+
+    // ==================== Reading Progress (full DTO) ====================
+
+    /**
+     * Push reading progress using the full ProgressDto.
+     * POST /api/Reader/progress
+     *
+     * @param progress Full progress DTO with volumeId, chapterId, pageNum,
+     *   seriesId, libraryId, bookScrollId, lastModifiedUtc
+     * @return Success indicator
+     */
+    @POST("api/Reader/progress")
+    suspend fun pushProgressDto(
+        @Body progress: KavitaProgressDto
+    ): Response<KavitaReaderResponse>
+
+    /**
+     * Get reading progress for a chapter using the full DTO response.
+     * GET /api/Reader/get-progress?chapterId={chapterId}
+     *
+     * @param chapterId The Kavita chapter ID
+     * @return Full progress response with bookScrollId and lastModifiedUtc
+     */
+    @GET("api/Reader/get-progress")
+    suspend fun getProgressDto(
+        @Query("chapterId") chapterId: Int
+    ): Response<KavitaProgressResponseDto>
+
+    /**
+     * Get the user's continue-reading point across all series.
+     * Used on app start for the "Continue Reading" feature.
+     * GET /api/Reader/continue-point
+     *
+     * @return The series/chapter/page where the user last left off
+     */
+    @GET("api/Reader/continue-point")
+    suspend fun getContinuePoint(): Response<KavitaContinuePointDto>
 }

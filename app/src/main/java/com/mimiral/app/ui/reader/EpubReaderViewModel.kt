@@ -672,7 +672,9 @@ class EpubReaderViewModel @Inject constructor(
     }
 
     /**
-     * Push current progress to Kavita (called on page change).
+     * Push current progress to Kavita using debounced sync.
+     * Called on page change — debounces to every 3 pages or 10 seconds.
+     * Falls back to immediate push on close.
      */
     private fun pushProgressToKavita(
         pageNumber: Int,
@@ -688,56 +690,45 @@ class EpubReaderViewModel @Inject constructor(
                     }
                     return@launch
                 }
-                _uiState.update {
-                    it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
-                }
-                when (
-                    val result = kavitaSyncRepository.pushProgress(
+
+                // Load Kavita IDs for the book
+                val book = bookRepository.getBookById(bookId)
+                val seriesId = book?.kavitaSeriesId
+                val libraryId = book?.kavitaLibraryId
+
+                if (seriesId != null && libraryId != null) {
+                    // Use debounced push via enhanced repository
+                    _uiState.update {
+                        it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
+                    }
+                    kavitaSyncRepository.progressSync.onPageTurn(
+                        bookId = bookId,
+                        chapterId = chapterIndex,
+                        pageNum = pageNumber,
+                        seriesId = seriesId,
+                        libraryId = libraryId,
+                        volumeId = seriesId
+                    )
+                    _uiState.update {
+                        it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCED)
+                    }
+                } else {
+                    // Fall back to legacy push for non-Kavita books
+                    _uiState.update {
+                        it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCING)
+                    }
+                    kavitaSyncRepository.pushProgress(
                         bookId = bookId,
                         pageNumber = pageNumber,
                         chapterIndex = chapterIndex
                     )
-                ) {
-                    is com.mimiral.app.data.remote.SyncResult.Success -> {
-                        _uiState.update {
-                            it.copy(
-                                syncStatus =
-                                com.mimiral.app.data.remote.SyncStatus.SYNCED
-                            )
-                        }
-                    }
-                    is com.mimiral.app.data.remote.SyncResult.NoKavitaBook,
-                    is com.mimiral.app.data.remote.SyncResult.NoServer -> {
-                        // Not a Kavita book or no server configured — not an error
-                        _uiState.update {
-                            it.copy(
-                                syncStatus =
-                                com.mimiral.app.data.remote.SyncStatus.IDLE
-                            )
-                        }
-                    }
-                    is com.mimiral.app.data.remote.SyncResult.Error -> {
-                        _uiState.update {
-                            it.copy(
-                                syncStatus =
-                                com.mimiral.app.data.remote.SyncStatus.ERROR
-                            )
-                        }
-                    }
-                    is com.mimiral.app.data.remote.SyncResult.Conflict -> {
-                        _uiState.update {
-                            it.copy(
-                                syncStatus =
-                                com.mimiral.app.data.remote.SyncStatus.SYNCED
-                            )
-                        }
+                    _uiState.update {
+                        it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.SYNCED)
                     }
                 }
             } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(
-                        syncStatus = com.mimiral.app.data.remote.SyncStatus.ERROR
-                    )
+                    it.copy(syncStatus = com.mimiral.app.data.remote.SyncStatus.ERROR)
                 }
             }
         }
@@ -814,15 +805,38 @@ class EpubReaderViewModel @Inject constructor(
     }
 
     /**
-     * Auto-sync on book close: push final progress to Kavita.
+     * Auto-sync on book close: push final progress to Kavita immediately.
+     * Bypasses debounce — always pushes on close.
      * Also stops the reading time tracker and persists daily reading time.
      */
     fun autoSyncOnClose() {
         val state = _uiState.value
-        pushProgressToKavita(
-            pageNumber = state.progress.pageNumber,
-            chapterIndex = state.progress.chapterIndex
-        )
+        // Immediate push on close (bypass debounce)
+        viewModelScope.launch {
+            try {
+                val book = bookRepository.getBookById(bookId)
+                val seriesId = book?.kavitaSeriesId
+                val libraryId = book?.kavitaLibraryId
+                if (seriesId != null && libraryId != null) {
+                    kavitaSyncRepository.progressSync.pushOnReaderClose(
+                        bookId = bookId,
+                        chapterId = state.progress.chapterIndex,
+                        pageNum = state.progress.pageNumber,
+                        seriesId = seriesId,
+                        libraryId = libraryId,
+                        volumeId = seriesId
+                    )
+                } else {
+                    kavitaSyncRepository.pushProgress(
+                        bookId = bookId,
+                        pageNumber = state.progress.pageNumber,
+                        chapterIndex = state.progress.chapterIndex
+                    )
+                }
+            } catch (_: Exception) {
+                // Non-critical — sync failure should not block close
+            }
+        }
         // Stop timer and persist reading time
         readingTimeTracker.stopSession()
         val totalMs = readingTimeTracker.accumulatedMs()

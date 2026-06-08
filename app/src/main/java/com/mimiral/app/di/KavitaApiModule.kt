@@ -80,17 +80,22 @@ object KavitaApiModule {
         return retrofit.create(KavitaSyncApi::class.java)
     }
 
+    /**
+     * Provide the KavitaApi Retrofit service (full-featured interface for
+     * reading progress sync, annotations, collections, etc.).
+     * Shares the same OkHttpClient and dynamic base URL interceptor.
+     */
     @Provides
     @Singleton
     fun provideKavitaApi(
         @KavitaApiClient okHttpClient: OkHttpClient
-    ): KavitaApi {
+    ): com.mimiral.app.data.remote.kavita.KavitaApi {
         val retrofit = Retrofit.Builder()
             .baseUrl(PLACEHOLDER_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-        return retrofit.create(KavitaApi::class.java)
+        return retrofit.create(com.mimiral.app.data.remote.kavita.KavitaApi::class.java)
     }
 
     @Provides
@@ -99,8 +104,6 @@ object KavitaApiModule {
         authService: KavitaAuthService
     ): () -> Unit {
         return { authService.clearTokens() }
-    }
-}
 
 /**
  * OkHttp interceptor that dynamically resolves the Kavita server base URL
