@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,7 +51,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,6 +69,12 @@ import com.mimiral.app.data.remote.kavita.KavitaReview
 import com.mimiral.app.ui.discover.RatingReviewViewModel
 import com.mimiral.app.ui.wanttoread.WantToReadToggleChip
 
+// Send-to-device target for picker bottom sheet
+private sealed class SendToDeviceTarget {
+    data class Chapter(val chapterId: Int, val title: String) : SendToDeviceTarget()
+    data class Series(val seriesId: Int, val name: String) : SendToDeviceTarget()
+}
+
 // ── Series List Screen ──
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,7 +85,8 @@ fun KavitaSeriesScreen(
     ratingViewModel: RatingReviewViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
     onNavigateToReader: (String) -> Unit = {},
-    seriesId: Int = 0
+    seriesId: Int = 0,
+    deviceRepository: com.mimiral.app.data.remote.kavita.KavitaDeviceRepository? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val markReadState by markReadViewModel.uiState.collectAsState()
@@ -87,6 +97,18 @@ fun KavitaSeriesScreen(
     LaunchedEffect(ratingSeriesId) {
         if (ratingSeriesId > 0) {
             ratingViewModel.loadForSeries(ratingSeriesId)
+        }
+    }
+
+    // Send-to-device target state
+    var sendToDeviceTarget by remember { mutableStateOf<SendToDeviceTarget?>(null) }
+    val scope = rememberCoroutineScope()
+
+    // Load devices when picker opens
+    if (sendToDeviceTarget != null && deviceRepository != null) {
+        val devices by deviceRepository.devices.collectAsState()
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            deviceRepository.refreshDevices()
         }
     }
 
@@ -164,7 +186,13 @@ fun KavitaSeriesScreen(
                         volume = uiState.selectedVolume!!,
                         viewModel = viewModel,
                         markReadViewModel = markReadViewModel,
-                        onNavigateToReader = onNavigateToReader
+                        onNavigateToReader = onNavigateToReader,
+                        onSendToDevice = { chapterId, chapterTitle ->
+                            sendToDeviceTarget = SendToDeviceTarget.Chapter(chapterId, chapterTitle)
+                        },
+                        onSendSeriesToDevice = { seriesId, seriesName ->
+                            sendToDeviceTarget = SendToDeviceTarget.Series(seriesId, seriesName)
+                        }
                     )
                 }
 
@@ -295,6 +323,34 @@ private fun SeriesMarkReadMenu(
                 }
             )
         }
+    }
+
+    // Send-to-device bottom sheet
+    val target = sendToDeviceTarget
+    if (target != null && deviceRepository != null) {
+        val (targetType, targetName) = when (target) {
+            is SendToDeviceTarget.Chapter -> "chapter" to target.title
+            is SendToDeviceTarget.Series -> "series" to target.name
+        }
+        com.mimiral.app.ui.kavita.SendToDevicePicker(
+            deviceRepository = deviceRepository,
+            sendTargetType = targetType,
+            sendTargetName = targetName,
+            onDeviceSelected = { device ->
+                scope.launch {
+                    when (target) {
+                        is SendToDeviceTarget.Chapter ->
+                            deviceRepository.sendChapterToDevice(target.chapterId, device.id)
+                        is SendToDeviceTarget.Series ->
+                            deviceRepository.sendSeriesToDevice(target.seriesId, device.id)
+                    }
+                }
+            },
+            onDismiss = {
+                sendToDeviceTarget = null
+                deviceRepository.resetSendState()
+            }
+        )
     }
 }
 
@@ -689,7 +745,9 @@ private fun VolumeDetailView(
     volume: VolumeDto,
     viewModel: KavitaSeriesViewModel,
     markReadViewModel: KavitaMarkReadViewModel,
-    onNavigateToReader: (String) -> Unit
+    onNavigateToReader: (String) -> Unit,
+    onSendToDevice: (chapterId: Int, chapterTitle: String) -> Unit = { _, _ -> },
+    onSendSeriesToDevice: (seriesId: Int, seriesName: String) -> Unit = { _, _ -> }
 ) {
     var expanded by remember { mutableStateOf(true) }
     val isFullyRead = volume.pages > 0 && volume.pagesRead >= volume.pages
@@ -790,6 +848,20 @@ private fun VolumeDetailView(
                         contentDescription = if (expanded) "Collapse" else "Expand",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (volume.seriesId > 0) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(onClick = {
+                            val name = volume.name.ifBlank { "Volume ${volume.number}" }
+                            onSendSeriesToDevice(volume.seriesId, name)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Send to Device",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -819,6 +891,12 @@ private fun VolumeDetailView(
                                 onNavigateToReader(route)
                             }
                         }
+                    },
+                    onSendToDevice = {
+                        val chapterTitle = chapter.title.ifBlank {
+                            chapter.titleName ?: "Chapter ${chapter.number}"
+                        }
+                        onSendToDevice(chapter.id, chapterTitle)
                     }
                 )
             }
@@ -831,7 +909,8 @@ private fun ChapterRow(
     chapter: ChapterDto,
     seriesId: Int,
     markReadViewModel: KavitaMarkReadViewModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onSendToDevice: () -> Unit = {}
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val isFullyRead = chapter.pages > 0 && chapter.pagesRead >= chapter.pages
@@ -941,6 +1020,20 @@ private fun ChapterRow(
                     }
                 }
             }
+            IconButton(onClick = onSendToDevice) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Send to Device",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.MenuBook,
+                contentDescription = "Read",
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

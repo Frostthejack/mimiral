@@ -655,6 +655,66 @@ class KavitaClient(
     ): KavitaResult<KavitaSeriesReadingHistory> =
         get("/api/Stats/reading-history/series/$seriesId", KavitaSeriesReadingHistory::class.java)
 
+    // ==================== Device (Send-to-Device) ====================
+
+    /**
+     * Get all registered devices for the current user.
+     * GET /api/Device/client/devices
+     *
+     * @return List of registered devices
+     */
+    suspend fun getDevices(): KavitaResult<List<KavitaDevice>> =
+        getList("/api/Device/client/devices", object : TypeToken<List<KavitaDevice>>() {})
+
+    /**
+     * Register a new send-to device.
+     * POST /api/Device/create
+     *
+     * @param request Device creation request
+     * @return The created device
+     */
+    suspend fun createDevice(request: KavitaDeviceCreateRequest): KavitaResult<KavitaDevice> =
+        post("/api/Device/create", request, object : TypeToken<KavitaDevice>() {})
+
+    /**
+     * Update an existing device.
+     * POST /api/Device/update
+     *
+     * @param request Device update request
+     * @return The updated device
+     */
+    suspend fun updateDevice(request: KavitaDeviceUpdateRequest): KavitaResult<KavitaDevice> =
+        post("/api/Device/update", request, object : TypeToken<KavitaDevice>() {})
+
+    /**
+     * Delete a device.
+     * DELETE /api/Device/{deviceId}
+     *
+     * @param deviceId The device ID to delete
+     */
+    suspend fun deleteDevice(deviceId: Int): KavitaResult<Unit> =
+        delete("/api/Device/$deviceId")
+
+    /**
+     * Send a chapter to a device.
+     * POST /api/Device/send-to
+     *
+     * @param request Send-to request with chapterId and deviceId
+     */
+    suspend fun sendToDevice(request: KavitaSendToRequest): KavitaResult<Unit> =
+        postUnit("/api/Device/send-to", request)
+
+    /**
+     * Send an entire series to a device.
+     * POST /api/Device/send-series-to
+     *
+     * @param request Send-series-to request with seriesId and deviceId
+     */
+    suspend fun sendSeriesToDevice(request: KavitaSendSeriesToRequest): KavitaResult<Unit> =
+        postUnit("/api/Device/send-series-to", request)
+
+    // ---- Internal helpers ----
+
     // ---- Internal helpers ----
 
     private fun addAuthHeader(requestBuilder: Request.Builder) {
@@ -685,6 +745,65 @@ class KavitaClient(
         typeToken: TypeToken<T>
     ): KavitaResult<T> = fetch(path) { body ->
         gson.fromJson<T>(body, typeToken.type)
+    }
+
+    private suspend fun <T> post(
+        path: String,
+        requestBody: Any,
+        typeToken: TypeToken<T>
+    ): KavitaResult<T> = fetchWithBody(path, requestBody) { body ->
+        gson.fromJson<T>(body, typeToken.type)
+    }
+
+    private suspend fun postUnit(
+        path: String,
+        requestBody: Any
+    ): KavitaResult<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val body = gson.toJson(requestBody).toRequestBody(JSON_MEDIA_TYPE)
+            val requestBuilder = Request.Builder()
+                .url("$normalizedBaseUrl$path")
+                .post(body)
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "Mimiral/0.1.0")
+            addAuthHeader(requestBuilder)
+            val request = requestBuilder.build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return@withContext KavitaResult.Error(
+                    message = "POST $path failed: HTTP ${response.code}",
+                    code = response.code
+                )
+            }
+            KavitaResult.Success(Unit)
+        } catch (e: IOException) {
+            KavitaResult.Error(message = "Network error: ${e.message}", cause = e)
+        } catch (e: Exception) {
+            KavitaResult.Error(message = "Unexpected error: ${e.message}", cause = e)
+        }
+    }
+
+    private suspend fun delete(path: String): KavitaResult<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val requestBuilder = Request.Builder()
+                .url("$normalizedBaseUrl$path")
+                .delete()
+                .header("User-Agent", "Mimiral/0.1.0")
+            addAuthHeader(requestBuilder)
+            val request = requestBuilder.build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return@withContext KavitaResult.Error(
+                    message = "DELETE $path failed: HTTP ${response.code}",
+                    code = response.code
+                )
+            }
+            KavitaResult.Success(Unit)
+        } catch (e: IOException) {
+            KavitaResult.Error(message = "Network error: ${e.message}", cause = e)
+        } catch (e: Exception) {
+            KavitaResult.Error(message = "Unexpected error: ${e.message}", cause = e)
+        }
     }
 
     private suspend inline fun <T> fetch(
@@ -720,6 +839,59 @@ class KavitaClient(
             val parsed = parser(body)
             if (parsed == null) {
                 Log.e(TAG, "Parse result was null for $path")
+                KavitaResult.Error(
+                    message = "Parsed null response from server",
+                    code = response.code
+                )
+            } else {
+                KavitaResult.Success(parsed)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Parse error: ${e.message}", e)
+            KavitaResult.Error(
+                message = "Parse error: ${e.message}",
+                cause = e
+            )
+        }
+    }
+
+    private suspend inline fun <T> fetchWithBody(
+        path: String,
+        requestBody: Any,
+        crossinline parser: (String) -> T
+    ): KavitaResult<T> {
+        val body = gson.toJson(requestBody).toRequestBody(JSON_MEDIA_TYPE)
+        val requestBuilder = Request.Builder()
+            .url("$normalizedBaseUrl$path")
+            .post(body)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "Mimiral/0.1.0")
+
+        addAuthHeader(requestBuilder)
+
+        val request = requestBuilder.build()
+        val response = withContext(Dispatchers.IO) {
+            client.newCall(request).execute()
+        }
+
+        if (!response.isSuccessful) {
+            return KavitaResult.Error(
+                message = "HTTP ${response.code}: ${response.message}",
+                code = response.code
+            )
+        }
+
+        val responseBody = response.body?.string()
+            ?: return KavitaResult.Error(
+                message = "Empty response body",
+                code = response.code
+            )
+
+        return try {
+            val parsed = parser(responseBody)
+            if (parsed == null) {
+                Log.e(TAG, "Parse result was null for POST $path")
                 KavitaResult.Error(
                     message = "Parsed null response from server",
                     code = response.code
