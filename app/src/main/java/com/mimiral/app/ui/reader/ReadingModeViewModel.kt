@@ -86,6 +86,14 @@ data class ReadingModeUiState(
     val showToc: Boolean = false,
     // Text settings panel
     val showTextSettings: Boolean = false,
+    // TTS state
+    val ttsState: com.mimiral.app.tts.TTSState = com.mimiral.app.tts.TTSState.IDLE,
+    /** Currently highlighted sentence during TTS playback (character offsets within full text). */
+    val currentTtsSentence: com.mimiral.app.data.reader.Sentence? = null,
+    /** Start offset of the currently spoken word (-1 = none). */
+    val ttsWordStart: Int = -1,
+    /** End offset of the currently spoken word (-1 = none). */
+    val ttsWordEnd: Int = -1,
     /** Sync status indicator for Kavita progress sync */
     val syncStatus: com.mimiral.app.data.remote.SyncStatus =
         com.mimiral.app.data.remote.SyncStatus.IDLE
@@ -667,6 +675,48 @@ class ReadingModeViewModel @Inject constructor(
             it.chapterIndex == chapterIdx && it.pageNumber == currentParagraphIndex
         }
         _uiState.update { it.copy(isCurrentPositionBookmarked = isBookmarked) }
+    }
+
+    // ---- TTS handlers ----
+
+    /**
+     * Called when the TTS engine state changes (PLAYING, PAUSED, READY, IDLE, etc.).
+     */
+    fun onTtsStateChanged(stateName: String) {
+        val newState = try {
+            com.mimiral.app.tts.TTSState.valueOf(stateName)
+        } catch (_: IllegalArgumentException) {
+            com.mimiral.app.tts.TTSState.IDLE
+        }
+        _uiState.update { it.copy(ttsState = newState) }
+    }
+
+    /**
+     * Called when the TTS sentence changes during playback.
+     */
+    fun onTtsSentenceChanged(sentence: com.mimiral.app.data.reader.Sentence?) {
+        _uiState.update { it.copy(currentTtsSentence = sentence) }
+    }
+
+    /**
+     * Called when the TTS word boundary changes during playback.
+     */
+    fun onTtsWordChanged(start: Int, end: Int) {
+        _uiState.update { it.copy(ttsWordStart = start, ttsWordEnd = end) }
+    }
+
+    /**
+     * Called when the TTS word highlight should be cleared.
+     */
+    fun onTtsWordCleared() {
+        _uiState.update { it.copy(ttsWordStart = -1, ttsWordEnd = -1) }
+    }
+
+    /**
+     * Get the full text of the current chapter for TTS.
+     */
+    fun getFullText(): String {
+        return _uiState.value.paragraphs.joinToString("\n\n") { it.text }
     }
 
     companion object {

@@ -1,5 +1,9 @@
 package com.mimiral.app.ui.reader
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,30 +38,40 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import com.mimiral.app.data.local.settings.TTSSettingsRepository
+import com.mimiral.app.data.reader.Sentence
+import com.mimiral.app.tts.TTSState
+import com.mimiral.app.tts.TTSService
 import kotlinx.coroutines.launch
 
 /**
  * Reading Mode screen — reflowable text display for books.
  *
  * Renders extracted text as a LazyColumn of paragraphs with chapter navigation,
- * progress tracking, and bookmark support. Works for EPUB, PDF, TXT, and other
- * text-based formats.
+ * progress tracking, bookmark support, and TTS read-aloud with word highlighting.
+ * Works for EPUB, PDF, TXT, and other text-based formats.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +85,15 @@ fun ReadingModeScreen(
     val textSettings by settingsRepository.textSettings.collectAsState(initial = TextSettings())
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+
+    // TTS settings repository for speed/pitch/voice persistence
+    val ttsSettingsRepository = remember { TTSSettingsRepository(context) }
+    val ttsSettings by ttsSettingsRepository.settings.collectAsState(
+        initial = com.mimiral.app.data.local.settings.TTSSettings()
+    )
+
+    // Voice picker dialog state
+    var showVoicePicker by remember { mutableStateOf(false) }
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val listState = rememberLazyListState()
@@ -94,6 +118,102 @@ fun ReadingModeScreen(
             viewModel.clearScrollTarget()
         }
     }
+
+    // --- TTS STATE broadcast receiver ---
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == TTSService.ACTION_TTS_STATE) {
+                    val stateName = intent.getStringExtra(TTSService.EXTRA_TTS_STATE) ?: "IDLE"
+                    viewModel.onTtsStateChanged(stateName)
+                }
+            }
+        }
+        val filter = IntentFilter(TTSService.ACTION_TTS_STATE)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+
+    // --- TTS SENTENCE broadcast receiver ---
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == TTSService.ACTION_TTS_SENTENCE) {
+                    val isActive = intent.getBooleanExtra(TTSService.EXTRA_SENTENCE_ACTIVE, false)
+                    if (isActive) {
+                        val start = intent.getIntExtra(TTSService.EXTRA_SENTENCE_START, 0)
+                        val end = intent.getIntExtra(TTSService.EXTRA_SENTENCE_END, 0)
+                        val text = intent.getStringExtra(TTSService.EXTRA_SENTENCE_TEXT) ?: ""
+                        viewModel.onTtsSentenceChanged(
+                            Sentence(start = start, end = end, text = text)
+                        )
+                    } else {
+                        viewModel.onTtsSentenceChanged(null)
+                    }
+                }
+            }
+        }
+        val filter = IntentFilter(TTSService.ACTION_TTS_SENTENCE)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+
+    // --- TTS WORD broadcast receiver ---
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == TTSService.ACTION_TTS_WORD) {
+                    val isActive = intent.getBooleanExtra(TTSService.EXTRA_WORD_ACTIVE, false)
+                    if (isActive) {
+                        val start = intent.getIntExtra(TTSService.EXTRA_WORD_START, -1)
+                        val end = intent.getIntExtra(TTSService.EXTRA_WORD_END, -1)
+                        viewModel.onTtsWordChanged(start, end)
+                    } else {
+                        viewModel.onTtsWordCleared()
+                    }
+                }
+            }
+        }
+        val filter = IntentFilter(TTSService.ACTION_TTS_WORD)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+
+    // --- Auto-scroll to keep TTS-highlighted word visible ---
+    // When the highlighted word falls in a different paragraph, scroll to it.
+    LaunchedEffect(uiState.ttsWordStart) {
+        val wordStart = uiState.ttsWordStart
+        if (wordStart < 0) return@LaunchedEffect
+
+        // Find which paragraph contains this word offset
+        val paragraphs = uiState.paragraphs
+        val targetIndex = paragraphs.indexOfFirst { para ->
+            wordStart >= para.charOffset && wordStart < para.charOffset + para.text.length
+        }
+        if (targetIndex >= 0 && targetIndex != listState.firstVisibleItemIndex) {
+            // Only scroll if the target is not already visible
+            val visibleItems = listState.layoutInfo.visibleItemsInfo
+            val isVisible = visibleItems.any { it.index == targetIndex }
+            if (!isVisible) {
+                listState.animateScrollToItem(targetIndex)
+            }
+        }
+    }
+
+    val isTtsPlayingOrPaused = uiState.ttsState == TTSState.PLAYING ||
+        uiState.ttsState == TTSState.PAUSED
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -131,6 +251,22 @@ fun ReadingModeScreen(
                     }
                 },
                 actions = {
+                    // Read Aloud button — shows when TTS is not actively playing/paused
+                    val isTtsIdle = uiState.ttsState == TTSState.IDLE
+                    val isTtsReady = uiState.ttsState == TTSState.READY
+                    if (isTtsIdle || isTtsReady) {
+                        IconButton(onClick = {
+                            val textToRead = viewModel.getFullText()
+                            if (textToRead.isNotBlank()) {
+                                TtsControlsHelper.play(context, textToRead)
+                            }
+                        }) {
+                            Icon(
+                                Icons.Default.RecordVoiceOver,
+                                contentDescription = "Read Aloud"
+                            )
+                        }
+                    }
                     // TOC button
                     IconButton(onClick = { viewModel.toggleToc() }) {
                         Icon(
@@ -177,8 +313,35 @@ fun ReadingModeScreen(
             )
         },
         bottomBar = {
-            // Progress bar at the bottom
-            if (uiState.paragraphs.isNotEmpty()) {
+            if (isTtsPlayingOrPaused) {
+                // TTS controls bar — shown during active TTS playback/pause
+                TtsControlsBar(
+                    ttsState = uiState.ttsState,
+                    currentSpeed = ttsSettings.speechRate,
+                    currentPitch = ttsSettings.pitch,
+                    currentVoiceName = ttsSettings.voiceName,
+                    onPlayPause = {
+                        TtsControlsHelper.toggle(context)
+                    },
+                    onStop = {
+                        TtsControlsHelper.stop(context)
+                    },
+                    onSpeedChanged = { newSpeed ->
+                        TtsControlsHelper.setSpeed(context, newSpeed)
+                        coroutineScope.launch {
+                            ttsSettingsRepository.setSpeechRate(newSpeed)
+                        }
+                    },
+                    onPitchChanged = { newPitch ->
+                        TtsControlsHelper.setPitch(context, newPitch)
+                        coroutineScope.launch {
+                            ttsSettingsRepository.setPitch(newPitch)
+                        }
+                    },
+                    onVoicePickerOpen = { showVoicePicker = true }
+                )
+            } else if (uiState.paragraphs.isNotEmpty()) {
+                // Progress bar at the bottom (when TTS is not active)
                 Column {
                     LinearProgressIndicator(
                         progress = { (uiState.progressPercent / 100f).coerceIn(0f, 1f) },
@@ -295,7 +458,9 @@ fun ReadingModeScreen(
                             paragraph = paragraph,
                             fontSize = textSettings.fontSize,
                             lineHeight = textSettings.lineSpacingMultiplier,
-                            fontFamily = textSettings.selectedFontFamily
+                            fontFamily = textSettings.selectedFontFamily,
+                            ttsWordStart = uiState.ttsWordStart,
+                            ttsWordEnd = uiState.ttsWordEnd
                         )
                     }
                 }
@@ -341,18 +506,37 @@ fun ReadingModeScreen(
                 onDismiss = { viewModel.toggleTextSettings() }
             )
         }
+
+        // Voice picker dialog
+        if (showVoicePicker) {
+            TtsVoicePickerDialog(
+                currentVoiceName = ttsSettings.voiceName,
+                onVoiceSelected = { voiceName ->
+                    TtsControlsHelper.setVoice(context, voiceName)
+                    coroutineScope.launch {
+                        ttsSettingsRepository.setVoiceName(voiceName)
+                    }
+                    showVoicePicker = false
+                },
+                onDismiss = { showVoicePicker = false }
+            )
+        }
     }
 }
 
 /**
  * A single paragraph rendered with the specified text settings.
+ * When TTS is active and a word is highlighted, applies a background highlight
+ * to the word range within this paragraph.
  */
 @Composable
 private fun ParagraphItem(
     paragraph: ReadingParagraph,
     fontSize: Int,
     lineHeight: Float,
-    fontFamily: ReaderFontFamily
+    fontFamily: ReaderFontFamily,
+    ttsWordStart: Int = -1,
+    ttsWordEnd: Int = -1
 ) {
     val textStyle = MaterialTheme.typography.bodyLarge.copy(
         fontSize = fontSize.toFloat().sp,
@@ -360,8 +544,46 @@ private fun ParagraphItem(
         fontFamily = fontFamily.fontFamily
     )
 
+    val highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+
+    // Build annotated string with word highlight if applicable
+    val annotatedText = if (ttsWordStart >= 0 && ttsWordEnd > ttsWordStart) {
+        // Calculate word positions relative to this paragraph
+        val paraStart = paragraph.charOffset
+        val paraEnd = paraStart + paragraph.text.length
+
+        // Check if the highlighted word overlaps this paragraph
+        val wordStartInPara = ttsWordStart - paraStart
+        val wordEndInPara = ttsWordEnd - paraStart
+
+        if (wordStartInPara < paragraph.text.length && wordEndInPara > 0) {
+            // Clamp to paragraph bounds
+            val clampedStart = wordStartInPara.coerceIn(0, paragraph.text.length)
+            val clampedEnd = wordEndInPara.coerceIn(0, paragraph.text.length)
+
+            if (clampedStart < clampedEnd) {
+                buildAnnotatedString {
+                    append(paragraph.text)
+                    addStyle(
+                        style = SpanStyle(
+                            background = highlightColor
+                        ),
+                        start = clampedStart,
+                        end = clampedEnd
+                    )
+                }
+            } else {
+                AnnotatedString(paragraph.text)
+            }
+        } else {
+            AnnotatedString(paragraph.text)
+        }
+    } else {
+        AnnotatedString(paragraph.text)
+    }
+
     Text(
-        text = paragraph.text,
+        text = annotatedText,
         style = textStyle,
         modifier = Modifier
             .fillMaxWidth()
@@ -485,4 +707,21 @@ private fun ModalBottomSheetForTextSettings(
             onDismiss = onDismiss
         )
     }
+}
+
+/**
+ * Voice picker dialog for TTS voices.
+ * Lists available voices from the TTS engine and allows selection.
+ */
+@Composable
+private fun TtsVoicePickerDialog(
+    currentVoiceName: String,
+    onVoiceSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    VoicePickerDialog(
+        currentVoiceName = currentVoiceName,
+        onVoiceSelected = onVoiceSelected,
+        onDismiss = onDismiss
+    )
 }
