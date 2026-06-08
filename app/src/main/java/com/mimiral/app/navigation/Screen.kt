@@ -56,6 +56,9 @@ sealed class Screen(val route: String) {
         fun createRoute(seriesId: Int): String = "kavita_series/$seriesId"
     }
 
+    // Kavita collections browsing
+    object KavitaCollections : Screen("kavita_collections")
+
     // Reading list detail
     object ReadingListDetail : Screen("reading_list_detail/{listId}") {
         fun createRoute(listId: Int): String = "reading_list_detail/$listId"
