@@ -215,7 +215,8 @@ fun KavitaBookmarksScreen(
             } else {
                 // Bookmark count
                 Text(
-                    text = "${uiState.bookmarks.size} bookmarks in ${uiState.groupedBookmarks.size} series",
+                    text = "${uiState.bookmarks.size} bookmarks in " +
+                        "${uiState.groupedBookmarks.size} series",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -235,7 +236,9 @@ fun KavitaBookmarksScreen(
                             group = seriesGroup,
                             isExpanded = seriesGroup.seriesId in uiState.expandedSeries,
                             expandedVolumes = uiState.expandedVolume,
-                            onToggleSeries = { viewModel.toggleSeriesExpanded(seriesGroup.seriesId) },
+                            onToggleSeries = {
+                                viewModel.toggleSeriesExpanded(seriesGroup.seriesId)
+                            },
                             onToggleVolume = { volumeId ->
                                 viewModel.toggleVolumeExpanded(seriesGroup.seriesId, volumeId)
                             },
@@ -285,7 +288,9 @@ private fun SeriesBookmarkGroup(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "${group.volumes.sumOf { v -> v.chapters.sumOf { c -> c.bookmarks.size } }} bookmarks",
+                        text = "${group.volumes.sumOf { v ->
+                            v.chapters.sumOf { c -> c.bookmarks.size }
+                        }} bookmarks",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
