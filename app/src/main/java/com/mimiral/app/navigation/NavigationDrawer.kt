@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -183,7 +184,9 @@ fun MimiralNavigationDrawer(
         gesturesEnabled = true,
         drawerContent = {
             ModalDrawerSheet(
-                modifier = Modifier.padding(end = 56.dp)
+                modifier = Modifier
+                    .padding(end = 56.dp)
+                    .clipToBounds()
             ) {
                 DrawerSheetContent(
                     navController = navController,
