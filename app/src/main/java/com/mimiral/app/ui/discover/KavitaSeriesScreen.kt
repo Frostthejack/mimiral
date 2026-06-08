@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,7 +43,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +58,12 @@ import coil.compose.AsyncImage
 import com.mimiral.app.data.remote.ChapterDto
 import com.mimiral.app.data.remote.VolumeDto
 
+// Send-to-device target for picker bottom sheet
+private sealed class SendToDeviceTarget {
+    data class Chapter(val chapterId: Int, val title: String) : SendToDeviceTarget()
+    data class Series(val seriesId: Int, val name: String) : SendToDeviceTarget()
+}
+
 // ── Series List Screen ──
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,9 +71,22 @@ import com.mimiral.app.data.remote.VolumeDto
 fun KavitaSeriesScreen(
     viewModel: KavitaSeriesViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToReader: (String) -> Unit = {}
+    onNavigateToReader: (String) -> Unit = {},
+    deviceRepository: com.mimiral.app.data.remote.kavita.KavitaDeviceRepository? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Send-to-device target state
+    var sendToDeviceTarget by remember { mutableStateOf<SendToDeviceTarget?>(null) }
+    val scope = rememberCoroutineScope()
+
+    // Load devices when picker opens
+    if (sendToDeviceTarget != null && deviceRepository != null) {
+        val devices by deviceRepository.devices.collectAsState()
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            deviceRepository.refreshDevices()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -129,7 +151,13 @@ fun KavitaSeriesScreen(
                     VolumeDetailView(
                         volume = uiState.selectedVolume!!,
                         viewModel = viewModel,
-                        onNavigateToReader = onNavigateToReader
+                        onNavigateToReader = onNavigateToReader,
+                        onSendToDevice = { chapterId, chapterTitle ->
+                            sendToDeviceTarget = SendToDeviceTarget.Chapter(chapterId, chapterTitle)
+                        },
+                        onSendSeriesToDevice = { seriesId, seriesName ->
+                            sendToDeviceTarget = SendToDeviceTarget.Series(seriesId, seriesName)
+                        }
                     )
                 }
 
@@ -142,6 +170,34 @@ fun KavitaSeriesScreen(
                 }
             }
         }
+    }
+
+    // Send-to-device bottom sheet
+    val target = sendToDeviceTarget
+    if (target != null && deviceRepository != null) {
+        val (targetType, targetName) = when (target) {
+            is SendToDeviceTarget.Chapter -> "chapter" to target.title
+            is SendToDeviceTarget.Series -> "series" to target.name
+        }
+        com.mimiral.app.ui.kavita.SendToDevicePicker(
+            deviceRepository = deviceRepository,
+            sendTargetType = targetType,
+            sendTargetName = targetName,
+            onDeviceSelected = { device ->
+                scope.launch {
+                    when (target) {
+                        is SendToDeviceTarget.Chapter ->
+                            deviceRepository.sendChapterToDevice(target.chapterId, device.id)
+                        is SendToDeviceTarget.Series ->
+                            deviceRepository.sendSeriesToDevice(target.seriesId, device.id)
+                    }
+                }
+            },
+            onDismiss = {
+                sendToDeviceTarget = null
+                deviceRepository.resetSendState()
+            }
+        )
     }
 }
 
@@ -387,7 +443,9 @@ private fun VolumeCard(
 private fun VolumeDetailView(
     volume: VolumeDto,
     viewModel: KavitaSeriesViewModel,
-    onNavigateToReader: (String) -> Unit
+    onNavigateToReader: (String) -> Unit,
+    onSendToDevice: (chapterId: Int, chapterTitle: String) -> Unit = { _, _ -> },
+    onSendSeriesToDevice: (seriesId: Int, seriesName: String) -> Unit = { _, _ -> }
 ) {
     var expanded by remember { mutableStateOf(true) }
 
@@ -454,6 +512,20 @@ private fun VolumeDetailView(
                         contentDescription = if (expanded) "Collapse" else "Expand",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (volume.seriesId > 0) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(onClick = {
+                            val name = volume.name.ifBlank { "Volume ${volume.number}" }
+                            onSendSeriesToDevice(volume.seriesId, name)
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Send to Device",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -481,6 +553,12 @@ private fun VolumeDetailView(
                                 onNavigateToReader(route)
                             }
                         }
+                    },
+                    onSendToDevice = {
+                        val chapterTitle = chapter.title.ifBlank {
+                            chapter.titleName ?: "Chapter ${chapter.number}"
+                        }
+                        onSendToDevice(chapter.id, chapterTitle)
                     }
                 )
             }
@@ -491,7 +569,8 @@ private fun VolumeDetailView(
 @Composable
 private fun ChapterRow(
     chapter: ChapterDto,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onSendToDevice: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -540,6 +619,14 @@ private fun ChapterRow(
                         )
                     }
                 }
+            }
+            IconButton(onClick = onSendToDevice) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Send to Device",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                )
             }
             Icon(
                 imageVector = Icons.Default.MenuBook,
