@@ -9,6 +9,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.mimiral.app.data.reader.ContentBlock
 
 /**
  * Data class representing text rendering configuration.
@@ -27,20 +28,36 @@ data class TextRenderConfig(
 )
 
 /**
- * Represents a single page of paginated text.
+ * A single page of structured content blocks.
+ *
+ * Each page contains the [ContentBlock]s that fit within the usable viewport
+ * height. The [startCharOffset] tracks the character offset from the start
+ * of the chapter for progress/bookmark tracking.
+ *
+ * @param pageIndex Zero-based page index.
+ * @param blocks ContentBlocks rendered on this page.
+ * @param startCharOffset Character offset from the start of the chapter.
  */
-data class PageBreak(
+data class ContentPage(
     val pageIndex: Int,
-    val startOffset: Int,
-    val endOffset: Int,
-    val text: String
-)
+    val blocks: List<ContentBlock>,
+    val startCharOffset: Int
+) {
+    /** Concatenated text of all blocks on this page (legacy compat). */
+    val text: String get() = blocks.joinToString("\n\n") { it.text }
+
+    /** Character offset at the start of this page (alias for startCharOffset). */
+    val startOffset: Int get() = startCharOffset
+
+    /** Character offset at the end of this page. */
+    val endOffset: Int get() = startCharOffset + blocks.sumOf { it.text.length }
+}
 
 /**
  * Result of pagination containing all pages and metadata.
  */
 data class PaginationResult(
-    val pages: List<PageBreak>,
+    val pages: List<ContentPage>,
     val totalPages: Int,
     val config: TextRenderConfig
 )
@@ -48,24 +65,68 @@ data class PaginationResult(
 /**
  * PaginationEngine uses Android's StaticLayout to compute page boundaries
  * based on screen dimensions, font settings, and margins.
+ *
+ * Supports two pagination modes:
+ * 1. **Structured pagination** ([paginateBlocks]): Takes `List<ContentBlock>`,
+ *    measures each block's height based on its type (headings are taller,
+ *    quotes have left padding, list items have indent), and distributes
+ *    blocks across pages.
+ * 2. **Legacy text pagination** ([paginate]): Takes a raw `String`, wraps
+ *    it in a single Paragraph block, and falls through to structured pagination.
  */
 class PaginationEngine(private val context: Context) {
 
     private var _paginationResult = mutableStateOf<PaginationResult?>(null)
     val paginationResult: PaginationResult? get() = _paginationResult.value
 
+    companion object {
+        /** Heading font size multipliers relative to body fontSize. */
+        private val HEADING_SIZE_MULTIPLIERS = mapOf(
+            1 to 1.78f,  // 32sp at 18sp base
+            2 to 1.56f,  // 28sp
+            3 to 1.22f,  // 22sp
+            4 to 1.0f,   // 18sp (bold)
+            5 to 1.0f,   // 18sp (bold)
+            6 to 1.0f,   // 18sp (bold)
+        )
+
+        /** Additional vertical padding (in dp) for headings (top + bottom). */
+        private val HEADING_VERTICAL_PADDING_DP = 16f
+
+        /** Quote left indent in dp. */
+        private const val QUOTE_LEFT_INDENT_DP = 24f
+
+        /** List item left indent in dp. */
+        private const val LIST_ITEM_LEFT_INDENT_DP = 16f
+
+        /** Rule (horizontal divider) height in dp. */
+        private const val RULE_HEIGHT_DP = 32f
+
+        /** Inter-block spacing in dp (vertical padding between blocks). */
+        private const val BLOCK_SPACING_DP = 8f
+
+        /** Inter-paragraph spacing in dp. */
+        private const val PARAGRAPH_SPACING_DP = 8f
+    }
+
     /**
-     * Paginate the given text using the provided configuration and screen dimensions.
+     * Paginate a list of ContentBlocks using block-type-aware height measurement.
+     *
+     * Each block is measured with its appropriate font size and padding:
+     * - Headings use scaled font sizes and extra vertical padding
+     * - Quotes have left indent reducing usable width
+     * - List items have left indent reducing usable width
+     * - Rules occupy a fixed height
      */
-    fun paginate(
-        text: String,
+    fun paginateBlocks(
+        blocks: List<ContentBlock>,
         config: TextRenderConfig,
         screenWidthPx: Int,
         screenHeightPx: Int
     ): PaginationResult {
-        if (text.isBlank()) {
+        if (blocks.isEmpty()) {
             val result = PaginationResult(
-                pages = listOf(PageBreak(0, 0, 0, "")),
+                pages = listOf(ContentPage(0, emptyList(), 0)),
                 totalPages = 1,
                 config = config
             )
@@ -83,7 +144,7 @@ class PaginationEngine(private val context: Context) {
 
         if (usableWidth <= 0 || usableHeight <= 0) {
             val result = PaginationResult(
-                pages = listOf(PageBreak(0, 0, text.length, text)),
+                pages = listOf(ContentPage(0, blocks, 0)),
                 totalPages = 1,
                 config = config
             )
@@ -91,8 +152,13 @@ class PaginationEngine(private val context: Context) {
             return result
         }
 
-        val paint = createTextPaint(config)
-        val pages = computePages(text, paint, usableWidth, usableHeight, config)
+        // Compute per-block heights
+        val blockHeights = blocks.map { block ->
+            measureBlockHeight(block, config, usableWidth)
+        }
+
+        // Distribute blocks across pages
+        val pages = distributeBlocksToPages(blocks, blockHeights, usableHeight)
 
         val result = PaginationResult(
             pages = pages,
@@ -104,92 +170,218 @@ class PaginationEngine(private val context: Context) {
     }
 
     /**
-     * Compute page breaks using StaticLayout line-based pagination.
+     * Legacy paginate: takes raw text, wraps in a Paragraph block,
+     * and delegates to [paginateBlocks].
      */
-    private fun computePages(
+    fun paginate(
         text: String,
-        paint: TextPaint,
-        usableWidth: Int,
-        usableHeight: Int,
-        config: TextRenderConfig
-    ): List<PageBreak> {
-        val pages = mutableListOf<PageBreak>()
-        var currentOffset = 0
-        var pageIndex = 0
+        config: TextRenderConfig,
+        screenWidthPx: Int,
+        screenHeightPx: Int
+    ): PaginationResult {
+        if (text.isBlank()) {
+            val result = PaginationResult(
+                pages = listOf(ContentPage(0, emptyList(), 0)),
+                totalPages = 1,
+                config = config
+            )
+            _paginationResult = mutableStateOf(result)
+            return result
+        }
 
-        while (currentOffset < text.length) {
-            val remainingText = text.substring(currentOffset)
-            val layout = StaticLayout.Builder
-                .obtain(remainingText, 0, remainingText.length, paint, usableWidth)
-                .setAlignment(android.text.Layout.Alignment.ALIGN_NORMAL)
-                .setLineSpacing(config.lineSpacingExtra, config.lineSpacingMultiplier)
-                .setIncludePad(false)
-                .build()
-
-            if (layout.lineCount == 0) {
-                pages.add(PageBreak(pageIndex, currentOffset, text.length, remainingText))
-                break
-            }
-
-            // Calculate how many lines fit in the usable height
-            var lineCount = 0
-            var lineHeightSum = 0f
-            for (i in 0 until layout.lineCount) {
-                val lineBottom = layout.getLineBottom(i)
-                val lineTop = layout.getLineTop(i)
-                val lineHeight = lineBottom - lineTop
-                if (lineHeightSum + lineHeight > usableHeight && lineCount > 0) {
-                    break
+        // Split text into paragraphs for block-level measurement
+        val blocks = text.split(Regex("\\n\\s*\\n"))
+            .mapIndexed { index, paragraph ->
+                val trimmed = paragraph.trim()
+                if (trimmed.isNotEmpty()) {
+                    ContentBlock.Paragraph(
+                        index = index,
+                        text = trimmed,
+                        isBold = false,
+                        spans = emptyList()
+                    )
+                } else {
+                    null
                 }
-                lineHeightSum += lineHeight
-                lineCount++
+            }
+            .filterNotNull()
+
+        return paginateBlocks(blocks, config, screenWidthPx, screenHeightPx)
+    }
+
+    /**
+     * Measures the height (in pixels) of a single ContentBlock.
+     *
+     * Uses StaticLayout to compute the exact rendered height for text blocks,
+     * and fixed heights for non-text blocks (rules).
+     *
+     * For headings, uses a larger font size based on the heading level.
+     * For quotes and list items, reduces usable width for the indent.
+     */
+    private fun measureBlockHeight(
+        block: ContentBlock,
+        config: TextRenderConfig,
+        usableWidthPx: Int
+    ): Int {
+        val density = context.resources.displayMetrics.density
+
+        return when (block) {
+            is ContentBlock.Rule -> {
+                // Fixed height for horizontal divider
+                (RULE_HEIGHT_DP * density).toInt()
             }
 
-            if (lineCount == 0) {
-                lineCount = 1
+            is ContentBlock.Heading -> {
+                val sizeMultiplier = HEADING_SIZE_MULTIPLIERS[block.level] ?: 1.0f
+                val headingFontSize = (config.fontSize * sizeMultiplier).toInt()
+                val paint = createTextPaint(config, fontSizeOverride = headingFontSize)
+                val text = block.text.ifBlank { return BLOCK_SPACING_DP.toInt() }
+                val layout = StaticLayout.Builder
+                    .obtain(text, 0, text.length, paint, usableWidthPx)
+                    .setAlignment(android.text.Layout.Alignment.ALIGN_NORMAL)
+                    .setLineSpacing(config.lineSpacingExtra, config.lineSpacingMultiplier)
+                    .setIncludePad(false)
+                    .build()
+                val textHeight = layout.height
+                val paddingPx = (HEADING_VERTICAL_PADDING_DP * density).toInt()
+                textHeight + paddingPx
             }
 
-            // Find the character offset at the end of the last fitting line
-            val lastLine = lineCount - 1
-            val endLineOffset = layout.getLineEnd(lastLine)
-            val pageEndOffset = currentOffset + endLineOffset
+            is ContentBlock.Quote -> {
+                val paint = createTextPaint(config)
+                val text = block.text.ifBlank { return BLOCK_SPACING_DP.toInt() }
+                val indentPx = (QUOTE_LEFT_INDENT_DP * density).toInt()
+                val width = usableWidthPx - indentPx
+                val layout = StaticLayout.Builder
+                    .obtain(text, 0, text.length, paint, width.coerceAtLeast(1))
+                    .setAlignment(android.text.Layout.Alignment.ALIGN_NORMAL)
+                    .setLineSpacing(config.lineSpacingExtra, config.lineSpacingMultiplier)
+                    .setIncludePad(false)
+                    .build()
+                layout.height + (PARAGRAPH_SPACING_DP * density).toInt()
+            }
 
-            val clampedEnd = pageEndOffset.coerceAtMost(text.length)
-            val pageText = text.substring(currentOffset, clampedEnd)
+            is ContentBlock.ListItem -> {
+                val paint = createTextPaint(config)
+                val prefix = if (block.order > 0) "${block.order}. " else "• "
+                val text = "$prefix${block.text}"
+                val indentPx = (LIST_ITEM_LEFT_INDENT_DP * density).toInt()
+                val width = usableWidthPx - indentPx
+                val layout = StaticLayout.Builder
+                    .obtain(text, 0, text.length, paint, width.coerceAtLeast(1))
+                    .setAlignment(android.text.Layout.Alignment.ALIGN_NORMAL)
+                    .setLineSpacing(config.lineSpacingExtra, config.lineSpacingMultiplier)
+                    .setIncludePad(false)
+                    .build()
+                layout.height + (BLOCK_SPACING_DP * density).toInt()
+            }
 
-            pages.add(PageBreak(pageIndex, currentOffset, clampedEnd, pageText))
+            is ContentBlock.Paragraph -> {
+                val paint = createTextPaint(
+                    config,
+                    boldOverride = block.isBold
+                )
+                val text = block.text.ifBlank { return BLOCK_SPACING_DP.toInt() }
+                val layout = StaticLayout.Builder
+                    .obtain(text, 0, text.length, paint, usableWidthPx)
+                    .setAlignment(android.text.Layout.Alignment.ALIGN_NORMAL)
+                    .setLineSpacing(config.lineSpacingExtra, config.lineSpacingMultiplier)
+                    .setIncludePad(false)
+                    .build()
+                layout.height + (PARAGRAPH_SPACING_DP * density).toInt()
+            }
+        }
+    }
 
-            currentOffset = clampedEnd
-            pageIndex++
+    /**
+     * Distributes ContentBlocks across pages based on their measured heights.
+     *
+     * Blocks are assigned to pages greedily: each page gets as many blocks
+     * as fit within [usableHeightPx]. A single block that exceeds the page
+     * height is placed on its own page (not split).
+     */
+    private fun distributeBlocksToPages(
+        blocks: List<ContentBlock>,
+        blockHeights: List<Int>,
+        usableHeightPx: Int
+    ): List<ContentPage> {
+        val pages = mutableListOf<ContentPage>()
+        var currentPageBlocks = mutableListOf<ContentBlock>()
+        var currentPageHeight = 0
+        var pageIndex = 0
+        var charOffset = 0
 
-            // Safety: prevent infinite loop
-            if (endLineOffset == 0) {
-                break
+        for (i in blocks.indices) {
+            val block = blocks[i]
+            val height = blockHeights[i]
+
+            // Does this block fit on the current page?
+            if (currentPageBlocks.isEmpty() || currentPageHeight + height <= usableHeightPx) {
+                currentPageBlocks.add(block)
+                currentPageHeight += height
+            } else {
+                // Flush current page and start a new one with this block
+                if (currentPageBlocks.isNotEmpty()) {
+                    pages.add(
+                        ContentPage(
+                            pageIndex = pageIndex++,
+                            blocks = currentPageBlocks.toList(),
+                            startCharOffset = charOffset
+                        )
+                    )
+                    charOffset += currentPageBlocks.sumOf { it.text.length }
+                }
+                currentPageBlocks = mutableListOf(block)
+                currentPageHeight = height
             }
         }
 
+        // Flush remaining blocks
+        if (currentPageBlocks.isNotEmpty()) {
+            pages.add(
+                ContentPage(
+                    pageIndex = pageIndex,
+                    blocks = currentPageBlocks.toList(),
+                    startCharOffset = charOffset
+                )
+            )
+        }
+
         return pages.ifEmpty {
-            listOf(PageBreak(0, 0, text.length, text))
+            listOf(ContentPage(0, emptyList(), 0))
         }
     }
 
     /**
      * Create a TextPaint configured with the current text settings.
+     *
+     * @param fontSizeOverride If set, use this font size instead of config.fontSize.
+     * @param boldOverride If true, apply bold typeface.
      */
-    private fun createTextPaint(config: TextRenderConfig): TextPaint {
+    private fun createTextPaint(
+        config: TextRenderConfig,
+        fontSizeOverride: Int? = null,
+        boldOverride: Boolean = false
+    ): TextPaint {
         val paint = TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        paint.textSize = spToPx(config.fontSize.toFloat())
+        paint.textSize = spToPx((fontSizeOverride ?: config.fontSize).toFloat())
         paint.color = android.graphics.Color.BLACK
 
-        if (config.customTypeface != null) {
-            paint.typeface = config.customTypeface
+        val baseTypeface = if (config.customTypeface != null) {
+            config.customTypeface
         } else {
-            paint.typeface = when (config.fontFamily) {
+            when (config.fontFamily) {
                 FontFamily.Serif -> Typeface.SERIF
                 FontFamily.SansSerif -> Typeface.SANS_SERIF
                 FontFamily.Monospace -> Typeface.MONOSPACE
                 else -> Typeface.DEFAULT
             }
+        }
+
+        paint.typeface = if (boldOverride) {
+            Typeface.create(baseTypeface, Typeface.BOLD)
+        } else {
+            baseTypeface
         }
 
         return paint

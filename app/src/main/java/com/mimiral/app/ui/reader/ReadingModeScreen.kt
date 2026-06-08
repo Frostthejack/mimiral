@@ -128,35 +128,52 @@ fun ReadingModeScreen(
         var globalPageIndex = 0
 
         for (chapter in uiState.chapters) {
-            val chapterText = chapter.paragraphs.joinToString("\n\n") { it.text }
-            if (chapterText.isBlank()) continue
-
             val renderConfig = textSettings.toRenderConfig()
-            val result = paginationEngine.paginate(
-                text = chapterText,
-                config = renderConfig,
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx
-            )
 
-            // Distribute ContentBlocks to pages based on text coverage
-            val chapterBlocks = chapter.contentBlocks
-            for (page in result.pages) {
-                // Find blocks whose text appears in this page
-                val pageBlocks = if (chapterBlocks.isNotEmpty()) {
-                    findBlocksInPage(chapterBlocks, page.text)
-                } else {
-                    emptyList()
-                }
-                allPages.add(
-                    ReadingPage(
-                        pageIndex = globalPageIndex++,
-                        chapterIndex = chapter.index,
-                        text = page.text,
-                        startCharOffset = page.startOffset,
-                        contentBlocks = pageBlocks
-                    )
+            // Use structured pagination when contentBlocks are available
+            if (chapter.contentBlocks.isNotEmpty()) {
+                val result = paginationEngine.paginateBlocks(
+                    blocks = chapter.contentBlocks,
+                    config = renderConfig,
+                    screenWidthPx = screenWidthPx,
+                    screenHeightPx = screenHeightPx
                 )
+
+                for (page in result.pages) {
+                    val pageText = page.blocks.joinToString("\n\n") { it.text }
+                    allPages.add(
+                        ReadingPage(
+                            pageIndex = globalPageIndex++,
+                            chapterIndex = chapter.index,
+                            text = pageText,
+                            startCharOffset = page.startCharOffset,
+                            contentBlocks = page.blocks
+                        )
+                    )
+                }
+            } else {
+                // Fallback to text-based pagination for chapters without blocks
+                val chapterText = chapter.paragraphs.joinToString("\n\n") { it.text }
+                if (chapterText.isBlank()) continue
+
+                val result = paginationEngine.paginate(
+                    text = chapterText,
+                    config = renderConfig,
+                    screenWidthPx = screenWidthPx,
+                    screenHeightPx = screenHeightPx
+                )
+
+                for (page in result.pages) {
+                    allPages.add(
+                        ReadingPage(
+                            pageIndex = globalPageIndex++,
+                            chapterIndex = chapter.index,
+                            text = page.blocks.joinToString("\n\n") { it.text },
+                            startCharOffset = page.startCharOffset,
+                            contentBlocks = page.blocks
+                        )
+                    )
+                }
             }
         }
 
@@ -601,41 +618,6 @@ fun ReadingModeScreen(
             )
         }
     }
-}
-
-/**
- * Find ContentBlocks from a chapter list whose text appears in a given page.
- * Uses sequential matching: walks through the chapter blocks and page text
- * to find which blocks fall within the page's text content.
- */
-private fun findBlocksInPage(
-    chapterBlocks: List<ContentBlock>,
-    pageText: String
-): List<ContentBlock> {
-    if (chapterBlocks.isEmpty() || pageText.isBlank()) return emptyList()
-
-    // Walk through blocks sequentially, tracking position in the page text
-    val result = mutableListOf<ContentBlock>()
-    var searchFrom = 0
-
-    for (block in chapterBlocks) {
-        if (block.text.isEmpty()) {
-            // Rule blocks — include if we're still scanning within page
-            if (searchFrom <= pageText.length) {
-                result.add(block)
-            }
-            continue
-        }
-
-        // Find this block's text in the page (starting from current position)
-        val idx = pageText.indexOf(block.text, searchFrom)
-        if (idx >= 0) {
-            result.add(block)
-            searchFrom = idx + block.text.length
-        }
-    }
-
-    return result
 }
 
 /**
