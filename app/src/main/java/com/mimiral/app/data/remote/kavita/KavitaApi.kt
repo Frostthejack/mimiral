@@ -2,6 +2,7 @@ package com.mimiral.app.data.remote.kavita
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -174,4 +175,99 @@ interface KavitaApi {
     suspend fun getProgress(
         @Query("chapterId") chapterId: Int
     ): Response<KavitaReadingProgress>
+
+    // ==================== Annotations ====================
+
+    /**
+     * Create a new annotation.
+     * POST /api/Annotation/create
+     *
+     * @param request The annotation to create
+     * @return The created annotation
+     */
+    @POST("api/Annotation/create")
+    suspend fun createAnnotation(
+        @Body request: KavitaAnnotationCreateRequest
+    ): Response<KavitaAnnotation>
+
+    /**
+     * Update an existing annotation.
+     * POST /api/Annotation/update
+     *
+     * @param request The update fields
+     * @return The updated annotation
+     */
+    @POST("api/Annotation/update")
+    suspend fun updateAnnotation(
+        @Body request: KavitaAnnotationUpdateRequest
+    ): Response<KavitaAnnotation>
+
+    /**
+     * Delete an annotation.
+     * POST /api/Annotation/delete
+     *
+     * @param request The deletion request containing the annotation ID
+     */
+    @POST("api/Annotation/delete")
+    suspend fun deleteAnnotation(
+        @Body request: KavitaAnnotationDeleteRequest
+    ): Response<Unit>
+
+    /**
+     * Get all annotations for a chapter.
+     * GET /api/Annotation/all?chapterId={chapterId}
+     *
+     * @param chapterId The chapter ID
+     * @return List of annotations
+     */
+    @GET("api/Annotation/all")
+    suspend fun getChapterAnnotations(
+        @Query("chapterId") chapterId: Int
+    ): Response<List<KavitaAnnotation>>
+
+    /**
+     * Get all annotations for a series.
+     * GET /api/Annotation/all-for-series?seriesId={seriesId}
+     *
+     * @param seriesId The series ID
+     * @return List of annotations
+     */
+    @GET("api/Annotation/all-for-series")
+    suspend fun getSeriesAnnotations(
+        @Query("seriesId") seriesId: Int
+    ): Response<List<KavitaAnnotation>>
+
+    /**
+     * Like an annotation.
+     * POST /api/Annotation/like
+     *
+     * @param request The like request containing the annotation ID
+     */
+    @POST("api/Annotation/like")
+    suspend fun likeAnnotation(
+        @Body request: KavitaAnnotationLikeRequest
+    ): Response<Unit>
+
+    /**
+     * Unlike an annotation.
+     * POST /api/Annotation/unlike
+     *
+     * @param request The unlike request containing the annotation ID
+     */
+    @POST("api/Annotation/unlike")
+    suspend fun unlikeAnnotation(
+        @Body request: KavitaAnnotationLikeRequest
+    ): Response<Unit>
+
+    /**
+     * Export annotations for a chapter.
+     * GET /api/Annotation/export?chapterId={chapterId}
+     *
+     * @param chapterId The chapter ID
+     * @return Exported annotations
+     */
+    @GET("api/Annotation/export")
+    suspend fun exportAnnotations(
+        @Query("chapterId") chapterId: Int
+    ): Response<KavitaAnnotationExport>
 }
