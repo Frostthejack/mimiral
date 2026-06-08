@@ -4,6 +4,7 @@ import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.ServerEntity
+import com.mimiral.app.data.remote.kavita.KavitaReadingProgressRepository
 import com.mimiral.app.di.KavitaApiClient
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -30,14 +31,18 @@ sealed class SyncResult {
 
 /**
  * Repository for bidirectional reading progress sync with Kavita.
- * Handles push/pull logic with conflict resolution (most recent timestamp wins).
+ *
+ * Now delegates to [KavitaReadingProgressRepository] for enhanced sync
+ * with debounced push, offline queue, bookScrollId, and continue-point.
+ * Maintains backward compatibility with existing reader ViewModels.
  */
 @Singleton
 class KavitaSyncRepository @Inject constructor(
     @KavitaApiClient private val kavitaApi: KavitaSyncApi,
     private val bookDao: BookDao,
     private val readingProgressDao: ReadingProgressDao,
-    private val serverDao: ServerDao
+    private val serverDao: ServerDao,
+    private val progressSyncRepository: KavitaReadingProgressRepository
 ) {
 
     private val dateFormat = SimpleDateFormat(
@@ -49,7 +54,8 @@ class KavitaSyncRepository @Inject constructor(
 
     /**
      * Push local reading progress to Kavita.
-     * Reads the book's kavitaSeriesId and kavitaLibraryId from the local DB.
+     * Delegates to KavitaReadingProgressRepository for enhanced sync
+     * with offline queue support.
      */
     suspend fun pushProgress(
         bookId: Int,
@@ -57,42 +63,17 @@ class KavitaSyncRepository @Inject constructor(
         chapterIndex: Int = 0
     ): SyncResult = withContext(Dispatchers.IO) {
         try {
-            val book = bookDao.getBookById(bookId)
-                ?: return@withContext SyncResult.Error(
-                    Exception("Book not found: $bookId")
-                )
-
-            val seriesId = book.kavitaSeriesId
-                ?: return@withContext SyncResult.NoKavitaBook
-            val libraryId = book.kavitaLibraryId
-                ?: return@withContext SyncResult.NoKavitaBook
-
-            val timestamp = dateFormat.format(Date())
-            val request = KavitaProgressRequest(
-                seriesId = seriesId,
-                libraryId = libraryId,
+            // Delegate to enhanced repository (handles offline queue)
+            val success = progressSyncRepository.pushProgressForBook(
+                bookId = bookId,
                 chapterId = chapterIndex,
-                pageNumber = pageNumber,
-                lastModified = timestamp,
-                volumeId = seriesId
+                pageNum = pageNumber
             )
-
-            val response = kavitaApi.pushProgress(request)
-            if (response.isSuccessful && response.body()?.success == true) {
-                // Mark local progress as synced
-                val progress = readingProgressDao.getProgressForBook(bookId)
-                if (progress != null) {
-                    readingProgressDao.saveProgress(
-                        progress.copy(kavitaSynced = true)
-                    )
-                }
+            if (success) {
                 SyncResult.Success("Progress pushed to Kavita")
             } else {
-                SyncResult.Error(
-                    Exception(
-                        "Push failed: ${response.code()} ${response.message()}"
-                    )
-                )
+                // Book may not have Kavita IDs — fall back to legacy path
+                pushProgressLegacy(bookId, pageNumber, chapterIndex)
             }
         } catch (e: ConnectException) {
             SyncResult.Error(Exception("Cannot connect to Kavita server"))
@@ -102,6 +83,47 @@ class KavitaSyncRepository @Inject constructor(
             SyncResult.Error(Exception("Kavita server unreachable"))
         } catch (e: Exception) {
             SyncResult.Error(e)
+        }
+    }
+
+    /**
+     * Legacy push path — used when the book doesn't have Kavita IDs
+     * in the new repository (backward compatibility).
+     */
+    private suspend fun pushProgressLegacy(
+        bookId: Int,
+        pageNumber: Int,
+        chapterIndex: Int
+    ): SyncResult {
+        val book = bookDao.getBookById(bookId)
+            ?: return SyncResult.Error(Exception("Book not found: $bookId"))
+
+        val seriesId = book.kavitaSeriesId
+            ?: return SyncResult.NoKavitaBook
+        val libraryId = book.kavitaLibraryId
+            ?: return SyncResult.NoKavitaBook
+
+        val timestamp = dateFormat.format(Date())
+        val request = KavitaProgressRequest(
+            seriesId = seriesId,
+            libraryId = libraryId,
+            chapterId = chapterIndex,
+            pageNumber = pageNumber,
+            lastModified = timestamp,
+            volumeId = seriesId
+        )
+
+        val response = kavitaApi.pushProgress(request)
+        return if (response.isSuccessful && response.body()?.success == true) {
+            val progress = readingProgressDao.getProgressForBook(bookId)
+            if (progress != null) {
+                readingProgressDao.saveProgress(progress.copy(kavitaSynced = true))
+            }
+            SyncResult.Success("Progress pushed to Kavita")
+        } else {
+            SyncResult.Error(
+                Exception("Push failed: ${response.code()} ${response.message()}")
+            )
         }
     }
 
@@ -204,34 +226,18 @@ class KavitaSyncRepository @Inject constructor(
                 resolvedPage = localPageNumber
             }
 
-            // Step 3: Push resolved progress to Kavita
-            val timestamp = dateFormat.format(Date())
-            val pushRequest = KavitaProgressRequest(
-                seriesId = seriesId,
-                libraryId = libraryId,
+            // Step 3: Push resolved progress via enhanced repository
+            val pushSuccess = progressSyncRepository.pushProgressForBook(
+                bookId = bookId,
                 chapterId = localChapterIndex,
-                pageNumber = resolvedPage,
-                lastModified = timestamp,
-                volumeId = seriesId
+                pageNum = resolvedPage
             )
-            val pushResponse = kavitaApi.pushProgress(pushRequest)
-            if (pushResponse.isSuccessful && pushResponse.body()?.success == true) {
-                // Mark local progress as synced
-                val progress = readingProgressDao.getProgressForBook(bookId)
-                if (progress != null) {
-                    readingProgressDao.saveProgress(
-                        progress.copy(kavitaSynced = true)
-                    )
-                }
-                SyncResult.Success(
-                    "Sync complete, resolved page: $resolvedPage"
-                )
+            if (pushSuccess) {
+                SyncResult.Success("Sync complete, resolved page: $resolvedPage")
             } else {
-                SyncResult.Error(
-                    Exception(
-                        "Push failed: ${pushResponse.code()} ${pushResponse.message()}"
-                    )
-                )
+                // Fall back to legacy push
+                val result = pushProgressLegacy(bookId, resolvedPage, localChapterIndex)
+                result
             }
         } catch (e: ConnectException) {
             SyncResult.Error(Exception("Cannot connect to Kavita server"))
@@ -283,4 +289,35 @@ class KavitaSyncRepository @Inject constructor(
      */
     suspend fun hasActiveServer(): Boolean =
         withContext(Dispatchers.IO) { serverDao.getActiveServerByType("KAVITA") != null }
+
+    // ── Pass-through to enhanced repository ──
+
+    /**
+     * Get the continue-reading point from Kavita.
+     * Delegates to KavitaReadingProgressRepository.
+     */
+    suspend fun fetchContinuePoint() = progressSyncRepository.fetchContinuePoint()
+
+    /**
+     * Flush pending offline operations.
+     * Delegates to KavitaReadingProgressRepository.
+     */
+    suspend fun flushPendingOperations() = progressSyncRepository.flushPendingOperations()
+
+    /**
+     * Perform full sync on app start.
+     * Delegates to KavitaReadingProgressRepository.
+     */
+    suspend fun fullSyncOnStartup() = progressSyncRepository.fullSyncOnStartup()
+
+    /**
+     * Get the count of pending operations.
+     * Delegates to KavitaReadingProgressRepository.
+     */
+    suspend fun pendingOperationCount() = progressSyncRepository.pendingOperationCount()
+
+    /**
+     * Access the enhanced repository directly for debounced page-turn sync.
+     */
+    val progressSync: KavitaReadingProgressRepository get() = progressSyncRepository
 }

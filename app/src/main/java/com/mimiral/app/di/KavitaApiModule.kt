@@ -80,6 +80,11 @@ object KavitaApiModule {
         return retrofit.create(KavitaSyncApi::class.java)
     }
 
+    /**
+     * Provide the KavitaApi Retrofit service (full-featured interface for
+     * reading progress sync, annotations, collections, etc.).
+     * Shares the same OkHttpClient and dynamic base URL interceptor.
+     */
     @Provides
     @Singleton
     fun provideKavitaApi(
