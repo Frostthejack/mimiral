@@ -608,6 +608,52 @@ class KavitaClient(
         }
     }
 
+    // ---- Stats API ----
+
+    /**
+     * Get reading activity (pages read per day).
+     * GET /api/Stats/reading-activity
+     */
+    suspend fun getReadingActivity(): KavitaResult<List<KavitaReadingActivity>> =
+        getList("/api/Stats/reading-activity", object : TypeToken<List<KavitaReadingActivity>>() {})
+
+    /**
+     * Get genre breakdown (pages read per genre).
+     * GET /api/Stats/genre-breakdown
+     */
+    suspend fun getGenreBreakdown(): KavitaResult<List<KavitaGenreBreakdown>> =
+        getList("/api/Stats/genre-breakdown", object : TypeToken<List<KavitaGenreBreakdown>>() {})
+
+    /**
+     * Get pages read per year.
+     * GET /api/Stats/pages-per-year
+     */
+    suspend fun getPagesPerYear(): KavitaResult<List<KavitaPagesPerYear>> =
+        getList("/api/Stats/pages-per-year", object : TypeToken<List<KavitaPagesPerYear>>() {})
+
+    /**
+     * Get reading pace trend (monthly rolling average).
+     * GET /api/Stats/reading-pace
+     */
+    suspend fun getReadingPace(): KavitaResult<List<KavitaReadingPace>> =
+        getList("/api/Stats/reading-pace", object : TypeToken<List<KavitaReadingPace>>() {})
+
+    /**
+     * Get favorite authors ordered by pages read.
+     * GET /api/Stats/favorite-authors
+     */
+    suspend fun getFavoriteAuthors(): KavitaResult<List<KavitaFavoriteAuthor>> =
+        getList("/api/Stats/favorite-authors", object : TypeToken<List<KavitaFavoriteAuthor>>() {})
+
+    /**
+     * Get series-specific reading history.
+     * GET /api/Stats/reading-history/series/{seriesId}
+     */
+    suspend fun getSeriesReadingHistory(
+        seriesId: Int
+    ): KavitaResult<KavitaSeriesReadingHistory> =
+        get("/api/Stats/reading-history/series/$seriesId", KavitaSeriesReadingHistory::class.java)
+
     // ---- Internal helpers ----
 
     private fun addAuthHeader(requestBuilder: Request.Builder) {

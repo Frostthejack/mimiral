@@ -47,6 +47,7 @@ import com.mimiral.app.ui.settings.ReadingPreferencesScreen
 import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.settings.TTSSettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
+import com.mimiral.app.ui.stats.StatsDashboardScreen
 import kotlinx.coroutines.launch
 
 /**
@@ -223,6 +224,15 @@ fun MimiralNavGraph(navController: NavHostController) {
                         navController.navigate(Screen.ReadingGoals.route)
                     },
                     onOpenDrawer = openDrawer
+                )
+            }
+
+            composable(Screen.KavitaStats.route) {
+                StatsDashboardScreen(
+                    onOpenDrawer = openDrawer,
+                    onNavigateToSetup = {
+                        navController.navigate(Screen.KavitaSetup.route)
+                    }
                 )
             }
 

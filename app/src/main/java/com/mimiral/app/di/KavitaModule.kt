@@ -4,6 +4,7 @@ import android.content.Context
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.remote.kavita.KavitaClient
 import com.mimiral.app.data.remote.kavita.KavitaRepository
+import com.mimiral.app.data.remote.kavita.KavitaStatsRepository
 import com.mimiral.app.data.repository.BookRepository
 import dagger.Module
 import dagger.Provides
@@ -75,5 +76,13 @@ object KavitaModule {
             serverDao = serverDao,
             bookRepository = bookRepository
         )
+    }
+
+    @Provides
+    @Singleton
+    fun provideKavitaStatsRepository(
+        serverDao: ServerDao
+    ): KavitaStatsRepository {
+        return KavitaStatsRepository(serverDao = serverDao)
     }
 }
