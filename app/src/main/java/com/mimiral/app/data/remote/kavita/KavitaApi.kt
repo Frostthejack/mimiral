@@ -1,5 +1,6 @@
 package com.mimiral.app.data.remote.kavita
 
+import com.mimiral.app.data.remote.KavitaServerInfo
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET

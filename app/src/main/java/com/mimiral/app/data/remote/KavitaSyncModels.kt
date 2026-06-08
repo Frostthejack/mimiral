@@ -61,12 +61,18 @@ enum class SyncStatus {
 /**
  * Server info response from GET /api/Server/info.
  * Used for connection validation and status display.
+ *
+ * Single source of truth for server info — replaces the duplicate
+ * com.mimiral.app.data.remote.kavita.KavitaServerInfo that was removed
+ * to prevent ClassCastException when R8 merges same-named classes.
  */
 data class KavitaServerInfo(
     @SerializedName("installId") val installId: String? = null,
     @SerializedName("version") val version: String? = null,
+    @SerializedName("isInstalled") val isInstalled: Boolean = true,
     @SerializedName("totalLibraries") val totalLibraries: Int = 0,
-    @SerializedName("isDocker") val isDocker: Boolean = false
+    @SerializedName("isDocker") val isDocker: Boolean = false,
+    @SerializedName("allowAnyToken") val allowAnyToken: Boolean = false
 )
 
 /**

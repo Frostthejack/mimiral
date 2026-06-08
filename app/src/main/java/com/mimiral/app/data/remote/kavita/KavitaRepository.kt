@@ -3,6 +3,7 @@ package com.mimiral.app.data.remote.kavita
 import android.content.Context
 import android.util.Log
 import com.mimiral.app.data.local.dao.ServerDao
+import com.mimiral.app.data.remote.KavitaServerInfo
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.qualifiers.ApplicationContext

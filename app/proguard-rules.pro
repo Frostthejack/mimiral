@@ -90,11 +90,17 @@
 -keep class com.mimiral.app.data.remote.SeriesDto { *; }
 -keep class com.mimiral.app.data.remote.kavita.KavitaBookmarkModels { *; }
 -keep class com.mimiral.app.data.remote.kavita.KavitaBookmarkModels$* { *; }
+# Single KavitaServerInfo class (com.mimiral.app.data.remote.KavitaServerInfo)
+# used by both Retrofit and raw Gson — keep all @SerializedName fields.
+# Keep all model classes in the kavita and remote packages so Gson reflection
+# and Retrofit type resolution work correctly under R8 minification.
+-keep class com.mimiral.app.data.remote.kavita.** { *; }
+-keep class com.mimiral.app.data.remote.KavitaServerInfo { *; }
 # Keep all @SerializedName fields in Kavita models for Gson
 -keepclassmembers class com.mimiral.app.data.remote.kavita.** {
     @com.google.gson.annotations.SerializedName <fields>;
 }
--keepclassmembers class com.mimiral.app.data.remote.KavitaSyncModels$* {
+-keepclassmembers class com.mimiral.app.data.remote.KavitaServerInfo {
     @com.google.gson.annotations.SerializedName <fields>;
 }
 # Keep top-level model classes in data.remote (from KavitaSyncModels.kt)
