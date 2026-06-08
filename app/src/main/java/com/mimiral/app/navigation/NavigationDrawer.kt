@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -75,6 +76,7 @@ val drawerSections = listOf(
         items = listOf(
             DrawerNavItem(Screen.NowReading, "Now Reading", Icons.Filled.PlayArrow),
             DrawerNavItem(Screen.Statistics, "Statistics", Icons.Filled.BarChart),
+            DrawerNavItem(Screen.KavitaStats, "Kavita Stats", Icons.Filled.AutoStories),
             DrawerNavItem(Screen.ReadingGoals, "Goals", Icons.Filled.EmojiEvents)
         )
     ),

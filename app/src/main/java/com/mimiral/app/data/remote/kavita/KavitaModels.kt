@@ -233,3 +233,68 @@ data class KavitaUserInfo(
     val ageRestriction: Int = 0,
     val isLocked: Boolean = false
 )
+
+// ==================== Stats Models ====================
+
+/**
+ * Reading activity data point from GET /api/Stats/reading-activity.
+ * Represents pages read per day over a time range.
+ */
+data class KavitaReadingActivity(
+    val date: String,
+    val pagesRead: Int,
+    val chaptersRead: Int = 0
+)
+
+/**
+ * Genre breakdown from GET /api/Stats/genre-breakdown.
+ * Each entry is a genre and its associated page count.
+ */
+data class KavitaGenreBreakdown(
+    val genre: String,
+    val pagesRead: Int,
+    val seriesCount: Int = 0
+)
+
+/**
+ * Pages-per-year data point from GET /api/Stats/pages-per-year.
+ * Used for the bar chart showing reading volume by year.
+ */
+data class KavitaPagesPerYear(
+    val year: Int,
+    val pagesRead: Int,
+    val booksRead: Int = 0
+)
+
+/**
+ * Reading pace trend from GET /api/Stats/reading-pace.
+ * Monthly rolling average of pages per day.
+ */
+data class KavitaReadingPace(
+    val month: String,
+    val pagesPerDay: Float,
+    val avgSessionMinutes: Float = 0f
+)
+
+/**
+ * Favorite author entry from GET /api/Stats/favorite-authors.
+ * Ordered by pages read descending.
+ */
+data class KavitaFavoriteAuthor(
+    val author: String,
+    val pagesRead: Int,
+    val seriesCount: Int = 0,
+    val booksCount: Int = 0
+)
+
+/**
+ * Series-specific reading history from GET /api/Stats/reading-history/series/{seriesId}.
+ */
+data class KavitaSeriesReadingHistory(
+    val seriesId: Int,
+    val seriesName: String? = null,
+    val totalPagesRead: Int,
+    val lastReadDate: String? = null,
+    val readingSessions: Int = 0,
+    val avgPagesPerSession: Float = 0f
+)

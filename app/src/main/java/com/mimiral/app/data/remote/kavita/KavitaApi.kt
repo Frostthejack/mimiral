@@ -174,4 +174,50 @@ interface KavitaApi {
     suspend fun getProgress(
         @Query("chapterId") chapterId: Int
     ): Response<KavitaReadingProgress>
+
+    // ==================== Stats ====================
+
+    /**
+     * Get reading activity (pages read per day).
+     * GET /api/Stats/reading-activity
+     */
+    @GET("api/Stats/reading-activity")
+    suspend fun getReadingActivity(): Response<List<KavitaReadingActivity>>
+
+    /**
+     * Get genre breakdown.
+     * GET /api/Stats/genre-breakdown
+     */
+    @GET("api/Stats/genre-breakdown")
+    suspend fun getGenreBreakdown(): Response<List<KavitaGenreBreakdown>>
+
+    /**
+     * Get pages per year.
+     * GET /api/Stats/pages-per-year
+     */
+    @GET("api/Stats/pages-per-year")
+    suspend fun getPagesPerYear(): Response<List<KavitaPagesPerYear>>
+
+    /**
+     * Get reading pace trend.
+     * GET /api/Stats/reading-pace
+     */
+    @GET("api/Stats/reading-pace")
+    suspend fun getReadingPace(): Response<List<KavitaReadingPace>>
+
+    /**
+     * Get favorite authors.
+     * GET /api/Stats/favorite-authors
+     */
+    @GET("api/Stats/favorite-authors")
+    suspend fun getFavoriteAuthors(): Response<List<KavitaFavoriteAuthor>>
+
+    /**
+     * Get series reading history.
+     * GET /api/Stats/reading-history/series/{seriesId}
+     */
+    @GET("api/Stats/reading-history/series/{seriesId}")
+    suspend fun getSeriesReadingHistory(
+        @Path("seriesId") seriesId: Int
+    ): Response<KavitaSeriesReadingHistory>
 }
