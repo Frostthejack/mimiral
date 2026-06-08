@@ -1,0 +1,12 @@
+# Scrobbling
+URL: https://wiki.kavitareader.com/guides/user-settings/scrobbling/
+
+Scrobbling is the act of syncing progress from Kavita to an upstream provider, like AniList.
+
+Scrobbling requires a Kavita+ subscription and your user account to have an API key saved in Scrobbling Providers.
+
+## Scrobble History
+Here you will find any scrobble events linked to your account when using the Kavita+ feature. All events that have been processed will clear after a month.
+
+## Scrobble Holds
+Any series that you block scrobbling from on the series page will show up here as a hold. You can remove a series at any time and the next scrobble-able event (reading progress, rating, want to read status) will trigger events.
