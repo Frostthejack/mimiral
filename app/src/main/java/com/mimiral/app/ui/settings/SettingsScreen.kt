@@ -87,6 +87,7 @@ import com.mimiral.app.data.local.settings.ParagraphSpacing
 import com.mimiral.app.data.local.settings.ReadingModeSettingsRepository
 import com.mimiral.app.data.local.settings.ReadingModeTheme
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import com.mimiral.app.data.local.settings.ProgressSyncMode
 import com.mimiral.app.data.local.settings.SyncInterval
 import com.mimiral.app.data.local.settings.SyncSettingsRepository
 import com.mimiral.app.data.local.settings.TTSSettingsRepository
@@ -1306,6 +1307,106 @@ fun SettingsScreen(
                             scope.launch { syncSettingsRepository.setSyncOnWifiOnly(enabled) }
                         }
                     )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Progress sync mode selector
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.CloudSync,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Progress Sync Mode",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = when (syncSettings.progressSyncMode) {
+                                ProgressSyncMode.NATIVE -> "JWT auth — full fidelity (recommended)"
+                                ProgressSyncMode.PANELS -> "API key fallback — no JWT required"
+                                ProgressSyncMode.KOREADER -> "KOReader interop for e-ink devices"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ReadingModeEnumSelector(
+                            options = ProgressSyncMode.entries,
+                            selected = syncSettings.progressSyncMode,
+                            onSelect = { mode ->
+                                scope.launch { syncSettingsRepository.setProgressSyncMode(mode) }
+                            },
+                            labelFor = { it.displayName }
+                        )
+                    }
+
+                    // KOReader device ID (only visible when mode is KOREADER)
+                    if (syncSettings.progressSyncMode == ProgressSyncMode.KOREADER) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.MenuBook,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "KOReader Device ID",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Identifies this device to Kavita and KOReader sync",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            var deviceIdText by remember(
+                                syncSettings.koreaderDeviceId
+                            ) {
+                                mutableStateOf(syncSettings.koreaderDeviceId)
+                            }
+                            OutlinedTextField(
+                                value = deviceIdText,
+                                onValueChange = { newText ->
+                                    deviceIdText = newText
+                                },
+                                label = { Text("Device ID") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                trailingIcon = {
+                                    if (deviceIdText != syncSettings.koreaderDeviceId) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                scope.launch {
+                                                    syncSettingsRepository
+                                                        .setKoreaderDeviceId(deviceIdText)
+                                                }
+                                            }
+                                        ) {
+                                            Text("Save")
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
