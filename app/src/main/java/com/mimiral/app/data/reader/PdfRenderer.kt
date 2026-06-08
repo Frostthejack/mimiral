@@ -17,12 +17,16 @@ import kotlinx.coroutines.withContext
  *
  * Provides page rendering, margin detection, and on-demand page rendering for large PDFs.
  * Text extraction is powered by Apache PDFBox (PDFTextStripper).
+ * Structured extraction (headings, bold, quotes) is powered by PdfStructuredExtractor.
  *
  * Supports two constructors:
  * - PdfRenderer(context) — for use with open(filePath)
  * - PdfRenderer(file) — for direct file opening (backward compat)
  */
 class PdfRenderer : AutoCloseable {
+
+    /** Structured extractor for font-metadata-based heading detection. */
+    private val structuredExtractor = PdfStructuredExtractor()
 
     private var pdfRenderer: AndroidPdfRenderer? = null
     private var fileDescriptor: ParcelFileDescriptor? = null
@@ -214,6 +218,28 @@ class PdfRenderer : AutoCloseable {
         val result = extractPageText(pageIndex)
         result.hasText
     }
+
+    /**
+     * Extract structured content blocks from a page using font metadata.
+     *
+     * Unlike [extractPageText] which returns raw text, this method returns
+     * [ContentBlock] instances (Heading, Paragraph, Quote, etc.) detected
+     * from font sizes, font names, and text patterns.
+     *
+     * @param pageIndex Zero-based page index.
+     * @return List of [ContentBlock] for the page, or empty list on error.
+     */
+    suspend fun extractStructuredPageText(pageIndex: Int): List<ContentBlock> =
+        withContext(Dispatchers.IO) {
+            val renderer = pdfRenderer ?: return@withContext emptyList()
+            if (pageIndex < 0 || pageIndex >= renderer.pageCount) return@withContext emptyList()
+
+            val filePath = openedFilePath ?: return@withContext emptyList()
+            val file = File(filePath)
+            if (!file.exists()) return@withContext emptyList()
+
+            structuredExtractor.extractPage(file, pageIndex)
+        }
 
     /**
      * Get the dimensions of a page in PostScript points (1/72 inch).
