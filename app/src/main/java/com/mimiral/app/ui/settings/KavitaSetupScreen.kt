@@ -63,7 +63,8 @@ import com.mimiral.app.data.remote.ConnectionStatus
 @Composable
 fun KavitaSetupScreen(
     viewModel: KavitaSetupViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToScrobbling: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -316,6 +317,24 @@ fun KavitaSetupScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
+                }
+            }
+
+            // ── Scrobbling Management ──────────────────────────
+            if (uiState.hasExistingConfig) {
+                HorizontalDivider()
+
+                FilledTonalButton(
+                    onClick = onNavigateToScrobbling,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.Default.Cloud,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Scrobbling Management")
                 }
             }
 

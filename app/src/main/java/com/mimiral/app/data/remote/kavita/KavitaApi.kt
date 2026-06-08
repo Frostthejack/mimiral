@@ -174,4 +174,100 @@ interface KavitaApi {
     suspend fun getProgress(
         @Query("chapterId") chapterId: Int
     ): Response<KavitaReadingProgress>
+
+    // ==================== License ====================
+
+    /**
+     * Check if Kavita+ license is valid.
+     * GET /api/License/valid-license
+     *
+     * Required before accessing scrobbling endpoints.
+     *
+     * @return License validation result
+     */
+    @GET("api/License/valid-license")
+    suspend fun validateLicense(): Response<KavitaLicenseStatus>
+
+    // ==================== Scrobbling ====================
+
+    /**
+     * Get scrobble settings.
+     * GET /api/Scrobbling/scrobble-settings
+     *
+     * Requires Kavita+ license.
+     *
+     * @return Current scrobble settings
+     */
+    @GET("api/Scrobbling/scrobble-settings")
+    suspend fun getScrobbleSettings(): Response<KavitaScrobblingSettings>
+
+    /**
+     * Update scrobble provider token (re-authentication).
+     * POST /api/Scrobbling/update-user-scrobble-provider
+     *
+     * Use when an external provider token (AniList, MAL, etc.) has expired.
+     *
+     * @param request Provider name and new token
+     */
+    @POST("api/Scrobbling/update-user-scrobble-provider")
+    suspend fun updateScrobbleProvider(
+        @Body request: KavitaUpdateScrobbleProviderRequest
+    ): Response<Unit>
+
+    /**
+     * Get scrobble errors.
+     * GET /api/Scrobbling/scrobble-errors
+     *
+     * Returns a list of failed scrobble attempts that can be retried.
+     *
+     * @return List of scrobble errors
+     */
+    @GET("api/Scrobbling/scrobble-errors")
+    suspend fun getScrobbleErrors(): Response<List<KavitaScrobbleError>>
+
+    /**
+     * Retry a failed scrobble.
+     * POST /api/Scrobbling/retry-scrobble
+     *
+     * @param errorId The scrobble error ID to retry
+     */
+    @POST("api/Scrobbling/retry-scrobble/{errorId}")
+    suspend fun retryScrobble(
+        @Path("errorId") errorId: Int
+    ): Response<Unit>
+
+    /**
+     * Add a scrobble hold on a series.
+     * POST /api/Scrobbling/add-hold
+     *
+     * Prevents scrobbling for the specified series.
+     *
+     * @param seriesId The series ID to hold
+     */
+    @POST("api/Scrobbling/add-hold")
+    suspend fun addScrobbleHold(
+        @Body seriesId: Int
+    ): Response<Unit>
+
+    /**
+     * Remove a scrobble hold from a series.
+     * POST /api/Scrobbling/remove-hold
+     *
+     * Re-enables scrobbling for the specified series.
+     *
+     * @param seriesId The series ID to unhold
+     */
+    @POST("api/Scrobbling/remove-hold")
+    suspend fun removeScrobbleHold(
+        @Body seriesId: Int
+    ): Response<Unit>
+
+    /**
+     * Get all series with scrobble holds.
+     * GET /api/Scrobbling/holds
+     *
+     * @return List of series IDs with active holds
+     */
+    @GET("api/Scrobbling/holds")
+    suspend fun getScrobbleHolds(): Response<List<Int>>
 }
