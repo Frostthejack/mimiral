@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.remote.kavita.KavitaContinueReadingRepository
+import com.mimiral.app.data.remote.kavita.KavitaOnDeckDto
+import com.mimiral.app.data.remote.kavita.KavitaContinuePointDto
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,12 +29,17 @@ data class NowReadingBook(
 
 data class NowReadingUiState(
     val books: List<NowReadingBook> = emptyList(),
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    /** On Deck series from Kavita (server-side reading status) */
+    val onDeckSeries: List<KavitaOnDeckDto> = emptyList(),
+    /** Continue-reading point across all series */
+    val continuePoint: KavitaContinuePointDto? = null
 )
 
 @HiltViewModel
 class NowReadingViewModel @Inject constructor(
-    private val bookRepository: BookRepository
+    private val bookRepository: BookRepository,
+    private val continueReadingRepository: KavitaContinueReadingRepository
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(true)
@@ -52,6 +60,10 @@ class NowReadingViewModel @Inject constructor(
         }.sortedByDescending { it.lastReadTime }
     }.combine(_isLoading) { books, loading ->
         NowReadingUiState(books = books, isLoading = loading)
+    }.combine(continueReadingRepository.onDeckSeries) { state, onDeck ->
+        state.copy(onDeckSeries = onDeck)
+    }.combine(continueReadingRepository.continuePoint) { state, point ->
+        state.copy(continuePoint = point)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -64,6 +76,21 @@ class NowReadingViewModel @Inject constructor(
             bookRepository.getAllBooks().collect {
                 _isLoading.value = false
             }
+        }
+        // Fetch On Deck and continue point from Kavita
+        viewModelScope.launch {
+            continueReadingRepository.fetchOnDeck()
+            continueReadingRepository.fetchContinuePoint()
+        }
+    }
+
+    /**
+     * Refresh On Deck shelf and continue point.
+     */
+    fun refreshKavita() {
+        viewModelScope.launch {
+            continueReadingRepository.fetchOnDeck()
+            continueReadingRepository.fetchContinuePoint()
         }
     }
 }

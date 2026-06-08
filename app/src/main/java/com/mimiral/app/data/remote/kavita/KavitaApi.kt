@@ -249,4 +249,66 @@ interface KavitaApi {
      */
     @GET("api/Reader/continue-point")
     suspend fun getContinuePoint(): Response<KavitaContinuePointDto>
+
+    // ==================== Next / Prev Chapter ====================
+
+    /**
+     * Get the next chapter after the current one for seamless end-of-chapter navigation.
+     * GET /api/Reader/next-chapter?seriesId={seriesId}&volumeId={volumeId}&chapterId={chapterId}
+     *
+     * @param seriesId The series ID
+     * @param volumeId The current volume ID
+     * @param chapterId The current chapter ID
+     * @return Next chapter info (id=-1 if no next chapter)
+     */
+    @GET("api/Reader/next-chapter")
+    suspend fun getNextChapter(
+        @Query("seriesId") seriesId: Int,
+        @Query("volumeId") volumeId: Int,
+        @Query("chapterId") chapterId: Int
+    ): Response<KavitaNextChapterDto>
+
+    /**
+     * Get the previous chapter before the current one for start-of-chapter navigation.
+     * GET /api/Reader/prev-chapter?seriesId={seriesId}&volumeId={volumeId}&chapterId={chapterId}
+     *
+     * @param seriesId The series ID
+     * @param volumeId The current volume ID
+     * @param chapterId The current chapter ID
+     * @return Previous chapter info (id=-1 if no prev chapter)
+     */
+    @GET("api/Reader/prev-chapter")
+    suspend fun getPrevChapter(
+        @Query("seriesId") seriesId: Int,
+        @Query("volumeId") volumeId: Int,
+        @Query("chapterId") chapterId: Int
+    ): Response<KavitaPrevChapterDto>
+
+    // ==================== Time Left ====================
+
+    /**
+     * Get estimated reading time remaining for a series.
+     * GET /api/Reader/time-left?seriesId={seriesId}&libraryId={libraryId}
+     *
+     * @param seriesId The series ID
+     * @param libraryId The library ID
+     * @return Time remaining estimate with pages left
+     */
+    @GET("api/Reader/time-left")
+    suspend fun getTimeLeft(
+        @Query("seriesId") seriesId: Int,
+        @Query("libraryId") libraryId: Int
+    ): Response<KavitaTimeLeftDto>
+
+    // ==================== On Deck ====================
+
+    /**
+     * Get series that the user is actively reading, sorted by most recent.
+     * Used for the "On Deck" home shelf.
+     * GET /api/Series/on-deck
+     *
+     * @return List of series currently being read
+     */
+    @GET("api/Series/on-deck")
+    suspend fun getOnDeck(): Response<List<KavitaOnDeckDto>>
 }
