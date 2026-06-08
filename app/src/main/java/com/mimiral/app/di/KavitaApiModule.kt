@@ -104,6 +104,8 @@ object KavitaApiModule {
         authService: KavitaAuthService
     ): () -> Unit {
         return { authService.clearTokens() }
+    }
+}
 
 /**
  * OkHttp interceptor that dynamically resolves the Kavita server base URL
