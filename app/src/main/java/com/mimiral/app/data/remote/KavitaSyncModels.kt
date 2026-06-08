@@ -180,3 +180,42 @@ data class SeriesDto(
     @SerializedName("wordCount") val wordCount: Int = 0,
     @SerializedName("created") val created: String? = null
 )
+
+// ── Mark Read / Unread request models ──
+
+/**
+ * Request body for POST /api/Reader/mark-chapter-read.
+ */
+data class KavitaMarkReadChapterRequest(
+    @SerializedName("chapterId") val chapterId: Int
+)
+
+/**
+ * Request body for POST /api/Reader/mark-volume-read and mark-volume-unread.
+ */
+data class KavitaMarkReadVolumeRequest(
+    @SerializedName("volumeId") val volumeId: Int
+)
+
+/**
+ * Request body for POST /api/Series/mark-read and mark-unread.
+ */
+data class KavitaMarkReadSeriesRequest(
+    @SerializedName("seriesId") val seriesId: Int
+)
+
+/**
+ * Request body for POST /api/Series/mark-multiple-series-read/unread.
+ */
+data class KavitaMarkReadMultipleSeriesRequest(
+    @SerializedName("seriesIds") val seriesIds: List<Int>
+)
+
+/**
+ * Request body for POST /api/Tachiyomi/mark-chapter-until-as-read.
+ */
+data class KavitaMarkReadChapterUntilRequest(
+    @SerializedName("seriesId") val seriesId: Int,
+    @SerializedName("chapterId") val chapterId: Int,
+    @SerializedName("volumesToInclude") val volumesToInclude: Int = 0
+)
