@@ -248,17 +248,16 @@ fun ReadingModeScreen(
         val wordStart = uiState.ttsWordStart
         if (wordStart < 0) return@LaunchedEffect
 
-        // Find which paragraph contains this word offset
-        val paragraphs = uiState.paragraphs
-        val targetIndex = paragraphs.indexOfFirst { para ->
-            wordStart >= para.charOffset && wordStart < para.charOffset + para.text.length
+        // In paginated mode, find which page contains this word offset
+        // and scroll to that page if not already visible
+        val pages = uiState.pages
+        val targetPage = pages.indexOfFirst { page ->
+            wordStart >= page.startCharOffset &&
+                wordStart < page.startCharOffset + page.text.length
         }
-        if (targetIndex >= 0 && targetIndex != listState.firstVisibleItemIndex) {
-            // Only scroll if the target is not already visible
-            val visibleItems = listState.layoutInfo.visibleItemsInfo
-            val isVisible = visibleItems.any { it.index == targetIndex }
-            if (!isVisible) {
-                listState.animateScrollToItem(targetIndex)
+        if (targetPage >= 0 && targetPage != pagerState.currentPage) {
+            coroutineScope.launch {
+                pagerState.animateScrollToPage(targetPage)
             }
         }
     }
