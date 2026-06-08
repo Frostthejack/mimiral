@@ -25,7 +25,11 @@ data class KavitaSeriesUiState(
     val selectedSeries: SeriesDto? = null,
     val selectedVolume: VolumeDto? = null,
     val errorMessage: String? = null,
-    val lastMarkReadOperation: MarkReadOperation? = null
+    val lastMarkReadOperation: MarkReadOperation? = null,
+    /** Continue-reading context for the current series (null if not started) */
+    val continueReading: com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext? = null,
+    /** Time-left estimate for this series */
+    val timeLeft: com.mimiral.app.data.remote.kavita.KavitaTimeLeftDto? = null
 )
 
 @HiltViewModel
@@ -33,6 +37,7 @@ class KavitaSeriesViewModel @Inject constructor(
     private val browseRepository: KavitaBrowseRepository,
     private val kavitaRepository: KavitaRepository,
     private val markReadRepository: KavitaMarkReadRepository,
+    private val continueReadingRepository: com.mimiral.app.data.remote.kavita.KavitaContinueReadingRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -98,6 +103,11 @@ class KavitaSeriesViewModel @Inject constructor(
                             pagesRead = volumesResult.data.sumOf { it.pagesRead }
                         )
                     )
+                    // Fetch continue-reading point and time-left for this series
+                    fetchContinueReadingForSeries(seriesId)
+                    // Derive libraryId from the series detail or continue-point
+                    val libId = continueReadingRepository.continuePoint.value?.libraryId ?: 0
+                    fetchTimeLeftForSeries(seriesId, libId)
                 }
                 is BrowseResult.Error -> {
                     _uiState.value = _uiState.value.copy(
@@ -146,6 +156,40 @@ class KavitaSeriesViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    /**
+     * Fetch continue-reading point for this series and update UI state.
+     */
+    private fun fetchContinueReadingForSeries(currentSeriesId: Int) {
+        viewModelScope.launch {
+            val point = continueReadingRepository.fetchContinuePoint()
+            if (point != null && point.seriesId == currentSeriesId) {
+                _uiState.value = _uiState.value.copy(
+                    continueReading = com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext(
+                        seriesId = point.seriesId,
+                        volumeId = point.volumeId,
+                        chapterId = point.chapterId,
+                        pageNum = point.pageNum,
+                        libraryId = point.libraryId,
+                        seriesName = point.seriesName,
+                        bookScrollId = point.bookScrollId
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Fetch time-left estimate for this series and update UI state.
+     */
+    private fun fetchTimeLeftForSeries(seriesId: Int, libraryId: Int) {
+        viewModelScope.launch {
+            val timeLeft = continueReadingRepository.getTimeLeft(seriesId, libraryId)
+            if (timeLeft != null) {
+                _uiState.value = _uiState.value.copy(timeLeft = timeLeft)
+            }
+        }
     }
 
     /**

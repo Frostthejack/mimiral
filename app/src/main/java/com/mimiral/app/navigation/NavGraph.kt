@@ -174,6 +174,14 @@ fun MimiralNavGraph(navController: NavHostController) {
                             popUpTo(Screen.Library.route) { inclusive = true }
                         }
                     },
+                    onNavigateToKavitaSeries = { seriesId ->
+                        navController.navigate(Screen.KavitaSeries.createRoute(seriesId))
+                    },
+                    onContinueReading = {
+                        // Navigate to the Kavita series screen for continue reading
+                        // The VM's continuePoint is already loaded; the series screen
+                        // will show the Continue Reading button
+                    },
                     onOpenDrawer = openDrawer
                 )
             }

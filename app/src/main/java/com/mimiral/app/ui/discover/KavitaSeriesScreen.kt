@@ -162,7 +162,25 @@ fun KavitaSeriesScreen(
                         seriesDetail = uiState.seriesDetail,
                         seriesId = uiState.selectedSeries?.id ?: 0,
                         onVolumeClick = { viewModel.selectVolume(it) },
-                        markReadViewModel = markReadViewModel
+                        markReadViewModel = markReadViewModel,
+                        continueReading = uiState.continueReading,
+                        timeLeft = uiState.timeLeft,
+                        onContinueReading = {
+                            // Deep link to reader at continue-reading position
+                            val ctx = uiState.continueReading
+                            if (ctx != null) {
+                                viewModel.downloadChapter(
+                                    chapterId = ctx.chapterId,
+                                    title = ctx.seriesName ?: "",
+                                    seriesId = ctx.seriesId,
+                                    onResult = { bookId, format ->
+                                        if (bookId != null && format != null) {
+                                            onNavigateToReader(format)
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     )
                 }
             }
@@ -263,7 +281,10 @@ private fun VolumesListView(
     seriesDetail: com.mimiral.app.data.remote.SeriesDetailDto?,
     seriesId: Int,
     onVolumeClick: (VolumeDto) -> Unit,
-    markReadViewModel: KavitaMarkReadViewModel
+    markReadViewModel: KavitaMarkReadViewModel,
+    continueReading: com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext? = null,
+    timeLeft: com.mimiral.app.data.remote.kavita.KavitaTimeLeftDto? = null,
+    onContinueReading: () -> Unit = {}
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -271,7 +292,12 @@ private fun VolumesListView(
     ) {
         // Series header card
         item {
-            SeriesHeaderCard(seriesDetail = seriesDetail)
+            SeriesHeaderCard(
+                seriesDetail = seriesDetail,
+                continueReading = continueReading,
+                timeLeft = timeLeft,
+                onContinueReading = onContinueReading
+            )
         }
 
         // Volumes header
@@ -318,7 +344,10 @@ private fun VolumesListView(
 
 @Composable
 private fun SeriesHeaderCard(
-    seriesDetail: com.mimiral.app.data.remote.SeriesDetailDto?
+    seriesDetail: com.mimiral.app.data.remote.SeriesDetailDto?,
+    continueReading: com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext? = null,
+    timeLeft: com.mimiral.app.data.remote.kavita.KavitaTimeLeftDto? = null,
+    onContinueReading: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -377,6 +406,66 @@ private fun SeriesHeaderCard(
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                     modifier = Modifier.padding(top = 4.dp)
                 )
+            }
+
+            // Continue Reading button
+            if (continueReading != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                androidx.compose.material3.FilledTonalButton(
+                    onClick = onContinueReading,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MenuBook,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Continue Reading")
+                    if (continueReading.pageNum > 0) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "p.${continueReading.pageNum}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+
+            // Time Left estimate
+            if (timeLeft != null && timeLeft.totalPages > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Time remaining",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = timeLeft.formattedTime,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "${timeLeft.pagesLeft} pages left",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = "${timeLeft.progressPercent.toInt()}% done",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }
