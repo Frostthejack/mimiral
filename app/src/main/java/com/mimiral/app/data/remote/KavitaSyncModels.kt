@@ -219,3 +219,58 @@ data class KavitaMarkReadChapterUntilRequest(
     @SerializedName("chapterId") val chapterId: Int,
     @SerializedName("volumesToInclude") val volumesToInclude: Int = 0
 )
+
+// ── Koreader sync models ──
+
+/**
+ * Request/response body for KOReader progress sync.
+ * PUT /api/Koreader/{apiKey}/syncs/progress
+ * GET /api/Koreader/{apiKey}/syncs/progress/{ebookHash}
+ *
+ * @param document MD5 hash of the ebook file (used as the book identifier)
+ * @param deviceId Device identifier string (e.g. "mimiral")
+ * @param device Device name (e.g. "Mimiral on Pixel 7")
+ * @param percentage Reading progress as 0.0–1.0
+ * @param progress Opaque progress string (XPointer for epub, page for pdf)
+ * @param timestamp Unix timestamp (seconds)
+ */
+data class KoreaderBookDto(
+    @SerializedName("document") val document: String,
+    @SerializedName("device_id") val deviceId: String,
+    @SerializedName("device") val device: String = "Mimiral",
+    @SerializedName("percentage") val percentage: Double,
+    @SerializedName("progress") val progress: String = "",
+    @SerializedName("timestamp") val timestamp: Long
+)
+
+// ── Panels sync models ──
+
+/**
+ * Request body for POST /api/Panels/save-progress.
+ * Uses the same ProgressDto shape as Reader/progress, but authenticates
+ * via apiKey query parameter instead of JWT.
+ *
+ * @param seriesId Kavita series ID
+ * @param libraryId Kavita library ID
+ * @param chapterId Kavita chapter ID
+ * @param pageNumber Current page number (0-based)
+ * @param volumeId Volume ID
+ */
+data class PanelsProgressRequest(
+    @SerializedName("seriesId") val seriesId: Int,
+    @SerializedName("libraryId") val libraryId: Int,
+    @SerializedName("chapterId") val chapterId: Int = 0,
+    @SerializedName("pageNumber") val pageNumber: Int,
+    @SerializedName("volumeId") val volumeId: Int = 0
+)
+
+/**
+ * Response body from GET /api/Panels/get-progress.
+ */
+data class PanelsProgressData(
+    @SerializedName("seriesId") val seriesId: Int = 0,
+    @SerializedName("libraryId") val libraryId: Int = 0,
+    @SerializedName("chapterId") val chapterId: Int = 0,
+    @SerializedName("pageNumber") val pageNumber: Int = 0,
+    @SerializedName("volumeId") val volumeId: Int = 0
+)
