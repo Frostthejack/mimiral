@@ -37,7 +37,8 @@ class KavitaSeriesViewModel @Inject constructor(
     private val browseRepository: KavitaBrowseRepository,
     private val kavitaRepository: KavitaRepository,
     private val markReadRepository: KavitaMarkReadRepository,
-    private val continueReadingRepository: com.mimiral.app.data.remote.kavita.KavitaContinueReadingRepository,
+    private val continueReadingRepository:
+        com.mimiral.app.data.remote.kavita.KavitaContinueReadingRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -166,7 +167,8 @@ class KavitaSeriesViewModel @Inject constructor(
             val point = continueReadingRepository.fetchContinuePoint()
             if (point != null && point.seriesId == currentSeriesId) {
                 _uiState.value = _uiState.value.copy(
-                    continueReading = com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext(
+                    continueReading =
+                        com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext(
                         seriesId = point.seriesId,
                         volumeId = point.volumeId,
                         chapterId = point.chapterId,

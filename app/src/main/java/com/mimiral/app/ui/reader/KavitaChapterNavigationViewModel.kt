@@ -62,7 +62,10 @@ class KavitaChapterNavigationViewModel @Inject constructor(
     fun setChapterContext(seriesId: Int, volumeId: Int, chapterId: Int) {
         // Skip if already set to the same context
         val current = _state.value
-        if (current.seriesId == seriesId && current.volumeId == volumeId && current.chapterId == chapterId) {
+        if (current.seriesId == seriesId &&
+            current.volumeId == volumeId &&
+            current.chapterId == chapterId
+        ) {
             return
         }
 
