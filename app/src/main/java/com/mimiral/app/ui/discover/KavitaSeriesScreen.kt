@@ -54,6 +54,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.mimiral.app.data.remote.ChapterDto
 import com.mimiral.app.data.remote.VolumeDto
+import com.mimiral.app.ui.wanttoread.WantToReadToggleChip
 
 // ── Series List Screen ──
 
@@ -62,7 +63,8 @@ import com.mimiral.app.data.remote.VolumeDto
 fun KavitaSeriesScreen(
     viewModel: KavitaSeriesViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToReader: (String) -> Unit = {}
+    onNavigateToReader: (String) -> Unit = {},
+    seriesId: Int = 0
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -137,6 +139,7 @@ fun KavitaSeriesScreen(
                     VolumesListView(
                         volumes = uiState.volumes,
                         seriesDetail = uiState.seriesDetail,
+                        seriesId = seriesId,
                         onVolumeClick = { viewModel.selectVolume(it) }
                     )
                 }
@@ -151,6 +154,7 @@ fun KavitaSeriesScreen(
 private fun VolumesListView(
     volumes: List<VolumeDto>,
     seriesDetail: com.mimiral.app.data.remote.SeriesDetailDto?,
+    seriesId: Int = 0,
     onVolumeClick: (VolumeDto) -> Unit
 ) {
     LazyColumn(
@@ -159,7 +163,7 @@ private fun VolumesListView(
     ) {
         // Series header card
         item {
-            SeriesHeaderCard(seriesDetail = seriesDetail)
+            SeriesHeaderCard(seriesDetail = seriesDetail, seriesId = seriesId)
         }
 
         // Volumes header
@@ -202,7 +206,8 @@ private fun VolumesListView(
 
 @Composable
 private fun SeriesHeaderCard(
-    seriesDetail: com.mimiral.app.data.remote.SeriesDetailDto?
+    seriesDetail: com.mimiral.app.data.remote.SeriesDetailDto?,
+    seriesId: Int = 0
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -220,7 +225,7 @@ private fun SeriesHeaderCard(
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Series Details",
                         style = MaterialTheme.typography.titleLarge,
@@ -241,6 +246,11 @@ private fun SeriesHeaderCard(
                         }
                     }
                 }
+            }
+            // Want To Read toggle chip
+            if (seriesId > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                WantToReadToggleChip(seriesId = seriesId)
             }
             if (seriesDetail != null) {
                 val readCount = seriesDetail.totalCount - seriesDetail.unreadCount
