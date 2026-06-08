@@ -613,4 +613,81 @@ interface KavitaApi {
         @Query("chapterId") chapterId: Int
     ): Response<KavitaAnnotationExport>
 
+    // ==================== Rating ====================
+
+    /**
+     * Rate a series (1-5 stars).
+     * POST /api/Rating/series
+     *
+     * @param request Series rating request
+     * @return Rating response with user + community rating
+     */
+    @POST("api/Rating/series")
+    suspend fun rateSeries(
+        @Body request: KavitaSeriesRatingRequest
+    ): Response<KavitaRatingResponse>
+
+    /**
+     * Rate a chapter (1-5 stars).
+     * POST /api/Rating/chapter
+     *
+     * @param request Chapter rating request
+     * @return Rating response with user + community rating
+     */
+    @POST("api/Rating/chapter")
+    suspend fun rateChapter(
+        @Body request: KavitaChapterRatingRequest
+    ): Response<KavitaRatingResponse>
+
+    /**
+     * Get the overall/community rating for a series.
+     * GET /api/Rating/overall-series?seriesId={seriesId}
+     *
+     * @param seriesId The series ID
+     * @return Overall community rating
+     */
+    @GET("api/Rating/overall-series")
+    suspend fun getOverallSeriesRating(
+        @Query("seriesId") seriesId: Int
+    ): Response<KavitaOverallSeriesRating>
+
+    // ==================== Reviews ====================
+
+    /**
+     * Write a review for a series.
+     * POST /api/Review/series
+     *
+     * @param request Review request body
+     * @return The created review
+     */
+    @POST("api/Review/series")
+    suspend fun reviewSeries(
+        @Body request: KavitaReviewRequest
+    ): Response<KavitaReview>
+
+    /**
+     * Write a review for a chapter.
+     * POST /api/Review/chapter
+     *
+     * @param request Review request body
+     * @return The created review
+     */
+    @POST("api/Review/chapter")
+    suspend fun reviewChapter(
+        @Body request: KavitaReviewRequest
+    ): Response<KavitaReview>
+
+    /**
+     * Get all reviews (optionally filtered).
+     * GET /api/Review/all?seriesId={seriesId}
+     *
+     * @param seriesId Optional series ID filter
+     * @param chapterId Optional chapter ID filter
+     * @return List of reviews
+     */
+    @GET("api/Review/all")
+    suspend fun getReviews(
+        @Query("seriesId") seriesId: Int? = null,
+        @Query("chapterId") chapterId: Int? = null
+    ): Response<List<KavitaReview>>
 }

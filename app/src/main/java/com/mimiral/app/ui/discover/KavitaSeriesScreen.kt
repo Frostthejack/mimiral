@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +62,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.mimiral.app.data.remote.ChapterDto
 import com.mimiral.app.data.remote.VolumeDto
+import com.mimiral.app.data.remote.kavita.KavitaReview
+import com.mimiral.app.ui.discover.RatingReviewViewModel
 
 // ── Series List Screen ──
 
@@ -69,12 +72,21 @@ import com.mimiral.app.data.remote.VolumeDto
 fun KavitaSeriesScreen(
     viewModel: KavitaSeriesViewModel = hiltViewModel(),
     markReadViewModel: KavitaMarkReadViewModel = hiltViewModel(),
+    ratingViewModel: RatingReviewViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
     onNavigateToReader: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val markReadState by markReadViewModel.uiState.collectAsState()
+    val ratingState by ratingViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val ratingSeriesId = uiState.selectedSeries?.id ?: 0
+    LaunchedEffect(ratingSeriesId) {
+        if (ratingSeriesId > 0) {
+            ratingViewModel.loadForSeries(ratingSeriesId)
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -178,6 +190,19 @@ fun KavitaSeriesScreen(
                                     }
                                 )
                             }
+                        },
+                        userRating = ratingState.userRating,
+                        communityRating = ratingState.communityRating,
+                        communityRatingsCount = ratingState.communityRatingsCount,
+                        reviews = ratingState.reviews,
+                        isSubmittingRating = ratingState.isSubmittingRating,
+                        isSubmittingReview = ratingState.isSubmittingReview,
+                        onRateSeries = { seriesId, rating ->
+                            ratingViewModel.rateSeries(seriesId, rating)
+                        },
+                        onSubmitReview = { body, tagline ->
+                            val sid = uiState.selectedSeries?.id ?: return@VolumesListView
+                            ratingViewModel.submitSeriesReview(sid, body, tagline)
                         }
                     )
                 }
@@ -282,7 +307,15 @@ private fun VolumesListView(
     markReadViewModel: KavitaMarkReadViewModel,
     continueReading: com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext? = null,
     timeLeft: com.mimiral.app.data.remote.kavita.KavitaTimeLeftDto? = null,
-    onContinueReading: () -> Unit = {}
+    onContinueReading: () -> Unit = {},
+    userRating: Int = 0,
+    communityRating: Double = 0.0,
+    communityRatingsCount: Int = 0,
+    reviews: List<KavitaReview> = emptyList(),
+    isSubmittingRating: Boolean = false,
+    isSubmittingReview: Boolean = false,
+    onRateSeries: (Int, Int) -> Unit = { _, _ -> },
+    onSubmitReview: (String, String?) -> Unit = { _, _ -> }
 ) {
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
@@ -294,7 +327,13 @@ private fun VolumesListView(
                 seriesDetail = seriesDetail,
                 continueReading = continueReading,
                 timeLeft = timeLeft,
-                onContinueReading = onContinueReading
+                onContinueReading = onContinueReading,
+                seriesId = seriesId,
+                userRating = userRating,
+                communityRating = communityRating,
+                communityRatingsCount = communityRatingsCount,
+                isSubmittingRating = isSubmittingRating,
+                onRateSeries = onRateSeries
             )
         }
 
@@ -345,7 +384,13 @@ private fun SeriesHeaderCard(
     seriesDetail: com.mimiral.app.data.remote.SeriesDetailDto?,
     continueReading: com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext? = null,
     timeLeft: com.mimiral.app.data.remote.kavita.KavitaTimeLeftDto? = null,
-    onContinueReading: () -> Unit = {}
+    onContinueReading: () -> Unit = {},
+    seriesId: Int = 0,
+    userRating: Int = 0,
+    communityRating: Double = 0.0,
+    communityRatingsCount: Int = 0,
+    isSubmittingRating: Boolean = false,
+    onRateSeries: (Int, Int) -> Unit = { _, _ -> }
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
