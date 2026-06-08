@@ -258,7 +258,10 @@ class KavitaBookmarkRepository @Inject constructor(
     ) {
         try {
             val serverBookmarks = getAllBookmarks()
-            Log.d(TAG, "Startup sync: ${serverBookmarks.size} server bookmarks, ${localBookmarks.size} local")
+            Log.d(
+                TAG,
+                "Startup sync: ${serverBookmarks.size} server bookmarks, ${localBookmarks.size} local"
+            )
 
             // Mark local bookmarks as synced where they match server bookmarks
             for (local in localBookmarks) {

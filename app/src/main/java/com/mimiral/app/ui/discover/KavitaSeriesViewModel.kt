@@ -168,7 +168,7 @@ class KavitaSeriesViewModel @Inject constructor(
             if (point != null && point.seriesId == currentSeriesId) {
                 _uiState.value = _uiState.value.copy(
                     continueReading =
-                        com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext(
+                    com.mimiral.app.data.remote.kavita.KavitaContinueReadingContext(
                         seriesId = point.seriesId,
                         volumeId = point.volumeId,
                         chapterId = point.chapterId,

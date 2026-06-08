@@ -6,11 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ReadingTimeTracker
-import com.mimiral.app.data.reader.ChapterExtractor
 import com.mimiral.app.data.reader.ChapterExtractionResult
-import com.mimiral.app.data.reader.StructuredChapterExtractionResult
+import com.mimiral.app.data.reader.ChapterExtractor
 import com.mimiral.app.data.reader.EpubParser
 import com.mimiral.app.data.reader.EpubState
+import com.mimiral.app.data.reader.StructuredChapterExtractionResult
 import com.mimiral.app.data.reader.TxtParseResult
 import com.mimiral.app.data.reader.TxtParser
 import com.mimiral.app.data.repository.BookRepository
@@ -540,7 +540,9 @@ class ReadingModeViewModel @Inject constructor(
 
                         // Use structured extractor for richer content
                         val blocks = structuredExtractor.extractPages(
-                            file, pageStart, pageEnd - 1
+                            file,
+                            pageStart,
+                            pageEnd - 1
                         )
 
                         if (blocks.isNotEmpty()) {
@@ -549,8 +551,11 @@ class ReadingModeViewModel @Inject constructor(
                             chapters.add(
                                 ReadingChapter(
                                     index = chapterIndex,
-                                    title = if (totalPages <= 20) "Page ${pageStart + 1}"
-                                    else "Section ${chapterIndex + 1}",
+                                    title = if (totalPages <= 20) {
+                                        "Page ${pageStart + 1}"
+                                    } else {
+                                        "Section ${chapterIndex + 1}"
+                                    },
                                     paragraphs = paragraphs,
                                     totalCharacters = charCount,
                                     contentBlocks = blocks
@@ -570,8 +575,11 @@ class ReadingModeViewModel @Inject constructor(
                                 chapters.add(
                                     ReadingChapter(
                                         index = chapterIndex,
-                                        title = if (totalPages <= 20) "Page ${pageStart + 1}"
-                                        else "Section ${chapterIndex + 1}",
+                                        title = if (totalPages <= 20) {
+                                            "Page ${pageStart + 1}"
+                                        } else {
+                                            "Section ${chapterIndex + 1}"
+                                        },
                                         paragraphs = paragraphs,
                                         totalCharacters = text.length,
                                         contentBlocks = contentBlocks
@@ -626,8 +634,11 @@ class ReadingModeViewModel @Inject constructor(
                             val chapters = mutableListOf<ReadingChapter>()
                             for (i in breaks.indices) {
                                 val start = breaks[i]
-                                val end = if (i + 1 < breaks.size) breaks[i + 1]
-                                else text.length
+                                val end = if (i + 1 < breaks.size) {
+                                    breaks[i + 1]
+                                } else {
+                                    text.length
+                                }
                                 val chapterText = text.substring(start, end).trim()
                                 if (chapterText.isNotEmpty()) {
                                     val paragraphs = splitIntoParagraphs(chapterText, i)
@@ -909,8 +920,10 @@ class ReadingModeViewModel @Inject constructor(
         while (i < text.length) {
             // Check for bold (** or __)
             if ((i + 1 < text.length) &&
-                ((text[i] == '*' && text[i + 1] == '*') ||
-                    (text[i] == '_' && text[i + 1] == '_'))
+                (
+                    (text[i] == '*' && text[i + 1] == '*') ||
+                        (text[i] == '_' && text[i + 1] == '_')
+                    )
             ) {
                 val marker = text[i]
                 val closeIdx = text.indexOf("$marker$marker", i + 2)

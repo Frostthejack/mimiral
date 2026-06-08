@@ -1,13 +1,21 @@
 package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
+import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.PendingOperationDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ServerDao
-import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.entity.PendingOperationEntity
-import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.remote.SyncStatus
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -19,15 +27,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.net.ConnectException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Repository for bidirectional reading progress sync with Kavita.
@@ -51,10 +50,13 @@ class KavitaReadingProgressRepository @Inject constructor(
 ) {
     companion object {
         private const val TAG = "KavitaProgressSync"
+
         /** Push after every N pages turned */
         const val DEBOUNCE_PAGE_INTERVAL = 3
+
         /** Push after this many ms regardless of page count */
         const val DEBOUNCE_TIME_MS = 10_000L
+
         /** Max retry attempts for pending operations before discard */
         const val MAX_RETRY_ATTEMPTS = 5
     }
@@ -70,14 +72,19 @@ class KavitaReadingProgressRepository @Inject constructor(
 
     /** Pages turned since last push */
     private var pagesSinceLastPush = 0
+
     /** Timestamp of last push */
     private var lastPushTimeMs = 0L
+
     /** Timer job for time-based debounce */
     private var debounceTimerJob: Job? = null
+
     /** Current pending progress to push (latest snapshot) */
     private val pendingPush = MutableStateFlow<KavitaProgressDto?>(null)
+
     /** Mutex to serialize push operations */
     private val pushMutex = Mutex()
+
     /** Scope for debounce coroutines */
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -142,8 +149,11 @@ class KavitaReadingProgressRepository @Inject constructor(
             Log.w(TAG, "Server unreachable on chapter open, using local progress")
             queuePendingOperation(
                 type = PendingOperationType.FULL_SYNC,
-                seriesId = 0, libraryId = 0, volumeId = 0,
-                chapterId = chapterId, pageNum = localPage
+                seriesId = 0,
+                libraryId = 0,
+                volumeId = 0,
+                chapterId = chapterId,
+                pageNum = localPage
             )
             localPage
         } catch (e: Exception) {

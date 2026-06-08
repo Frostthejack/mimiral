@@ -291,8 +291,11 @@ class TTSService : Service() {
                             handlePlay()
                         }
                     } else {
-                        Log.w(TAG, "Voice '$voiceName' not found in available voices. " +
-                            "Available: ${availableVoices.map { it.name }}")
+                        Log.w(
+                            TAG,
+                            "Voice '$voiceName' not found in available voices. " +
+                                "Available: ${availableVoices.map { it.name }}"
+                        )
                     }
                 } else {
                     // Reset to default voice

@@ -205,7 +205,9 @@ fun KavitaBookmarksScreen(
                             Text(
                                 text = "Bookmarks you create while reading will appear here",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.7f
+                                )
                             )
                         }
                     }
@@ -289,7 +291,11 @@ private fun SeriesBookmarkGroup(
                     )
                 }
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    imageVector = if (isExpanded) {
+                        Icons.Default.ExpandLess
+                    } else {
+                        Icons.Default.ExpandMore
+                    },
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -344,7 +350,11 @@ private fun VolumeBookmarkGroup(
                 )
             }
             Icon(
-                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                imageVector = if (isExpanded) {
+                    Icons.Default.ExpandLess
+                } else {
+                    Icons.Default.ExpandMore
+                },
                 contentDescription = if (isExpanded) "Collapse" else "Expand",
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant

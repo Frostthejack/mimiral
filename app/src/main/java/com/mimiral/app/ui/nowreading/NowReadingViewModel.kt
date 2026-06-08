@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
+import com.mimiral.app.data.remote.kavita.KavitaContinuePointDto
 import com.mimiral.app.data.remote.kavita.KavitaContinueReadingRepository
 import com.mimiral.app.data.remote.kavita.KavitaOnDeckDto
-import com.mimiral.app.data.remote.kavita.KavitaContinuePointDto
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject

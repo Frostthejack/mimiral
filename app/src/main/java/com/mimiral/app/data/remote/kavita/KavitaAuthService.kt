@@ -1,9 +1,9 @@
 package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
+import com.google.gson.Gson
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.ServerEntity
-import com.google.gson.Gson
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton

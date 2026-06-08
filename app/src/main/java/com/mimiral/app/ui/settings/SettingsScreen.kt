@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Folder
@@ -29,6 +28,7 @@ import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Restore
@@ -84,10 +84,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mimiral.app.data.local.settings.LibrarySettingsRepository
 import com.mimiral.app.data.local.settings.MarginWidth
 import com.mimiral.app.data.local.settings.ParagraphSpacing
+import com.mimiral.app.data.local.settings.ProgressSyncMode
+import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.data.local.settings.ReadingModeSettingsRepository
 import com.mimiral.app.data.local.settings.ReadingModeTheme
-import com.mimiral.app.data.local.settings.ReaderSettingsRepository
-import com.mimiral.app.data.local.settings.ProgressSyncMode
 import com.mimiral.app.data.local.settings.SyncInterval
 import com.mimiral.app.data.local.settings.SyncSettingsRepository
 import com.mimiral.app.data.local.settings.TTSSettingsRepository
@@ -337,7 +337,13 @@ fun SettingsScreen(
                         ReadingModeEnumSelector(
                             options = com.mimiral.app.data.local.settings.DefaultReaderMode.entries,
                             selected = readingModeSettings.defaultReaderMode,
-                            onSelect = { scope.launch { readingModeSettingsRepo.setDefaultReaderMode(it) } },
+                            onSelect = {
+                                scope.launch {
+                                    readingModeSettingsRepo.setDefaultReaderMode(
+                                        it
+                                    )
+                                }
+                            },
                             labelFor = { it.displayName }
                         )
                     }
@@ -368,7 +374,13 @@ fun SettingsScreen(
                             selected = com.mimiral.app.ui.reader.ReaderFontFamily.entries.find {
                                 it.name == readingModeSettings.fontFamily
                             } ?: com.mimiral.app.ui.reader.ReaderFontFamily.DEFAULT,
-                            onSelect = { scope.launch { readingModeSettingsRepo.setFontFamily(it.name) } },
+                            onSelect = {
+                                scope.launch {
+                                    readingModeSettingsRepo.setFontFamily(
+                                        it.name
+                                    )
+                                }
+                            },
                             labelFor = { it.displayName }
                         )
                     }
@@ -503,7 +515,13 @@ fun SettingsScreen(
                         ReadingModeEnumSelector(
                             options = ParagraphSpacing.entries,
                             selected = readingModeSettings.paragraphSpacing,
-                            onSelect = { scope.launch { readingModeSettingsRepo.setParagraphSpacing(it) } },
+                            onSelect = {
+                                scope.launch {
+                                    readingModeSettingsRepo.setParagraphSpacing(
+                                        it
+                                    )
+                                }
+                            },
                             labelFor = { it.displayName }
                         )
                     }
@@ -590,7 +608,13 @@ fun SettingsScreen(
                         ReadingModeEnumSelector(
                             options = TtsHighlightColor.entries,
                             selected = readingModeSettings.ttsHighlightColor,
-                            onSelect = { scope.launch { readingModeSettingsRepo.setTtsHighlightColor(it) } },
+                            onSelect = {
+                                scope.launch {
+                                    readingModeSettingsRepo.setTtsHighlightColor(
+                                        it
+                                    )
+                                }
+                            },
                             labelFor = { it.displayName }
                         )
                     }

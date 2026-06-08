@@ -356,8 +356,11 @@ private fun ReadingActivityChart(
                                 .height(barHeightDp.dp + 4.dp)
                         ) {
                             drawRoundRect(
-                                color = if (point.pagesRead > 0) primaryColor
-                                else surfaceVariantColor.copy(alpha = 0.3f),
+                                color = if (point.pagesRead > 0) {
+                                    primaryColor
+                                } else {
+                                    surfaceVariantColor.copy(alpha = 0.3f)
+                                },
                                 topLeft = Offset.Zero,
                                 size = Size(size.width, barHeightDp.dp.toPx()),
                                 cornerRadius = CornerRadius(4f, 4f)
@@ -383,7 +386,7 @@ private val PIE_COLORS = listOf(
     Color(0xFF6750A4), Color(0xFFEF5350), Color(0xFF26A69A),
     Color(0xFFFF7043), Color(0xFF42A5F5), Color(0xFFAB47BC),
     Color(0xFF66BB6A), Color(0xFFFFCA28), Color(0xFF78909C),
-    Color(0xFFEC407A), Color(0xFF7E57C2), Color(0xFF29B6F6),
+    Color(0xFFEC407A), Color(0xFF7E57C2), Color(0xFF29B6F6)
 )
 
 @Composable
@@ -662,9 +665,11 @@ private fun FavoriteAuthorsList(
                         )
                         Text(
                             text = "${author.pagesRead} pages" +
-                                if (author.seriesCount > 0)
+                                if (author.seriesCount > 0) {
                                     " \u00b7 ${author.seriesCount} series"
-                                else "",
+                                } else {
+                                    ""
+                                },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

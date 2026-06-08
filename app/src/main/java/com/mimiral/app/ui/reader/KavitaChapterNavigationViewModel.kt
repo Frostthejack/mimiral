@@ -31,6 +31,7 @@ data class ChapterNavigationState(
 ) {
     /** Whether a next chapter is available */
     val hasNextChapter: Boolean get() = nextChapter != null && nextChapter.id > 0
+
     /** Whether a previous chapter is available */
     val hasPrevChapter: Boolean get() = prevChapter != null && prevChapter.id > 0
 }

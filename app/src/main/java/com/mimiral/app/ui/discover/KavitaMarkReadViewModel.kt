@@ -6,7 +6,6 @@ import com.mimiral.app.data.remote.BrowseResult
 import com.mimiral.app.data.remote.KavitaBrowseRepository
 import com.mimiral.app.data.remote.kavita.KavitaMarkReadRepository
 import com.mimiral.app.data.remote.kavita.KavitaMarkReadUiState
-import com.mimiral.app.data.remote.kavita.MarkReadOperation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow

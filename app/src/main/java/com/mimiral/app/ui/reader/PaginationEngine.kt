@@ -82,12 +82,12 @@ class PaginationEngine(private val context: Context) {
     companion object {
         /** Heading font size multipliers relative to body fontSize. */
         private val HEADING_SIZE_MULTIPLIERS = mapOf(
-            1 to 1.78f,  // 32sp at 18sp base
-            2 to 1.56f,  // 28sp
-            3 to 1.22f,  // 22sp
-            4 to 1.0f,   // 18sp (bold)
-            5 to 1.0f,   // 18sp (bold)
-            6 to 1.0f,   // 18sp (bold)
+            1 to 1.78f, // 32sp at 18sp base
+            2 to 1.56f, // 28sp
+            3 to 1.22f, // 22sp
+            4 to 1.0f, // 18sp (bold)
+            5 to 1.0f, // 18sp (bold)
+            6 to 1.0f // 18sp (bold)
         )
 
         /** Additional vertical padding (in dp) for headings (top + bottom). */

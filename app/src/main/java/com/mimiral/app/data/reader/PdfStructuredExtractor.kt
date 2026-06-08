@@ -38,7 +38,15 @@ class PdfStructuredExtractor {
         private const val HEADING_SIZE_RATIO_THRESHOLD = 1.2f
 
         /** Font name substrings that indicate bold weight. */
-        private val BOLD_INDICATORS = listOf("Bold", "Black", "Heavy", "SemiBold", "Demibold", "ExtraBold", "UltraBold")
+        private val BOLD_INDICATORS = listOf(
+            "Bold",
+            "Black",
+            "Heavy",
+            "SemiBold",
+            "Demibold",
+            "ExtraBold",
+            "UltraBold"
+        )
 
         /** Font name substrings that indicate italic style. */
         private val ITALIC_INDICATORS = listOf("Italic", "Oblique", "Slanted")
@@ -51,11 +59,11 @@ class PdfStructuredExtractor {
          * Ratios are descending; first match wins.
          */
         private val HEADING_LEVEL_RATIOS = listOf(
-            2.0f to 1,  // 2x+ body size → h1
-            1.7f to 2,  // 1.7x → h2
-            1.5f to 3,  // 1.5x → h3
+            2.0f to 1, // 2x+ body size → h1
+            1.7f to 2, // 1.7x → h2
+            1.5f to 3, // 1.5x → h3
             1.35f to 4, // 1.35x → h4
-            1.25f to 5, // 1.25x → h5
+            1.25f to 5 // 1.25x → h5
         )
         // Anything between HEADING_SIZE_RATIO_THRESHOLD and 1.25x → h6
 
@@ -297,7 +305,7 @@ class PdfStructuredExtractor {
             val totalLen = sortedChunks.sumOf { it.text.length }
             val avgFontSize = if (totalLen > 0) {
                 sortedChunks.sumOf { (it.fontSize * it.text.length).toDouble() }
-        .toFloat() / totalLen
+                    .toFloat() / totalLen
             } else {
                 sortedChunks.first().fontSize
             }
@@ -376,7 +384,9 @@ class PdfStructuredExtractor {
             }
 
             // Heuristic 4 & 5: Paragraph (with optional bold flag)
-            blocks.add(ContentBlock.Paragraph(index = index, text = line.text, isBold = line.isBold))
+            blocks.add(
+                ContentBlock.Paragraph(index = index, text = line.text, isBold = line.isBold)
+            )
             index++
         }
 

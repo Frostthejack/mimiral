@@ -61,8 +61,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.mimiral.app.data.remote.ChapterDto
 import com.mimiral.app.data.remote.VolumeDto
-import com.mimiral.app.data.remote.kavita.KavitaMarkReadUiState
-import com.mimiral.app.data.remote.kavita.MarkReadOperation
 
 // ── Series List Screen ──
 
@@ -704,11 +702,13 @@ private fun VolumeDetailView(
                                 onClick = {
                                     if (isFullyRead) {
                                         markReadViewModel.markVolumeUnread(
-                                            volume.id, volume.seriesId
+                                            volume.id,
+                                            volume.seriesId
                                         )
                                     } else {
                                         markReadViewModel.markVolumeRead(
-                                            volume.id, volume.seriesId
+                                            volume.id,
+                                            volume.seriesId
                                         )
                                     }
                                 }

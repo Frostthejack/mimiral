@@ -1,8 +1,7 @@
 package com.mimiral.app.ui.reader
 
-import android.content.Context
-import android.speech.tts.Voice
 import android.speech.tts.TextToSpeech
+import android.speech.tts.Voice
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +33,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mimiral.app.R
-import java.util.Locale
 
 /**
  * Dialog for selecting a TTS voice from available voices.

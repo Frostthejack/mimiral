@@ -50,10 +50,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -69,8 +69,8 @@ import com.mimiral.app.data.local.settings.TTSSettingsRepository
 import com.mimiral.app.data.reader.ContentBlock
 import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.reader.TextSpan
-import com.mimiral.app.tts.TTSState
 import com.mimiral.app.tts.TTSService
+import com.mimiral.app.tts.TTSState
 import kotlinx.coroutines.launch
 
 /**
@@ -711,7 +711,10 @@ private fun PageTextContent(
                             )
                         }
                         val annotated = applyTtsHighlight(
-                            block.text, ttsWordStart, ttsWordEnd, highlightColor
+                            block.text,
+                            ttsWordStart,
+                            ttsWordEnd,
+                            highlightColor
                         )
                         Text(
                             text = annotated,
@@ -758,7 +761,10 @@ private fun PageTextContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         val annotated = applyTtsHighlight(
-                            block.text, ttsWordStart, ttsWordEnd, highlightColor
+                            block.text,
+                            ttsWordStart,
+                            ttsWordEnd,
+                            highlightColor
                         )
                         Text(
                             text = annotated,
@@ -773,7 +779,10 @@ private fun PageTextContent(
                         val prefix = if (block.order > 0) "${block.order}. " else "• "
                         val fullText = "$prefix${block.text}"
                         val annotated = applyTtsHighlight(
-                            fullText, ttsWordStart, ttsWordEnd, highlightColor
+                            fullText,
+                            ttsWordStart,
+                            ttsWordEnd,
+                            highlightColor
                         )
                         Text(
                             text = annotated,
@@ -800,7 +809,10 @@ private fun PageTextContent(
                 key = { index, _ -> index }
             ) { _, paragraphText ->
                 val annotatedText = applyTtsHighlight(
-                    paragraphText, ttsWordStart, ttsWordEnd, highlightColor
+                    paragraphText,
+                    ttsWordStart,
+                    ttsWordEnd,
+                    highlightColor
                 )
                 Text(
                     text = annotatedText,

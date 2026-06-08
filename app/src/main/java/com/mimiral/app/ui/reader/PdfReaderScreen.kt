@@ -1,11 +1,11 @@
 package com.mimiral.app.ui.reader
 
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.BroadcastReceiver
 import android.graphics.Bitmap
 import android.graphics.PointF
 import androidx.compose.animation.AnimatedVisibility
@@ -387,7 +387,9 @@ fun PdfReaderScreen(
                                 } catch (_: Exception) {
                                     ""
                                 }
-                            } else ""
+                            } else {
+                                ""
+                            }
                         } ?: ""
                         if (pageText.isNotBlank()) {
                             TtsControlsHelper.play(context, pageText)

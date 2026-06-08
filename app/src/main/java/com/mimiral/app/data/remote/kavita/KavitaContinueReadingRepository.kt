@@ -2,11 +2,11 @@ package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
 import com.mimiral.app.data.local.dao.ServerDao
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Repository for Continue Reading, Next/Prev Chapter, On Deck, and Time Left features.

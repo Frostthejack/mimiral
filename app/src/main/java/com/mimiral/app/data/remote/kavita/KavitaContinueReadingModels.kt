@@ -64,7 +64,9 @@ data class KavitaTimeLeftDto(
     val progressPercent: Float
         get() = if (totalPages > 0) {
             ((totalPages - pagesLeft).toFloat() / totalPages) * 100f
-        } else 0f
+        } else {
+            0f
+        }
 }
 
 /**

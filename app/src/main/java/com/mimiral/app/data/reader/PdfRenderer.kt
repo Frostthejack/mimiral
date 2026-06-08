@@ -5,10 +5,10 @@ import android.graphics.Bitmap
 import android.graphics.RectF
 import android.graphics.pdf.PdfRenderer as AndroidPdfRenderer
 import android.os.ParcelFileDescriptor
-import java.io.File
-import java.io.FileNotFoundException
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
+import java.io.File
+import java.io.FileNotFoundException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -174,7 +174,11 @@ class PdfRenderer : AutoCloseable {
         }
 
         val filePath = openedFilePath ?: return@withContext PageText(
-            "", false, pageIndex, 0, 0
+            "",
+            false,
+            pageIndex,
+            0,
+            0
         )
 
         try {

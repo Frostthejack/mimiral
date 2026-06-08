@@ -1,13 +1,13 @@
 package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
-import kotlinx.coroutines.runBlocking
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * OkHttp interceptor that handles Kavita authentication:

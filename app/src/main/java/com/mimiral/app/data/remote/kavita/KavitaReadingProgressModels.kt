@@ -77,6 +77,7 @@ data class KavitaReaderResponse(
 enum class PendingOperationType {
     /** Push reading progress to Kavita */
     PUSH_PROGRESS,
+
     /** Full bidirectional sync */
     FULL_SYNC
 }
