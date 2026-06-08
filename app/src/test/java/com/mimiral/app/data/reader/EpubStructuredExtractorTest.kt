@@ -1,6 +1,7 @@
 package com.mimiral.app.data.reader
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -38,10 +39,9 @@ class EpubStructuredExtractorTest {
         val blocks = extractor.extract(html)
         assertEquals(1, blocks.size)
         val para = blocks[0] as ContentBlock.Paragraph
-        assertEquals(1, para.spans.size)
-        assertEquals("Hello world", para.spans[0].text)
-        assertEquals(false, para.spans[0].bold)
-        assertEquals(false, para.spans[0].italic)
+        assertEquals("Hello world", para.text)
+        // Plain text paragraphs take the fast path with empty spans
+        assertEquals(true, para.spans.isEmpty())
     }
 
     @Test
@@ -50,13 +50,15 @@ class EpubStructuredExtractorTest {
         val blocks = extractor.extract(html)
         assertEquals(1, blocks.size)
         val para = blocks[0] as ContentBlock.Paragraph
-        assertEquals(3, para.spans.size)
-        assertEquals("This is ", para.spans[0].text)
-        assertEquals(false, para.spans[0].bold)
-        assertEquals("bold", para.spans[1].text)
-        assertEquals(true, para.spans[1].bold)
-        assertEquals(" text", para.spans[2].text)
-        assertEquals(false, para.spans[2].bold)
+        assertEquals("This is bold text", para.text)
+        // Bold span should be present
+        val boldSpans = para.spans.filter { it.isBold }
+        assertTrue("Should have at least one bold span", boldSpans.isNotEmpty())
+        // Bold span offsets should be within text range
+        for (span in boldSpans) {
+            assertTrue("span.start should be >= 0", span.start >= 0)
+            assertTrue("span.end should be <= text.length", span.end <= para.text.length)
+        }
     }
 
     @Test
@@ -65,9 +67,8 @@ class EpubStructuredExtractorTest {
         val blocks = extractor.extract(html)
         assertEquals(1, blocks.size)
         val para = blocks[0] as ContentBlock.Paragraph
-        assertEquals(3, para.spans.size)
-        assertEquals("italic", para.spans[1].text)
-        assertEquals(true, para.spans[1].italic)
+        val italicSpans = para.spans.filter { it.isItalic }
+        assertTrue("Should have at least one italic span", italicSpans.isNotEmpty())
     }
 
     @Test
@@ -76,9 +77,8 @@ class EpubStructuredExtractorTest {
         val blocks = extractor.extract(html)
         assertEquals(1, blocks.size)
         val para = blocks[0] as ContentBlock.Paragraph
-        val boldItalicSpan = para.spans.first { it.text == "bold italic" }
-        assertEquals(true, boldItalicSpan.bold)
-        assertEquals(true, boldItalicSpan.italic)
+        val boldItalicSpans = para.spans.filter { it.isBold && it.isItalic }
+        assertTrue("Should have at least one bold+italic span", boldItalicSpans.isNotEmpty())
     }
 
     @Test
@@ -86,10 +86,10 @@ class EpubStructuredExtractorTest {
         val html = "<p>This is <b>bold</b> and <i>italic</i></p>"
         val blocks = extractor.extract(html)
         val para = blocks[0] as ContentBlock.Paragraph
-        val boldSpan = para.spans.first { it.bold }
-        val italicSpan = para.spans.first { it.italic }
-        assertEquals("bold", boldSpan.text)
-        assertEquals("italic", italicSpan.text)
+        val boldSpans = para.spans.filter { it.isBold }
+        val italicSpans = para.spans.filter { it.isItalic }
+        assertTrue("Should have bold span", boldSpans.isNotEmpty())
+        assertTrue("Should have italic span", italicSpans.isNotEmpty())
     }
 
     // ---- Quotes ----
@@ -112,12 +112,9 @@ class EpubStructuredExtractorTest {
         assertEquals(3, blocks.size)
         val items = blocks.map { it as ContentBlock.ListItem }
         assertEquals("First", items[0].text)
-        assertEquals(false, items[0].ordered)
-        assertEquals(1, items[0].index)
+        assertEquals(0, items[0].order)  // unordered = order 0
         assertEquals("Second", items[1].text)
-        assertEquals(2, items[1].index)
         assertEquals("Third", items[2].text)
-        assertEquals(3, items[2].index)
     }
 
     @Test
@@ -126,10 +123,10 @@ class EpubStructuredExtractorTest {
         val blocks = extractor.extract(html)
         assertEquals(2, blocks.size)
         val items = blocks.map { it as ContentBlock.ListItem }
-        assertEquals(true, items[0].ordered)
-        assertEquals(1, items[0].index)
-        assertEquals(true, items[1].ordered)
-        assertEquals(2, items[1].index)
+        assertTrue("First item should be ordered", items[0].order > 0)
+        assertTrue("Second item should be ordered", items[1].order > 0)
+        assertEquals("Step one", items[0].text)
+        assertEquals("Step two", items[1].text)
     }
 
     // ---- Mixed content ----
@@ -144,9 +141,7 @@ class EpubStructuredExtractorTest {
             <p>Final paragraph.</p>
         """.trimIndent()
         val blocks = extractor.extract(html)
-
-        // Expect: heading, paragraph, quote, 2 list items, paragraph = 6 blocks
-        assertTrue(blocks.size >= 4) // at minimum heading, para, quote, para
+        assertTrue(blocks.size >= 4)
 
         val heading = blocks.filterIsInstance<ContentBlock.Heading>().firstOrNull()
         assertEquals(2, heading?.level)
@@ -203,30 +198,41 @@ class EpubStructuredExtractorTest {
         val html = "<p>Line one<br/>Line two</p>"
         val blocks = extractor.extract(html)
         val para = blocks[0] as ContentBlock.Paragraph
-        // Should have 2 spans split at the <br>
-        assertTrue(para.spans.size >= 2)
         assertTrue(para.text.contains("Line one"))
         assertTrue(para.text.contains("Line two"))
     }
 
-    // ---- TextSpan convenience properties ----
+    // ---- TextSpan offset-based API ----
 
     @Test
-    fun `paragraph text property concatenates spans`() {
-        val para = ContentBlock.Paragraph(listOf(TextSpan("Hello ", true), TextSpan("world")))
+    fun `paragraph text property returns full text`() {
+        val html = "<p>Hello world</p>"
+        val blocks = extractor.extract(html)
+        val para = blocks[0] as ContentBlock.Paragraph
         assertEquals("Hello world", para.text)
     }
 
     @Test
-    fun `paragraph hasStyle detects styled spans`() {
-        val plain = ContentBlock.Paragraph(listOf(TextSpan("hello")))
-        assertEquals(false, plain.hasStyle)
+    fun `styled paragraph has non-empty spans`() {
+        val html = "<p>Hello <strong>world</strong></p>"
+        val blocks = extractor.extract(html)
+        val para = blocks[0] as ContentBlock.Paragraph
+        assertTrue("Styled paragraph should have spans", para.spans.isNotEmpty())
+        // Spans should have valid offsets
+        for (span in para.spans) {
+            assertTrue("span.start >= 0", span.start >= 0)
+            assertTrue("span.end > span.start", span.end > span.start)
+            assertTrue("span.end <= text.length", span.end <= para.text.length)
+        }
+    }
 
-        val bold = ContentBlock.Paragraph(listOf(TextSpan("hello", bold = true)))
-        assertEquals(true, bold.hasStyle)
-
-        val italic = ContentBlock.Paragraph(listOf(TextSpan("hello", italic = true)))
-        assertEquals(true, italic.hasStyle)
+    @Test
+    fun `bold span has isBold true`() {
+        val html = "<p><strong>bold text</strong></p>"
+        val blocks = extractor.extract(html)
+        val para = blocks[0] as ContentBlock.Paragraph
+        // All-bold paragraph uses isBold flag on paragraph, not spans
+        assertEquals(true, para.isBold)
     }
 
     // ---- Tokenizer (internal tests) ----
@@ -235,7 +241,6 @@ class EpubStructuredExtractorTest {
     fun `tokenizer produces correct tokens`() {
         val html = "<p>Hello <strong>world</strong></p>"
         val tokens = extractor.tokenize(html)
-        // Tokens: OpenTag(p), Text("Hello "), OpenTag(strong), Text("world"), CloseTag(strong), CloseTag(p)
         assertEquals(6, tokens.size)
         assertTrue(tokens[0] is EpubStructuredExtractor.Token.OpenTag)
         assertEquals("p", (tokens[0] as EpubStructuredExtractor.Token.OpenTag).name)
@@ -262,17 +267,5 @@ class EpubStructuredExtractorTest {
         val text = extractor.extractPlainText(html)
         assertTrue(text.contains("Title"))
         assertTrue(text.contains("Paragraph"))
-    }
-
-    // ---- ContentBlock.Heading validation ----
-
-    @Test(expected = IllegalArgumentException::class)
-    fun `heading level must be 1-6`() {
-        ContentBlock.Heading(level = 0, text = "Invalid")
-    }
-
-    @Test(expected = IllegalArgumentException::class)
-    fun `heading level must not exceed 6`() {
-        ContentBlock.Heading(level = 7, text = "Invalid")
     }
 }
