@@ -13,7 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
@@ -35,13 +36,15 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,26 +75,75 @@ fun ReadingModeScreen(
     val coroutineScope = rememberCoroutineScope()
 
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val listState = rememberLazyListState()
+    val configuration = LocalConfiguration.current
+    val paginationEngine = remember { PaginationEngine(context) }
 
-    // Track the first visible paragraph index for progress reporting
-    val firstVisibleParagraphIndex by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex
+    // Compute pages from chapters when chapters or text settings change
+    val screenWidthPx = remember(configuration) {
+        configuration.screenWidthDp * context.resources.displayMetrics.density.toInt()
+    }
+    val screenHeightPx = remember(configuration) {
+        configuration.screenHeightDp * context.resources.displayMetrics.density.toInt()
+    }
+
+    // Track last paginated settings to avoid re-paginating on every recomposition
+    var lastPaginatedFont by remember { mutableIntStateOf(-1) }
+
+    LaunchedEffect(uiState.chapters, textSettings.fontSize) {
+        if (uiState.chapters.isEmpty()) return@LaunchedEffect
+        if (textSettings.fontSize == lastPaginatedFont && uiState.pages.isNotEmpty()) {
+            return@LaunchedEffect
         }
+        lastPaginatedFont = textSettings.fontSize
+
+        val allPages = mutableListOf<ReadingPage>()
+        var globalPageIndex = 0
+
+        for (chapter in uiState.chapters) {
+            val chapterText = chapter.paragraphs.joinToString("\n\n") { it.text }
+            if (chapterText.isBlank()) continue
+
+            val renderConfig = textSettings.toRenderConfig()
+            val result = paginationEngine.paginate(
+                text = chapterText,
+                config = renderConfig,
+                screenWidthPx = screenWidthPx,
+                screenHeightPx = screenHeightPx
+            )
+
+            for (page in result.pages) {
+                allPages.add(
+                    ReadingPage(
+                        pageIndex = globalPageIndex++,
+                        chapterIndex = chapter.index,
+                        text = page.text,
+                        startCharOffset = page.startOffset
+                    )
+                )
+            }
+        }
+
+        viewModel.setPages(allPages)
     }
 
-    // Report visible paragraph changes to ViewModel for progress tracking
-    LaunchedEffect(firstVisibleParagraphIndex) {
-        viewModel.onParagraphVisible(firstVisibleParagraphIndex)
+    // Pager state
+    val pageCount = uiState.pages.size
+    val pagerState = rememberPagerState(
+        pageCount = { pageCount },
+        initialPage = uiState.currentPageIndex.coerceAtMost(pageCount - 1).coerceAtLeast(0)
+    )
+
+    // Report page changes to ViewModel
+    LaunchedEffect(pagerState.currentPage) {
+        viewModel.onPageChanged(pagerState.currentPage)
     }
 
-    // Handle scroll-to requests from ViewModel (chapter navigation, bookmark navigation)
-    LaunchedEffect(uiState.scrollToParagraphIndex) {
-        val target = uiState.scrollToParagraphIndex
-        if (target != null) {
-            listState.animateScrollToItem(target)
-            viewModel.clearScrollTarget()
+    // Handle page-scroll requests (from chapter/bookmark navigation)
+    LaunchedEffect(uiState.currentPageIndex) {
+        if (pagerState.currentPage != uiState.currentPageIndex &&
+            uiState.currentPageIndex in 0 until pageCount
+        ) {
+            pagerState.animateScrollToPage(uiState.currentPageIndex)
         }
     }
 
@@ -177,14 +229,14 @@ fun ReadingModeScreen(
             )
         },
         bottomBar = {
-            // Progress bar at the bottom
-            if (uiState.paragraphs.isNotEmpty()) {
+            // Progress bar + page numbers at the bottom
+            if (uiState.pages.isNotEmpty()) {
                 Column {
                     LinearProgressIndicator(
                         progress = { (uiState.progressPercent / 100f).coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    // Chapter navigation row
+                    // Page numbers + chapter info
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -192,12 +244,18 @@ fun ReadingModeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Chapter ${uiState.currentChapterIndex + 1}" +
-                                " of ${uiState.chapterTitles.size}",
+                            text = "Page ${uiState.currentPageIndex + 1} of ${uiState.totalPages}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "Ch. ${uiState.currentChapterIndex + 1}" +
+                                " of ${uiState.chapterTitles.size}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "${uiState.progressPercent.toInt()}%",
                             style = MaterialTheme.typography.labelSmall,
@@ -274,28 +332,27 @@ fun ReadingModeScreen(
             }
 
             else -> {
-                // Reading content — LazyColumn of paragraphs
-                LazyColumn(
-                    state = listState,
+                // Reading content — HorizontalPager of paginated pages
+                HorizontalPager(
+                    state = pagerState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = textSettings.marginLeft.dp,
-                        end = textSettings.marginRight.dp,
-                        top = textSettings.marginTop.dp,
-                        bottom = textSettings.marginBottom.dp + 32.dp
-                    )
-                ) {
-                    itemsIndexed(
-                        items = uiState.paragraphs,
-                        key = { _, paragraph -> paragraph.index }
-                    ) { _, paragraph ->
-                        ParagraphItem(
-                            paragraph = paragraph,
+                    beyondViewportPageCount = 1,
+                    key = { index -> index }
+                ) { pageIndex ->
+                    val page = uiState.pages.getOrNull(pageIndex)
+                    if (page != null) {
+                        // Render the page text with proper formatting
+                        PageTextContent(
+                            text = page.text,
                             fontSize = textSettings.fontSize,
                             lineHeight = textSettings.lineSpacingMultiplier,
-                            fontFamily = textSettings.selectedFontFamily
+                            fontFamily = textSettings.selectedFontFamily,
+                            marginLeft = textSettings.marginLeft,
+                            marginRight = textSettings.marginRight,
+                            marginTop = textSettings.marginTop,
+                            marginBottom = textSettings.marginBottom
                         )
                     }
                 }
@@ -308,8 +365,13 @@ fun ReadingModeScreen(
                 chapterTitles = uiState.chapterTitles,
                 currentChapterIndex = uiState.currentChapterIndex,
                 onNavigateToChapter = { index ->
-                    viewModel.navigateToChapter(index)
+                    val targetPage = viewModel.navigateToChapter(index)
                     viewModel.toggleToc()
+                    if (targetPage >= 0 && targetPage < pageCount) {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(targetPage)
+                        }
+                    }
                 },
                 onDismiss = { viewModel.toggleToc() }
             )
@@ -320,7 +382,12 @@ fun ReadingModeScreen(
             BookmarkListDialog(
                 bookmarks = uiState.bookmarks,
                 onNavigateToBookmark = { bookmark ->
-                    viewModel.navigateToBookmark(bookmark)
+                    val targetPage = viewModel.navigateToBookmark(bookmark)
+                    if (targetPage >= 0 && targetPage < pageCount) {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(targetPage)
+                        }
+                    }
                 },
                 onDeleteBookmark = { bookmark ->
                     // Delegate to existing bookmark management
@@ -345,14 +412,19 @@ fun ReadingModeScreen(
 }
 
 /**
- * A single paragraph rendered with the specified text settings.
+ * Renders a single page of text content with proper formatting.
+ * Paragraphs are separated by double newlines for visual breathing room.
  */
 @Composable
-private fun ParagraphItem(
-    paragraph: ReadingParagraph,
+private fun PageTextContent(
+    text: String,
     fontSize: Int,
     lineHeight: Float,
-    fontFamily: ReaderFontFamily
+    fontFamily: ReaderFontFamily,
+    marginLeft: Int,
+    marginRight: Int,
+    marginTop: Int,
+    marginBottom: Int
 ) {
     val textStyle = MaterialTheme.typography.bodyLarge.copy(
         fontSize = fontSize.toFloat().sp,
@@ -360,13 +432,39 @@ private fun ParagraphItem(
         fontFamily = fontFamily.fontFamily
     )
 
-    Text(
-        text = paragraph.text,
-        style = textStyle,
+    // Split page text into paragraphs for rendering with spacing
+    val paragraphs = remember(text) {
+        text.split(Regex("\\n\\s*\\n"))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+    }
+
+    LazyColumn(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    )
+            .fillMaxSize()
+            .padding(
+                start = marginLeft.dp,
+                end = marginRight.dp,
+                top = marginTop.dp,
+                bottom = marginBottom.dp
+            ),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            vertical = 8.dp
+        )
+    ) {
+        itemsIndexed(
+            items = paragraphs,
+            key = { index, _ -> index }
+        ) { _, paragraphText ->
+            Text(
+                text = paragraphText,
+                style = textStyle,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            )
+        }
+    }
 }
 
 /**

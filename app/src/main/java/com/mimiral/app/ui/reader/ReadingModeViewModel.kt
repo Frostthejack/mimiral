@@ -57,6 +57,21 @@ data class ReadingChapter(
 )
 
 /**
+ * A single page of paginated text, computed by PaginationEngine.
+ *
+ * @param pageIndex Zero-based page index across all chapters.
+ * @param chapterIndex The chapter this page belongs to.
+ * @param text The text content for this page.
+ * @param startCharOffset Character offset from the start of the chapter.
+ */
+data class ReadingPage(
+    val pageIndex: Int,
+    val chapterIndex: Int,
+    val text: String,
+    val startCharOffset: Int
+)
+
+/**
  * UI state for the Reading Mode screen.
  */
 data class ReadingModeUiState(
@@ -70,13 +85,17 @@ data class ReadingModeUiState(
     val chapters: List<ReadingChapter> = emptyList(),
     val chapterTitles: List<String> = emptyList(),
     val currentChapterIndex: Int = 0,
-    // Reading content
+    // Reading content (paragraphs kept for bookmark/progress compat)
     val paragraphs: List<ReadingParagraph> = emptyList(),
+    // Paginated pages (filled after PaginationEngine runs)
+    val pages: List<ReadingPage> = emptyList(),
+    val currentPageIndex: Int = 0,
+    val totalPages: Int = 0,
     // Progress
     val progressPercent: Float = 0f,
     val totalCharacters: Long = 0,
     val readCharacters: Long = 0,
-    // Scroll position (paragraph index for LazyColumn)
+    // Scroll position (paragraph index — kept for bookmark compat)
     val scrollToParagraphIndex: Int? = null,
     // Bookmarks
     val bookmarks: List<BookmarkEntity> = emptyList(),
@@ -147,18 +166,71 @@ class ReadingModeViewModel @Inject constructor(
     // ---- Public API ----
 
     /**
-     * Navigate to a chapter by index. Loads its paragraphs and scrolls to top.
+     * Called when the HorizontalPager page changes.
+     * Updates current chapter, progress, and bookmark state.
      */
-    fun navigateToChapter(chapterIndex: Int) {
-        val chapters = _uiState.value.chapters
-        if (chapterIndex !in chapters.indices) return
+    fun onPageChanged(pageIndex: Int) {
+        val pages = _uiState.value.pages
+        if (pageIndex !in pages.indices) return
 
+        val page = pages[pageIndex]
+        _uiState.update {
+            it.copy(
+                currentPageIndex = pageIndex,
+                currentChapterIndex = page.chapterIndex
+            )
+        }
+        currentParagraphIndex = pageIndex
+        currentCharOffsetInChapter = page.startCharOffset
+        charsInPreviousChapters = calculateCharsInPreviousChapters(page.chapterIndex)
+        updateProgress()
+        updateBookmarkState()
+        sessionPagesTurned++
+    }
+
+    /**
+     * Set the paginated pages (called from Screen after PaginationEngine computes them).
+     */
+    fun setPages(pages: List<ReadingPage>) {
+        _uiState.update {
+            it.copy(
+                pages = pages,
+                totalPages = pages.size
+            )
+        }
+    }
+
+    /**
+     * Navigate to a chapter by index. Returns the page index to scroll to.
+     */
+    fun navigateToChapter(chapterIndex: Int): Int {
+        val chapters = _uiState.value.chapters
+        if (chapterIndex !in chapters.indices) return -1
+
+        val pages = _uiState.value.pages
+        val targetPage = pages.indexOfFirst { it.chapterIndex == chapterIndex }
+        if (targetPage >= 0) {
+            _uiState.update {
+                it.copy(
+                    currentChapterIndex = chapterIndex,
+                    currentPageIndex = targetPage
+                )
+            }
+            currentParagraphIndex = targetPage
+            currentCharOffsetInChapter = 0
+            charsInPreviousChapters = calculateCharsInPreviousChapters(chapterIndex)
+            updateProgress()
+            updateBookmarkState()
+            sessionPagesTurned++
+            return targetPage
+        }
+
+        // Fallback: no pages computed yet, just update chapter
         val chapter = chapters[chapterIndex]
         _uiState.update {
             it.copy(
                 currentChapterIndex = chapterIndex,
-                paragraphs = chapter.paragraphs,
-                scrollToParagraphIndex = 0
+                paragraphs = chapter.paragraphs
             )
         }
         currentParagraphIndex = 0
@@ -167,6 +239,7 @@ class ReadingModeViewModel @Inject constructor(
         updateProgress()
         updateBookmarkState()
         sessionPagesTurned++
+        return -1
     }
 
     /**
@@ -241,12 +314,12 @@ class ReadingModeViewModel @Inject constructor(
     }
 
     /**
-     * Navigate to a bookmark's position.
+     * Navigate to a bookmark's position. Returns the page index to scroll to.
      */
-    fun navigateToBookmark(bookmark: BookmarkEntity) {
-        navigateToChapter(bookmark.chapterIndex)
-        _uiState.update { it.copy(scrollToParagraphIndex = bookmark.pageNumber) }
+    fun navigateToBookmark(bookmark: BookmarkEntity): Int {
+        val targetPage = navigateToChapter(bookmark.chapterIndex)
         _uiState.update { it.copy(showBookmarkList = false) }
+        return targetPage
     }
 
     /**
@@ -636,9 +709,9 @@ class ReadingModeViewModel @Inject constructor(
                     chapterIndex = state.currentChapterIndex,
                     characterOffset = state.readCharacters,
                     totalCharacters = state.totalCharacters,
-                    pageNumber = currentParagraphIndex,
-                    totalPages = state.paragraphs.size,
-                    lastReadPosition = "paragraph:$currentParagraphIndex"
+                    pageNumber = state.currentPageIndex,
+                    totalPages = state.totalPages,
+                    lastReadPosition = "page:${state.currentPageIndex}"
                 )
             } catch (_: Exception) {
                 // Non-critical
