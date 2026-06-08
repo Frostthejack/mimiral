@@ -62,6 +62,8 @@ class KavitaSyncRepositoryTest {
             kavitaLibraryId = null
         )
         whenever(bookDao.getBookById(1)).thenReturn(book)
+        whenever(progressSyncRepository.pushProgressForBook(any(), any(), any()))
+            .thenReturn(false)
 
         val result = repository.pushProgress(1, 5)
 
@@ -80,6 +82,8 @@ class KavitaSyncRepositoryTest {
             kavitaLibraryId = null
         )
         whenever(bookDao.getBookById(1)).thenReturn(book)
+        whenever(progressSyncRepository.pushProgressForBook(any(), any(), any()))
+            .thenReturn(false)
 
         val result = repository.pushProgress(1, 5)
 
@@ -108,6 +112,8 @@ class KavitaSyncRepositoryTest {
         whenever(kavitaApi.pushProgress(any())).thenReturn(
             Response.success(KavitaProgressResponse(success = true))
         )
+        whenever(progressSyncRepository.pushProgressForBook(any(), any(), any()))
+            .thenReturn(false)
 
         val result = repository.pushProgress(1, 5)
 
@@ -129,6 +135,8 @@ class KavitaSyncRepositoryTest {
         whenever(kavitaApi.pushProgress(any())).thenReturn(
             Response.error(500, okhttp3.ResponseBody.create(null, "Server Error"))
         )
+        whenever(progressSyncRepository.pushProgressForBook(any(), any(), any()))
+            .thenReturn(false)
 
         val result = repository.pushProgress(1, 5)
 
@@ -249,6 +257,8 @@ class KavitaSyncRepositoryTest {
         whenever(kavitaApi.pushProgress(any())).thenReturn(
             Response.success(KavitaProgressResponse(success = true))
         )
+        whenever(progressSyncRepository.pushProgressForBook(any(), any(), any()))
+            .thenReturn(false)
 
         val result = repository.syncProgress(
             bookId = 1,
