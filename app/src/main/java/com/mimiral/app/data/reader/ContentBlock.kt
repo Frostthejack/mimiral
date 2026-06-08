@@ -32,11 +32,14 @@ sealed class ContentBlock {
      * A normal paragraph block — body text in the default font.
      *
      * @param isBold Whether the paragraph uses a bold/semibold font throughout.
+     * @param spans Inline spans (bold, italic) within the paragraph text.
+     *              Each span describes a contiguous range with formatting.
      */
     data class Paragraph(
         override val index: Int,
         override val text: String,
-        val isBold: Boolean = false
+        val isBold: Boolean = false,
+        val spans: List<TextSpan> = emptyList()
     ) : ContentBlock()
 
     /**
@@ -67,3 +70,18 @@ sealed class ContentBlock {
         override val text: String get() = ""
     }
 }
+
+/**
+ * Represents an inline span within a ContentBlock.Paragraph.
+ *
+ * @param start Inclusive start offset within the paragraph text.
+ * @param end Exclusive end offset within the paragraph text.
+ * @param isBold Whether this span should be rendered as bold.
+ * @param isItalic Whether this span should be rendered as italic.
+ */
+data class TextSpan(
+    val start: Int,
+    val end: Int,
+    val isBold: Boolean = false,
+    val isItalic: Boolean = false
+)

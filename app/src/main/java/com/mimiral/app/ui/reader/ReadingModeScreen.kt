@@ -53,9 +53,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,7 +66,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.data.local.settings.TTSSettingsRepository
+import com.mimiral.app.data.reader.ContentBlock
 import com.mimiral.app.data.reader.Sentence
+import com.mimiral.app.data.reader.TextSpan
 import com.mimiral.app.tts.TTSState
 import com.mimiral.app.tts.TTSService
 import kotlinx.coroutines.launch
@@ -134,13 +139,22 @@ fun ReadingModeScreen(
                 screenHeightPx = screenHeightPx
             )
 
+            // Distribute ContentBlocks to pages based on text coverage
+            val chapterBlocks = chapter.contentBlocks
             for (page in result.pages) {
+                // Find blocks whose text appears in this page
+                val pageBlocks = if (chapterBlocks.isNotEmpty()) {
+                    findBlocksInPage(chapterBlocks, page.text)
+                } else {
+                    emptyList()
+                }
                 allPages.add(
                     ReadingPage(
                         pageIndex = globalPageIndex++,
                         chapterIndex = chapter.index,
                         text = page.text,
-                        startCharOffset = page.startOffset
+                        startCharOffset = page.startOffset,
+                        contentBlocks = pageBlocks
                     )
                 )
             }
@@ -506,6 +520,7 @@ fun ReadingModeScreen(
                         // Render the page text with proper formatting
                         PageTextContent(
                             text = page.text,
+                            contentBlocks = page.contentBlocks,
                             fontSize = textSettings.fontSize,
                             lineHeight = textSettings.lineSpacingMultiplier,
                             fontFamily = textSettings.selectedFontFamily,
@@ -589,14 +604,55 @@ fun ReadingModeScreen(
 }
 
 /**
- * Renders a single page of text content with proper formatting.
- * Paragraphs are separated by double newlines for visual breathing room.
- * When TTS is active and a word is highlighted, applies a background highlight
- * to the word range within the page text.
+ * Find ContentBlocks from a chapter list whose text appears in a given page.
+ * Uses sequential matching: walks through the chapter blocks and page text
+ * to find which blocks fall within the page's text content.
+ */
+private fun findBlocksInPage(
+    chapterBlocks: List<ContentBlock>,
+    pageText: String
+): List<ContentBlock> {
+    if (chapterBlocks.isEmpty() || pageText.isBlank()) return emptyList()
+
+    // Walk through blocks sequentially, tracking position in the page text
+    val result = mutableListOf<ContentBlock>()
+    var searchFrom = 0
+
+    for (block in chapterBlocks) {
+        if (block.text.isEmpty()) {
+            // Rule blocks — include if we're still scanning within page
+            if (searchFrom <= pageText.length) {
+                result.add(block)
+            }
+            continue
+        }
+
+        // Find this block's text in the page (starting from current position)
+        val idx = pageText.indexOf(block.text, searchFrom)
+        if (idx >= 0) {
+            result.add(block)
+            searchFrom = idx + block.text.length
+        }
+    }
+
+    return result
+}
+
+/**
+ * Renders a single page of text content with rich Typography.
+ *
+ * When contentBlocks is non-empty, renders each block with appropriate
+ * typography styles (headings, quotes, list items, paragraphs with spans).
+ * Falls back to flat bodyLarge text when no blocks are available.
+ *
+ * All blocks respect the user's font size setting — base sizes are scaled
+ * proportionally. TTS word highlighting is applied as an overlay SpanStyle
+ * on top of existing formatting within the relevant block.
  */
 @Composable
 private fun PageTextContent(
     text: String,
+    contentBlocks: List<ContentBlock> = emptyList(),
     fontSize: Int,
     lineHeight: Float,
     fontFamily: ReaderFontFamily,
@@ -607,16 +663,20 @@ private fun PageTextContent(
     ttsWordStart: Int = -1,
     ttsWordEnd: Int = -1
 ) {
-    val textStyle = MaterialTheme.typography.bodyLarge.copy(
+    val highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+
+    // Font size scale factor: user setting relative to default (18sp)
+    val fontScale = fontSize.toFloat() / 18f
+
+    // Base text style for paragraphs
+    val baseParagraphStyle = MaterialTheme.typography.bodyLarge.copy(
         fontSize = fontSize.toFloat().sp,
         lineHeight = (fontSize.toFloat() * lineHeight).sp,
         fontFamily = fontFamily.fontFamily
     )
 
-    val highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-
-    // Split page text into paragraphs for rendering with spacing
-    val paragraphs = remember(text) {
+    // Pre-compute fallback paragraphs (for when contentBlocks is empty)
+    val fallbackParagraphs = remember(text) {
         text.split(Regex("\\n\\s*\\n"))
             .map { it.trim() }
             .filter { it.isNotEmpty() }
@@ -635,39 +695,216 @@ private fun PageTextContent(
             vertical = 8.dp
         )
     ) {
-        itemsIndexed(
-            items = paragraphs,
-            key = { index, _ -> index }
-        ) { _, paragraphText ->
-            // Apply TTS word highlight within paragraph if applicable
-            val annotatedText = if (ttsWordStart >= 0 && ttsWordEnd > ttsWordStart) {
-                // Map global word offsets to this paragraph's local offsets
-                // This is approximate — exact mapping requires character offset tracking
-                val localEnd = ttsWordEnd.coerceAtMost(paragraphText.length)
-                val localStart = ttsWordStart.coerceAtLeast(0).coerceAtMost(localEnd)
-                if (localStart < localEnd) {
-                    buildAnnotatedString {
-                        append(paragraphText)
-                        addStyle(
-                            style = SpanStyle(background = highlightColor),
-                            start = localStart,
-                            end = localEnd
+        if (contentBlocks.isNotEmpty()) {
+            itemsIndexed(
+                items = contentBlocks,
+                key = { index, _ -> index }
+            ) { _, block ->
+                when (block) {
+                    is ContentBlock.Heading -> {
+                        val headingStyle = when (block.level) {
+                            1 -> MaterialTheme.typography.headlineLarge.copy(
+                                fontSize = (32f * fontScale).sp,
+                                lineHeight = (32f * fontScale * lineHeight).sp,
+                                fontFamily = fontFamily.fontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                            2 -> MaterialTheme.typography.headlineMedium.copy(
+                                fontSize = (28f * fontScale).sp,
+                                lineHeight = (28f * fontScale * lineHeight).sp,
+                                fontFamily = fontFamily.fontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                            3 -> MaterialTheme.typography.titleMedium.copy(
+                                fontSize = (22f * fontScale).sp,
+                                lineHeight = (22f * fontScale * lineHeight).sp,
+                                fontFamily = fontFamily.fontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                            else -> MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = (18f * fontScale).sp,
+                                lineHeight = (18f * fontScale * lineHeight).sp,
+                                fontFamily = fontFamily.fontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        val annotated = applyTtsHighlight(
+                            block.text, ttsWordStart, ttsWordEnd, highlightColor
+                        )
+                        Text(
+                            text = annotated,
+                            style = headingStyle,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
                         )
                     }
-                } else {
-                    AnnotatedString(paragraphText)
-                }
-            } else {
-                AnnotatedString(paragraphText)
-            }
 
-            Text(
-                text = annotatedText,
-                style = textStyle,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
+                    is ContentBlock.Paragraph -> {
+                        val style = if (block.isBold) {
+                            baseParagraphStyle.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            baseParagraphStyle
+                        }
+
+                        // Build annotated string with inline spans + TTS highlight
+                        val annotated = buildParagraphAnnotatedString(
+                            text = block.text,
+                            spans = block.spans,
+                            ttsWordStart = ttsWordStart,
+                            ttsWordEnd = ttsWordEnd,
+                            highlightColor = highlightColor
+                        )
+
+                        Text(
+                            text = annotated,
+                            style = style,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        )
+                    }
+
+                    is ContentBlock.Quote -> {
+                        val quoteStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = (16f * fontScale).sp,
+                            lineHeight = (16f * fontScale * lineHeight).sp,
+                            fontStyle = FontStyle.Italic,
+                            fontFamily = fontFamily.fontFamily,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        val annotated = applyTtsHighlight(
+                            block.text, ttsWordStart, ttsWordEnd, highlightColor
+                        )
+                        Text(
+                            text = annotated,
+                            style = quoteStyle,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 24.dp, top = 4.dp, bottom = 4.dp)
+                        )
+                    }
+
+                    is ContentBlock.ListItem -> {
+                        val prefix = if (block.order > 0) "${block.order}. " else "• "
+                        val fullText = "$prefix${block.text}"
+                        val annotated = applyTtsHighlight(
+                            fullText, ttsWordStart, ttsWordEnd, highlightColor
+                        )
+                        Text(
+                            text = annotated,
+                            style = baseParagraphStyle,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, top = 2.dp, bottom = 2.dp)
+                        )
+                    }
+
+                    is ContentBlock.Rule -> {
+                        HorizontalDivider(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+        } else {
+            // Fallback: flat text rendering (original behavior)
+            itemsIndexed(
+                items = fallbackParagraphs,
+                key = { index, _ -> index }
+            ) { _, paragraphText ->
+                val annotatedText = applyTtsHighlight(
+                    paragraphText, ttsWordStart, ttsWordEnd, highlightColor
+                )
+                Text(
+                    text = annotatedText,
+                    style = baseParagraphStyle,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Apply TTS word highlight to text if start/end offsets are valid.
+ */
+private fun applyTtsHighlight(
+    text: String,
+    ttsWordStart: Int,
+    ttsWordEnd: Int,
+    highlightColor: Color
+): AnnotatedString {
+    if (ttsWordStart < 0 || ttsWordEnd <= ttsWordStart) {
+        return AnnotatedString(text)
+    }
+    val localEnd = ttsWordEnd.coerceAtMost(text.length)
+    val localStart = ttsWordStart.coerceAtLeast(0).coerceAtMost(localEnd)
+    if (localStart < localEnd) {
+        return buildAnnotatedString {
+            append(text)
+            addStyle(
+                style = SpanStyle(background = highlightColor),
+                start = localStart,
+                end = localEnd
             )
+        }
+    }
+    return AnnotatedString(text)
+}
+
+/**
+ * Build an AnnotatedString for a Paragraph, applying inline bold/italic spans
+ * and TTS word highlight on top.
+ */
+private fun buildParagraphAnnotatedString(
+    text: String,
+    spans: List<TextSpan>,
+    ttsWordStart: Int,
+    ttsWordEnd: Int,
+    highlightColor: Color
+): AnnotatedString {
+    return buildAnnotatedString {
+        append(text)
+
+        // Apply inline spans (bold, italic)
+        for (span in spans) {
+            val spanStyle = SpanStyle(
+                fontWeight = if (span.isBold) {
+                    FontWeight.Bold
+                } else {
+                    null
+                },
+                fontStyle = if (span.isItalic) {
+                    FontStyle.Italic
+                } else {
+                    null
+                }
+            )
+            addStyle(
+                style = spanStyle,
+                start = span.start.coerceIn(0, text.length),
+                end = span.end.coerceIn(0, text.length)
+            )
+        }
+
+        // Apply TTS highlight on top of existing styles
+        if (ttsWordStart >= 0 && ttsWordEnd > ttsWordStart) {
+            val localEnd = ttsWordEnd.coerceAtMost(text.length)
+            val localStart = ttsWordStart.coerceAtLeast(0).coerceAtMost(localEnd)
+            if (localStart < localEnd) {
+                addStyle(
+                    style = SpanStyle(background = highlightColor),
+                    start = localStart,
+                    end = localEnd
+                )
+            }
         }
     }
 }
