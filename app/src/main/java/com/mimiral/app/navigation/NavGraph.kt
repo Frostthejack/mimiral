@@ -45,6 +45,8 @@ import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
 import com.mimiral.app.ui.settings.LibraryPreferencesScreen
 import com.mimiral.app.ui.settings.ReadingPreferencesScreen
+import com.mimiral.app.ui.settings.ScrobblingScreen
+import com.mimiral.app.ui.settings.ScrobblingViewModel
 import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.settings.TTSSettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
@@ -261,6 +263,17 @@ fun MimiralNavGraph(navController: NavHostController) {
                 val kavitaViewModel: KavitaSetupViewModel = hiltViewModel()
                 KavitaSetupScreen(
                     viewModel = kavitaViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToScrobbling = {
+                        navController.navigate(Screen.KavitaScrobbling.route)
+                    }
+                )
+            }
+
+            composable(Screen.KavitaScrobbling.route) {
+                val scrobblingViewModel: ScrobblingViewModel = hiltViewModel()
+                ScrobblingScreen(
+                    viewModel = scrobblingViewModel,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
