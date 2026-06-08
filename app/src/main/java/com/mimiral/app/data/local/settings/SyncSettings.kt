@@ -33,6 +33,29 @@ enum class SyncInterval(val displayName: String, val minutes: Int) {
 }
 
 /**
+ * Progress sync protocol mode.
+ *
+ * - NATIVE: Uses POST /api/Reader/progress with JWT auth (default, full fidelity).
+ * - PANELS: Uses POST /api/Panels/save-progress with API key (fallback when no JWT).
+ * - KOREADER: Uses PUT /api/Koreader/{apiKey}/syncs/progress (KOReader interop, niche).
+ */
+enum class ProgressSyncMode(val displayName: String, val description: String) {
+    NATIVE("Native", "Reader/progress with JWT (recommended)"),
+    PANELS("Panels", "Panels/progress with API key fallback"),
+    KOREADER("KOReader", "KOReader sync for e-ink devices");
+
+    companion object {
+        fun fromName(name: String): ProgressSyncMode {
+            return try {
+                valueOf(name)
+            } catch (_: IllegalArgumentException) {
+                NATIVE
+            }
+        }
+    }
+}
+
+/**
  * Data class holding all sync-related preferences.
  */
 data class SyncSettings(
@@ -42,7 +65,9 @@ data class SyncSettings(
     val lastSyncTimestamp: Long = 0L,
     val syncBookmarks: Boolean = true,
     val syncReadingProgress: Boolean = true,
-    val syncHighlights: Boolean = true
+    val syncHighlights: Boolean = true,
+    val progressSyncMode: ProgressSyncMode = ProgressSyncMode.NATIVE,
+    val koreaderDeviceId: String = "mimiral"
 )
 
 /**
@@ -58,6 +83,8 @@ class SyncSettingsRepository(private val context: Context) {
         val SYNC_BOOKMARKS = booleanPreferencesKey("sync_bookmarks")
         val SYNC_READING_PROGRESS = booleanPreferencesKey("sync_reading_progress")
         val SYNC_HIGHLIGHTS = booleanPreferencesKey("sync_highlights")
+        val PROGRESS_SYNC_MODE = stringPreferencesKey("progress_sync_mode")
+        val KOREADER_DEVICE_ID = stringPreferencesKey("koreader_device_id")
     }
 
     val settings: Flow<SyncSettings> = context.syncSettingsDataStore.data.map { prefs ->
@@ -70,7 +97,11 @@ class SyncSettingsRepository(private val context: Context) {
             lastSyncTimestamp = prefs[Keys.LAST_SYNC]?.toLongOrNull() ?: 0L,
             syncBookmarks = prefs[Keys.SYNC_BOOKMARKS] ?: true,
             syncReadingProgress = prefs[Keys.SYNC_READING_PROGRESS] ?: true,
-            syncHighlights = prefs[Keys.SYNC_HIGHLIGHTS] ?: true
+            syncHighlights = prefs[Keys.SYNC_HIGHLIGHTS] ?: true,
+            progressSyncMode = ProgressSyncMode.fromName(
+                prefs[Keys.PROGRESS_SYNC_MODE] ?: ProgressSyncMode.NATIVE.name
+            ),
+            koreaderDeviceId = prefs[Keys.KOREADER_DEVICE_ID] ?: "mimiral"
         )
     }
 
@@ -113,6 +144,18 @@ class SyncSettingsRepository(private val context: Context) {
     suspend fun setSyncHighlights(enabled: Boolean) {
         context.syncSettingsDataStore.edit { prefs ->
             prefs[Keys.SYNC_HIGHLIGHTS] = enabled
+        }
+    }
+
+    suspend fun setProgressSyncMode(mode: ProgressSyncMode) {
+        context.syncSettingsDataStore.edit { prefs ->
+            prefs[Keys.PROGRESS_SYNC_MODE] = mode.name
+        }
+    }
+
+    suspend fun setKoreaderDeviceId(deviceId: String) {
+        context.syncSettingsDataStore.edit { prefs ->
+            prefs[Keys.KOREADER_DEVICE_ID] = deviceId
         }
     }
 }
