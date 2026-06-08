@@ -32,7 +32,10 @@ sealed class StructuredChapterExtractionResult {
         val characterCount: Int
     ) : StructuredChapterExtractionResult()
 
-    data class Error(val message: String, val chapterIndex: Int) : StructuredChapterExtractionResult()
+    data class Error(
+        val message: String,
+        val chapterIndex: Int
+    ) : StructuredChapterExtractionResult()
 }
 
 /**
@@ -176,7 +179,9 @@ class ChapterExtractor(
      * @param chapterIndex Zero-based chapter index.
      * @return [StructuredChapterExtractionResult.Success] with ContentBlocks, or Error.
      */
-    suspend fun getStructuredChapter(chapterIndex: Int): StructuredChapterExtractionResult = mutex.withLock {
+    suspend fun getStructuredChapter(
+        chapterIndex: Int
+    ): StructuredChapterExtractionResult = mutex.withLock {
         withContext(Dispatchers.IO) {
             try {
                 val chapters = epubParser.getChapters()

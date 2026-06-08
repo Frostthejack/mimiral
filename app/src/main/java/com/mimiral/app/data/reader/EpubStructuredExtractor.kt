@@ -248,7 +248,9 @@ class EpubStructuredExtractor {
      * Bold detection: if ALL spans are bold, the paragraph itself is marked bold
      * and no individual TextSpans are emitted (reduces redundant markup).
      */
-    private fun parsedSpansToParagraph(parsedSpans: List<ParsedSpan>): List<ContentBlock.Paragraph> {
+    private fun parsedSpansToParagraph(
+        parsedSpans: List<ParsedSpan>
+    ): List<ContentBlock.Paragraph> {
         if (parsedSpans.isEmpty() || parsedSpans.all { it.text.isBlank() }) {
             return emptyList()
         }

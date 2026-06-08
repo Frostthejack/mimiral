@@ -296,7 +296,8 @@ class PdfStructuredExtractor {
             // Weighted average font size by text length
             val totalLen = sortedChunks.sumOf { it.text.length }
             val avgFontSize = if (totalLen > 0) {
-                sortedChunks.sumOf { (it.fontSize * it.text.length).toDouble() }.toFloat() / totalLen
+                sortedChunks.sumOf { (it.fontSize * it.text.length).toDouble() }
+        .toFloat() / totalLen
             } else {
                 sortedChunks.first().fontSize
             }

@@ -662,7 +662,9 @@ private fun FavoriteAuthorsList(
                         )
                         Text(
                             text = "${author.pagesRead} pages" +
-                                if (author.seriesCount > 0) " \u00b7 ${author.seriesCount} series" else "",
+                                if (author.seriesCount > 0)
+                                    " \u00b7 ${author.seriesCount} series"
+                                else "",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
