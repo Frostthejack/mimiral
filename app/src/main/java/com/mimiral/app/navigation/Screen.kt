@@ -72,4 +72,7 @@ sealed class Screen(val route: String) {
         fun createRoute(bookIds: List<Int>): String =
             "collection_picker/${bookIds.joinToString(",")}"
     }
+
+    // Kavita bookmark viewer
+    object KavitaBookmarks : Screen("kavita_bookmarks")
 }

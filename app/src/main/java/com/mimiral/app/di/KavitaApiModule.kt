@@ -89,13 +89,13 @@ object KavitaApiModule {
     @Singleton
     fun provideKavitaApi(
         @KavitaApiClient okHttpClient: OkHttpClient
-    ): com.mimiral.app.data.remote.kavita.KavitaApi {
+    ): KavitaApi {
         val retrofit = Retrofit.Builder()
             .baseUrl(PLACEHOLDER_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-        return retrofit.create(com.mimiral.app.data.remote.kavita.KavitaApi::class.java)
+        return retrofit.create(KavitaApi::class.java)
     }
 
     @Provides

@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.mimiral.app.ui.collections.CollectionsScreen
 import com.mimiral.app.ui.discover.DiscoverScreen
+import com.mimiral.app.ui.discover.KavitaBookmarksScreen
 import com.mimiral.app.ui.discover.KavitaSeriesScreen
 import com.mimiral.app.ui.goals.ReadingGoalsScreen
 import com.mimiral.app.ui.library.AddBooksScreen
@@ -413,6 +414,13 @@ fun MimiralNavGraph(navController: NavHostController) {
                 KavitaSeriesScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToReader = { route -> navController.navigate(route) }
+                )
+            }
+
+            // Kavita bookmark viewer
+            composable(Screen.KavitaBookmarks.route) {
+                KavitaBookmarksScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             // Book metadata editing
