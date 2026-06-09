@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.remote.kavita.KavitaCollection
 import com.mimiral.app.data.remote.kavita.KavitaCollectionRepository
 import com.mimiral.app.data.remote.kavita.KavitaCollectionSeries
-import com.mimiral.app.data.remote.kavita.KavitaCollectionSeriesPage
 import com.mimiral.app.data.remote.kavita.KavitaResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -114,7 +113,9 @@ class KavitaCollectionsViewModel @Inject constructor(
                         seriesTotalCount = pageData.totalCount,
                         seriesTotalPages = if (pageData.pageSize > 0) {
                             (pageData.totalCount + pageData.pageSize - 1) / pageData.pageSize
-                        } else 1
+                        } else {
+                            1
+                        }
                     )
                 }
                 is KavitaResult.Error -> {
@@ -149,7 +150,14 @@ class KavitaCollectionsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            when (val result = collectionRepository.createCollection(title, summary, seriesIds, promoted)) {
+            when (
+                val result = collectionRepository.createCollection(
+                    title,
+                    summary,
+                    seriesIds,
+                    promoted
+                )
+            ) {
                 is KavitaResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -180,7 +188,14 @@ class KavitaCollectionsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            when (val result = collectionRepository.updateCollection(collectionId, title, summary, promoted)) {
+            when (
+                val result = collectionRepository.updateCollection(
+                    collectionId,
+                    title,
+                    summary,
+                    promoted
+                )
+            ) {
                 is KavitaResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -206,7 +221,12 @@ class KavitaCollectionsViewModel @Inject constructor(
         seriesIds: List<Int>
     ) {
         viewModelScope.launch {
-            when (val result = collectionRepository.addSeriesToCollection(collectionId, seriesIds)) {
+            when (
+                val result = collectionRepository.addSeriesToCollection(
+                    collectionId,
+                    seriesIds
+                )
+            ) {
                 is KavitaResult.Success -> {
                     // Reload to reflect changes
                     loadCollections()

@@ -3,10 +3,10 @@ package com.mimiral.app.ui.settings
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mimiral.app.data.remote.kavita.KavitaLicenseStatus
 import com.mimiral.app.data.remote.kavita.KavitaScrobbleError
 import com.mimiral.app.data.remote.kavita.KavitaScrobblingRepository
 import com.mimiral.app.data.remote.kavita.KavitaScrobblingSettings
-import com.mimiral.app.data.remote.kavita.KavitaLicenseStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow

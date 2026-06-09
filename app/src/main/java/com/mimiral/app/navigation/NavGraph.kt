@@ -20,17 +20,16 @@ import androidx.navigation.navArgument
 import com.mimiral.app.ui.collections.CollectionsScreen
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.discover.KavitaBookmarksScreen
-import com.mimiral.app.ui.discover.KavitaSeriesScreen
 import com.mimiral.app.ui.discover.KavitaCollectionsScreen
 import com.mimiral.app.ui.discover.KavitaOpdsFeedScreen
-import com.mimiral.app.ui.opds.KavitaOpdsBrowseScreen
+import com.mimiral.app.ui.discover.KavitaSeriesScreen
 import com.mimiral.app.ui.goals.ReadingGoalsScreen
 import com.mimiral.app.ui.library.AddBooksScreen
-import com.mimiral.app.ui.wanttoread.WantToReadScreen
 import com.mimiral.app.ui.library.BookMetadataEditScreen
 import com.mimiral.app.ui.library.CollectionPickerScreen
 import com.mimiral.app.ui.library.LibraryScreen
 import com.mimiral.app.ui.nowreading.NowReadingScreen
+import com.mimiral.app.ui.opds.KavitaOpdsBrowseScreen
 import com.mimiral.app.ui.reader.ComicReaderScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.DocReaderScreen
@@ -45,9 +44,9 @@ import com.mimiral.app.ui.readinglists.ReadingListDetailScreen
 import com.mimiral.app.ui.readinglists.ReadingListsScreen
 import com.mimiral.app.ui.settings.AccessibilitySettingsScreen
 import com.mimiral.app.ui.settings.GestureSettingsScreen
+import com.mimiral.app.ui.settings.KavitaDeviceManagementScreen
 import com.mimiral.app.ui.settings.KavitaSetupScreen
 import com.mimiral.app.ui.settings.KavitaSetupViewModel
-import com.mimiral.app.ui.settings.KavitaDeviceManagementScreen
 import com.mimiral.app.ui.settings.LibraryPreferencesScreen
 import com.mimiral.app.ui.settings.ReadingPreferencesScreen
 import com.mimiral.app.ui.settings.ScrobblingScreen
@@ -56,6 +55,7 @@ import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.settings.TTSSettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
 import com.mimiral.app.ui.stats.StatsDashboardScreen
+import com.mimiral.app.ui.wanttoread.WantToReadScreen
 import kotlinx.coroutines.launch
 
 /**

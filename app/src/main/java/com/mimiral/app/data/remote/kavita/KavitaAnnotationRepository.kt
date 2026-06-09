@@ -245,7 +245,8 @@ class KavitaAnnotationRepository @Inject constructor(
                 is KavitaResult.Success -> {
                     Log.d(
                         TAG,
-                        "Exported ${result.data.annotations.size} annotations for chapter $chapterId"
+                        "Exported ${result.data.annotations.size} annotations " +
+                            "for chapter $chapterId"
                     )
                     result.data
                 }

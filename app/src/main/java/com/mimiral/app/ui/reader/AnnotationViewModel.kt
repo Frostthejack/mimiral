@@ -300,7 +300,9 @@ class AnnotationViewModel @Inject constructor(
                 val success = annotationRepository.deleteAnnotation(annotationId)
                 if (success) {
                     _uiState.update {
-                        it.copy(annotations = it.annotations.filter { ann -> ann.id != annotationId })
+                        it.copy(
+                            annotations = it.annotations.filter { ann -> ann.id != annotationId }
+                        )
                     }
                 } else {
                     _uiState.update { it.copy(error = "Failed to delete annotation") }
@@ -332,9 +334,15 @@ class AnnotationViewModel @Inject constructor(
                                 if (it.id == annotation.id) {
                                     it.copy(
                                         isLiked = !it.isLiked,
-                                        likesCount = if (it.isLiked) it.likesCount - 1 else it.likesCount + 1
+                                        likesCount = if (it.isLiked) {
+                                            it.likesCount - 1
+                                        } else {
+                                            it.likesCount + 1
+                                        }
                                     )
-                                } else it
+                                } else {
+                                    it
+                                }
                             }
                         )
                     }

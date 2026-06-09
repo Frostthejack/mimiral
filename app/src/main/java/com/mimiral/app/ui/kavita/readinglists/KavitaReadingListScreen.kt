@@ -147,8 +147,11 @@ fun KavitaReadingListScreen(
                             items = state.items,
                             onSeriesClick = { onNavigateToSeries(it.seriesId) },
                             onChapterClick = { item ->
-                                if (item.chapterId > 0) onNavigateToChapter(item.chapterId)
-                                else onNavigateToSeries(item.seriesId)
+                                if (item.chapterId > 0) {
+                                    onNavigateToChapter(item.chapterId)
+                                } else {
+                                    onNavigateToSeries(item.seriesId)
+                                }
                             }
                         )
                     }

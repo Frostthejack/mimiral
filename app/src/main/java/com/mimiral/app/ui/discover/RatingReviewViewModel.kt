@@ -2,7 +2,6 @@ package com.mimiral.app.ui.discover
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mimiral.app.data.remote.kavita.KavitaOverallSeriesRating
 import com.mimiral.app.data.remote.kavita.KavitaRatingRepository
 import com.mimiral.app.data.remote.kavita.KavitaReview
 import dagger.hilt.android.lifecycle.HiltViewModel

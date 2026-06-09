@@ -1,6 +1,5 @@
 package com.mimiral.app.ui.wanttoread
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -69,9 +68,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.mimiral.app.data.remote.kavita.KavitaSortDirection
 import com.mimiral.app.data.remote.kavita.KavitaWantToReadSeries
 import com.mimiral.app.data.remote.kavita.KavitaWantToReadSort
-import com.mimiral.app.data.remote.kavita.KavitaSortDirection
 
 // ── Main Screen ──
 
@@ -108,7 +107,11 @@ fun WantToReadScreen(
                     // View toggle
                     IconButton(onClick = { isGridView = !isGridView }) {
                         Icon(
-                            imageVector = if (isGridView) Icons.Default.ViewList else Icons.Default.ViewModule,
+                            imageVector = if (isGridView) {
+                                Icons.Default.ViewList
+                            } else {
+                                Icons.Default.ViewModule
+                            },
                             contentDescription = if (isGridView) "List view" else "Grid view"
                         )
                     }
@@ -124,11 +127,18 @@ fun WantToReadScreen(
                             DropdownMenuItem(
                                 text = { Text(sort.label) },
                                 onClick = {
-                                    val newDir = if (uiState.sortBy == sort) {
-                                        if (uiState.sortDirection == KavitaSortDirection.Ascending)
+                                    val isCurrent = uiState.sortBy == sort
+                                    val newDir = if (isCurrent) {
+                                        if (uiState.sortDirection ==
+                                            KavitaSortDirection.Ascending
+                                        ) {
                                             KavitaSortDirection.Descending
-                                        else KavitaSortDirection.Ascending
-                                    } else KavitaSortDirection.Ascending
+                                        } else {
+                                            KavitaSortDirection.Ascending
+                                        }
+                                    } else {
+                                        KavitaSortDirection.Ascending
+                                    }
                                     viewModel.onSortChanged(sort, newDir)
                                     showSortMenu = false
                                 }
@@ -175,9 +185,14 @@ fun WantToReadScreen(
                             )
                         },
                         label = {
-                            Text(
-                                "${uiState.sortBy.label} ${if (uiState.sortDirection == KavitaSortDirection.Ascending) "↑" else "↓"}"
-                            )
+                            val arrow = if (
+                                uiState.sortDirection == KavitaSortDirection.Ascending
+                            ) {
+                                "↑"
+                            } else {
+                                "↓"
+                            }
+                            Text("${uiState.sortBy.label} $arrow")
                         },
                         trailingIcon = {
                             Icon(
@@ -349,9 +364,17 @@ private fun SeriesGridCard(
                         .size(32.dp)
                 ) {
                     Icon(
-                        imageVector = if (isInList) Icons.Default.BookmarkRemove else Icons.Default.BookmarkAdd,
+                        imageVector = if (isInList) {
+                            Icons.Default.BookmarkRemove
+                        } else {
+                            Icons.Default.BookmarkAdd
+                        },
                         contentDescription = if (isInList) "Remove from WTR" else "Add to WTR",
-                        tint = if (isInList) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        tint = if (isInList) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
                     )
                 }
             }
@@ -480,9 +503,17 @@ private fun SeriesListRow(
             // WTR toggle
             IconButton(onClick = onToggleWantToRead) {
                 Icon(
-                    imageVector = if (isInList) Icons.Default.BookmarkRemove else Icons.Outlined.BookmarkAdd,
+                    imageVector = if (isInList) {
+                        Icons.Default.BookmarkRemove
+                    } else {
+                        Icons.Outlined.BookmarkAdd
+                    },
                     contentDescription = if (isInList) "Remove from WTR" else "Add to WTR",
-                    tint = if (isInList) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (isInList) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
             }
         }
@@ -644,7 +675,11 @@ fun WantToReadToggleChip(
         },
         leadingIcon = {
             Icon(
-                imageVector = if (isAdded) Icons.Default.BookmarkAdd else Icons.Outlined.BookmarkAdd,
+                imageVector = if (isAdded) {
+                    Icons.Default.BookmarkAdd
+                } else {
+                    Icons.Outlined.BookmarkAdd
+                },
                 contentDescription = null,
                 modifier = Modifier.size(18.dp)
             )

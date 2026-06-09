@@ -1037,6 +1037,4 @@ interface KavitaApi {
     suspend fun deleteReadingList(
         @Body request: KavitaReadingListDeleteRequest
     ): Response<Unit>
-
-
 }

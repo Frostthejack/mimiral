@@ -1,7 +1,5 @@
 package com.mimiral.app.data.remote.kavita
 
-import androidx.compose.ui.graphics.vector.ImageVector
-
 /**
  * Represents a Kavita OPDS feed category that can be browsed
  * via the OPDS protocol under /api/Opds/{apiKey}/.

@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material3.DrawerState

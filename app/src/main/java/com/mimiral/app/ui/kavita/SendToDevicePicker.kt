@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import com.mimiral.app.data.remote.kavita.DeviceSendState
 import com.mimiral.app.data.remote.kavita.KavitaDevice
 import com.mimiral.app.data.remote.kavita.KavitaDeviceRepository
-import kotlinx.coroutines.launch
 
 /**
  * Send-to-device picker bottom sheet.

@@ -53,7 +53,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,8 +65,8 @@ import coil.compose.AsyncImage
 import com.mimiral.app.data.remote.ChapterDto
 import com.mimiral.app.data.remote.VolumeDto
 import com.mimiral.app.data.remote.kavita.KavitaReview
-import com.mimiral.app.ui.discover.RatingReviewViewModel
 import com.mimiral.app.ui.wanttoread.WantToReadToggleChip
+import kotlinx.coroutines.launch
 
 // Send-to-device target for picker bottom sheet
 private sealed class SendToDeviceTarget {
@@ -272,6 +271,34 @@ fun KavitaSeriesScreen(
             }
         }
     }
+
+    // Send-to-device bottom sheet
+    val target = sendToDeviceTarget
+    if (target != null && deviceRepository != null) {
+        val (targetType, targetName) = when (target) {
+            is SendToDeviceTarget.Chapter -> "chapter" to target.title
+            is SendToDeviceTarget.Series -> "series" to target.name
+        }
+        com.mimiral.app.ui.kavita.SendToDevicePicker(
+            deviceRepository = deviceRepository,
+            sendTargetType = targetType,
+            sendTargetName = targetName,
+            onDeviceSelected = { device ->
+                scope.launch {
+                    when (target) {
+                        is SendToDeviceTarget.Chapter ->
+                            deviceRepository.sendChapterToDevice(target.chapterId, device.id)
+                        is SendToDeviceTarget.Series ->
+                            deviceRepository.sendSeriesToDevice(target.seriesId, device.id)
+                    }
+                }
+            },
+            onDismiss = {
+                sendToDeviceTarget = null
+                deviceRepository.resetSendState()
+            }
+        )
+    }
 }
 
 // ── Series-level Mark Read/Unread Dropdown Menu ──
@@ -323,34 +350,6 @@ private fun SeriesMarkReadMenu(
                 }
             )
         }
-    }
-
-    // Send-to-device bottom sheet
-    val target = sendToDeviceTarget
-    if (target != null && deviceRepository != null) {
-        val (targetType, targetName) = when (target) {
-            is SendToDeviceTarget.Chapter -> "chapter" to target.title
-            is SendToDeviceTarget.Series -> "series" to target.name
-        }
-        com.mimiral.app.ui.kavita.SendToDevicePicker(
-            deviceRepository = deviceRepository,
-            sendTargetType = targetType,
-            sendTargetName = targetName,
-            onDeviceSelected = { device ->
-                scope.launch {
-                    when (target) {
-                        is SendToDeviceTarget.Chapter ->
-                            deviceRepository.sendChapterToDevice(target.chapterId, device.id)
-                        is SendToDeviceTarget.Series ->
-                            deviceRepository.sendSeriesToDevice(target.seriesId, device.id)
-                    }
-                }
-            },
-            onDismiss = {
-                sendToDeviceTarget = null
-                deviceRepository.resetSendState()
-            }
-        )
     }
 }
 

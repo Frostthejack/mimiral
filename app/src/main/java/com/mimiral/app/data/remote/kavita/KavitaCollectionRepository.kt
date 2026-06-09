@@ -60,7 +60,11 @@ class KavitaCollectionRepository @Inject constructor(
             val response = kavitaApi.getSeriesByCollection(collectionId, pageNumber, pageSize)
             if (response.isSuccessful) {
                 val page = response.body() ?: KavitaCollectionSeriesPage()
-                Log.d(TAG, "Fetched ${page.series.size} series for collection $collectionId (page $pageNumber)")
+                Log.d(
+                    TAG,
+                    "Fetched ${page.series.size} series for collection " +
+                        "$collectionId (page $pageNumber)"
+                )
                 KavitaResult.Success(page)
             } else {
                 val errorBody = response.errorBody()?.string() ?: "Unknown error"

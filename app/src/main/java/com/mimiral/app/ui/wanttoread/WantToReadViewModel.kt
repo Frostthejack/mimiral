@@ -2,18 +2,16 @@ package com.mimiral.app.ui.wanttoread
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mimiral.app.data.remote.kavita.KavitaSortDirection
 import com.mimiral.app.data.remote.kavita.KavitaWantToReadFilter
 import com.mimiral.app.data.remote.kavita.KavitaWantToReadRepository
 import com.mimiral.app.data.remote.kavita.KavitaWantToReadSeries
 import com.mimiral.app.data.remote.kavita.KavitaWantToReadSort
-import com.mimiral.app.data.remote.kavita.KavitaSortDirection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 

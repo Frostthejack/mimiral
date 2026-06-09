@@ -1,8 +1,6 @@
 package com.mimiral.app.ui.settings
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,7 +27,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -367,10 +364,11 @@ private fun ScrobbleSettingsSection(
                 // Global scrobble toggle (read-only display)
                 SettingsRow(
                     label = "Scrobbling Enabled",
-                    description = if (settings.isScrobblingEnabled)
+                    description = if (settings.isScrobblingEnabled) {
                         "Server is scrobbling reading activity"
-                    else
-                        "Scrobbling is disabled on the server",
+                    } else {
+                        "Scrobbling is disabled on the server"
+                    },
                     checked = settings.isScrobblingEnabled
                 )
 
@@ -446,14 +444,20 @@ private fun ProviderChip(name: String, enabled: Boolean) {
                 if (enabled) Icons.Default.Check else Icons.Default.Close,
                 contentDescription = null,
                 modifier = Modifier.size(14.dp),
-                tint = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                tint = if (enabled) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
             Text(
                 name,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (enabled) MaterialTheme.colorScheme.onPrimaryContainer
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
         }
     }

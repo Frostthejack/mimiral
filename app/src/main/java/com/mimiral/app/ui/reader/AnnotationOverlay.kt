@@ -88,7 +88,11 @@ fun AnnotationOverlay(
 
     Popup(
         alignment = Alignment.TopCenter,
-        properties = PopupProperties(focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true),
+        properties = PopupProperties(
+            focusable = true,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        ),
         onDismissRequest = onDismiss
     ) {
         Surface(
@@ -212,8 +216,8 @@ fun AnnotationOverlay(
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = if (showNoteField) Icons.Default.NoteAdd else Icons.Default.NoteAdd,
-                            contentDescription = "Add note",
+                            imageVector = Icons.Default.NoteAdd,
+                            contentDescription = if (showNoteField) "Hide note" else "Add note",
                             tint = if (showNoteField) {
                                 MaterialTheme.colorScheme.primary
                             } else {
@@ -240,7 +244,11 @@ fun AnnotationOverlay(
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = if (isSpoiler) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            imageVector = if (isSpoiler) {
+                                Icons.Default.VisibilityOff
+                            } else {
+                                Icons.Default.Visibility
+                            },
                             contentDescription = if (isSpoiler) "Spoiler on" else "Spoiler off",
                             tint = if (isSpoiler) {
                                 MaterialTheme.colorScheme.error

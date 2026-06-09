@@ -138,8 +138,11 @@ class KavitaReadingListRepository @Inject constructor(
             if (response.isSuccessful) {
                 // Update local cache
                 _readingLists.value = _readingLists.value.map {
-                    if (it.id == id) it.copy(name = name, summary = summary, promoted = promoted)
-                    else it
+                    if (it.id == id) {
+                        it.copy(name = name, summary = summary, promoted = promoted)
+                    } else {
+                        it
+                    }
                 }
                 Log.d(TAG, "Updated reading list $id")
                 true
@@ -205,7 +208,11 @@ class KavitaReadingListRepository @Inject constructor(
                 _currentItems.value = body.items
                 _itemTotalCount.value = body.totalCount
                 _itemCurrentPage.value = body.pageNumber
-                Log.d(TAG, "Loaded ${body.items.size} items for list $readingListId (page $pageNumber, total ${body.totalCount})")
+                Log.d(
+                    TAG,
+                    "Loaded ${body.items.size} items for list " +
+                        "$readingListId (page $pageNumber, total ${body.totalCount})"
+                )
             } else {
                 val msg = "Failed to load reading list items: HTTP ${response.code()}"
                 _errorMessage.value = msg

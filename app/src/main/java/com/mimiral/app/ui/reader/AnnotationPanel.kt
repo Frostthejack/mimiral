@@ -36,11 +36,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -118,7 +116,8 @@ fun AnnotationPanel(
                         )
                         if (!uiState.isLoading) {
                             Text(
-                                text = "${uiState.annotations.size} annotation${if (uiState.annotations.size != 1) "s" else ""}",
+                                text = "${uiState.annotations.size} annotation" +
+                                    if (uiState.annotations.size != 1) "s" else "",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -193,7 +192,9 @@ fun AnnotationPanel(
                             Text(
                                 text = "Select text to create one",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.7f
+                                )
                             )
                         }
                     }
@@ -375,7 +376,11 @@ private fun AnnotationPanelItem(
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
-                            imageVector = if (annotation.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            imageVector = if (annotation.isLiked) {
+                                Icons.Default.Favorite
+                            } else {
+                                Icons.Default.FavoriteBorder
+                            },
                             contentDescription = if (annotation.isLiked) "Unlike" else "Like",
                             modifier = Modifier.size(16.dp),
                             tint = if (annotation.isLiked) {

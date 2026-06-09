@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -166,7 +164,9 @@ fun KavitaDeviceManagementScreen(
                 )
 
                 LazyColumn(
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 16.dp
+                    ),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(uiState.devices, key = { it.id }) { device ->
@@ -284,7 +284,8 @@ private fun AddDeviceForm(
             // Device type dropdown
             var expanded by remember { mutableStateOf(false) }
             val deviceTypes = listOf(0 to "Kindle", 1 to "Kobo", 2 to "Other")
-            val selectedTypeLabel = deviceTypes.firstOrNull { it.first == uiState.newDeviceType }?.second ?: "Other"
+            val selectedTypeLabel = deviceTypes.firstOrNull { it.first == uiState.newDeviceType }
+                ?.second ?: "Other"
 
             ExposedDropdownMenuBox(
                 expanded = expanded,
@@ -295,7 +296,9 @@ private fun AddDeviceForm(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Device Type") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(MenuAnchorType.PrimaryNotEditable)
@@ -331,7 +334,11 @@ private fun AddDeviceForm(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Add Device")
@@ -382,7 +389,11 @@ private fun DeviceCard(
                     horizontalArrangement = Arrangement.End
                 ) {
                     OutlinedButton(onClick = { isEditing = false }) {
-                        Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Cancel")
                     }
@@ -391,7 +402,11 @@ private fun DeviceCard(
                         onEdit(editName, editEmail, device.deviceType)
                         isEditing = false
                     }) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Save")
                     }

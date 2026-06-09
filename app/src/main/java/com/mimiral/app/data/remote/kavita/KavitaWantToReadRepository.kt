@@ -81,7 +81,11 @@ class KavitaWantToReadRepository @Inject constructor(
                 // Update tracked IDs
                 _wantToReadSeriesIds.value = _wantToReadSeriesIds.value
                     .plus(body.series.map { it.id }.toSet())
-                Log.d(TAG, "Loaded ${body.series.size} WTR series (page $pageNumber, total ${body.totalCount})")
+                Log.d(
+                    TAG,
+                    "Loaded ${body.series.size} WTR series (page " +
+                        "$pageNumber, total ${body.totalCount})"
+                )
             } else {
                 val msg = "Failed to load Want To Read: HTTP ${response.code()}"
                 _errorMessage.value = msg
