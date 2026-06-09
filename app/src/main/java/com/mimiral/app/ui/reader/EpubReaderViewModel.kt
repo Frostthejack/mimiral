@@ -7,10 +7,13 @@ import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.ReadingTimeTracker
 import com.mimiral.app.data.reader.Sentence
+import com.mimiral.app.data.reader.EpubParser
+import com.mimiral.app.data.reader.EpubState
 import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.ReadingTimeRepository
 import com.mimiral.app.tts.TTSState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -89,6 +92,7 @@ class EpubReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val readingTimeRepository: ReadingTimeRepository,
     private val kavitaSyncRepository: com.mimiral.app.data.remote.KavitaSyncRepository,
+    @ApplicationContext private val appContext: android.content.Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -143,7 +147,53 @@ class EpubReaderViewModel @Inject constructor(
      * For now, generates sample chapters based on the book.
      */
     private fun loadToc() {
-        // Sample TOC — in production, parse from EPUB spine/NCX
+        if (bookId == -1) {
+            // Fallback to sample chapters
+            setSampleChapters()
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val book = bookRepository.getBookById(bookId)
+                if (book == null || book.filePath.isBlank()) {
+                    setSampleChapters()
+                    return@launch
+                }
+
+                val file = java.io.File(book.filePath)
+                if (!file.exists() || !file.canRead()) {
+                    setSampleChapters()
+                    return@launch
+                }
+
+                val parser = EpubParser(appContext)
+                val result = parser.openFile(file)
+                when (result) {
+                    is EpubState.Loaded -> {
+                        val realChapters = parser.getChapters().map { ch ->
+                            EpubChapter(
+                                index = ch.index,
+                                title = ch.title,
+                                startPage = ch.index * 2,
+                                endPage = ch.index * 2 + 1
+                            )
+                        }
+                        _uiState.update { it.copy(chapters = realChapters) }
+                        parser.close()
+                    }
+                    else -> {
+                        setSampleChapters()
+                        parser.close()
+                    }
+                }
+            } catch (e: Exception) {
+                setSampleChapters()
+            }
+        }
+    }
+
+    private fun setSampleChapters() {
         val sampleChapters = listOf(
             EpubChapter(0, "Cover", 0, 0),
             EpubChapter(1, "Chapter 1: The Beginning", 1, 2),

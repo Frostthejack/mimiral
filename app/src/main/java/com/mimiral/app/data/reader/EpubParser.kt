@@ -5,12 +5,14 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import java.io.File
 import java.io.IOException
+import java.util.zip.ZipFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.readium.r2.shared.publication.Link
-import org.readium.r2.shared.publication.Publication
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserFactory
+import java.io.StringReader
 
 /**
  * Represents the state of an EPUB document being parsed.
@@ -36,11 +38,6 @@ sealed class EpubState {
 
 /**
  * Represents a single chapter in an EPUB.
- *
- * @param index Zero-based chapter index in reading order.
- * @param title Chapter title from the TOC or derived from the spine.
- * @param href Relative href within the EPUB ZIP pointing to the XHTML file.
- * @param mediaType MIME type of the resource (e.g., "application/xhtml+xml").
  */
 data class EpubChapter(
     val index: Int,
@@ -51,11 +48,6 @@ data class EpubChapter(
 
 /**
  * Table of contents entry with support for nested hierarchy.
- *
- * @param title Display title of the TOC entry.
- * @param href Link href pointing into the EPUB spine.
- * @param depth Nesting depth (0 = top-level).
- * @param children Nested child entries.
  */
 data class TocEntry(
     val title: String,
@@ -74,58 +66,48 @@ sealed class CoverResult {
 }
 
 /**
- * Core EPUB parser built on Readium Mobile v3 (PublicationOpener + AssetRetriever).
+ * Lightweight EPUB parser that reads the ZIP structure directly.
  *
- * Features:
- * - Opens EPUB files (ZIP archives) via AssetRetriever + PublicationOpener
- * - Parses OPF manifest to extract metadata, spine, and TOC
- * - Extracts chapter list in reading order
- * - Provides cover image extraction
- * - Thread-safe access via internal mutex
- * - Suitable for large EPUBs (500+ pages) via on-demand parsing
+ * EPUB is an OCF ZIP container with:
+ *   META-INF/container.xml  → points to the OPF file
+ *   <opf-path>              → package document with metadata + manifest + spine
+ *   NCX or nav document     → table of contents
+ *   XHTML files             → chapter content
  *
- * Usage:
- * ```
- * val parser = EpubParser(context)
- * val state = parser.openFile(File("/path/to/book.epub"))
- * when (state) {
- *     is EpubState.Loaded -> {
- *         val chapters = parser.getChapters()
- *         val toc = parser.getTableOfContents()
- *         val cover = parser.extractCover()
- *     }
- *     is EpubState.Error -> { / handle error / }
- * }
- * parser.close()
- * ```
+ * This parser extracts metadata, chapter list, TOC, and raw XHTML content
+ * without depending on Readium's internal Asset/Publication APIs.
  *
- * Important: Always call [close] when done to release resources.
+ * The existing [ChapterExtractor] and [EpubStructuredExtractor] can still be
+ * used for structured text extraction from the raw XHTML.
  */
 class EpubParser(private val context: Context) {
 
-    private var publication: Publication? = null
-    private var publicationOpener: Any? = null
-    private var assetRetriever: Any? = null
     private var currentFile: File? = null
     private var chapters: List<EpubChapter> = emptyList()
     private var tocEntries: List<TocEntry> = emptyList()
+    private var metadata: EpubMetadata = EpubMetadata()
+    private var manifestItems: Map<String, ManifestItem> = emptyMap()
+    private var spineRefs: List<String> = emptyList()
+    private var opfBasePath: String = ""
     private val mutex = Mutex()
 
-    /**
-     * Current state of the EPUB parser.
-     */
     var state: EpubState = EpubState.Idle
         private set
 
-    /**
-     * Opens and parses an EPUB file.
-     *
-     * This method uses AssetRetriever to create an Asset from the file,
-     * then PublicationOpener to parse the EPUB into a Publication.
-     *
-     * @param file The EPUB file to open.
-     * @return [EpubState.Loaded] on success, [EpubState.Error] on failure.
-     */
+    data class EpubMetadata(
+        var title: String? = null,
+        var author: String? = null,
+        var description: String? = null,
+        var coverId: String? = null
+    )
+
+    data class ManifestItem(
+        val id: String,
+        val href: String,
+        val mediaType: String,
+        val properties: List<String> = emptyList()
+    )
+
     suspend fun openFile(file: File): EpubState = mutex.withLock {
         withContext(Dispatchers.IO) {
             try {
@@ -141,23 +123,46 @@ class EpubParser(private val context: Context) {
                     return@withContext error
                 }
 
-                // Close any previously opened document
                 closeInternal()
-
-                // Phase 1: Return stub Loaded state
-                // Full Readium integration deferred to Phase 2
                 currentFile = file
-                chapters = emptyList()
-                tocEntries = emptyList()
+
+                ZipFile(file).use { zip ->
+                    // Step 1: Read META-INF/container.xml to find OPF path
+                    val opfPath = findOpfPath(zip)
+                        ?: return@withContext EpubState.Error(
+                            "Could not find OPUB package document (OPF)"
+                        ).also { state = it }
+
+                    // Step 2: Parse OPF for metadata, manifest, and spine
+                    val opfEntry = zip.getEntry(opfPath)
+                        ?: return@withContext EpubState.Error(
+                            "OPF file not found in EPUB: $opfPath"
+                        ).also { state = it }
+
+                    val opfXml = zip.getInputStream(opfEntry).bufferedReader().readText()
+                    opfBasePath = if (opfPath.contains("/")) {
+                        opfPath.substringBeforeLast("/") + "/"
+                    } else {
+                        ""
+                    }
+
+                    parseOpf(opfXml)
+
+                    // Step 3: Build chapter list from spine
+                    chapters = buildChaptersFromSpine()
+
+                    // Step 4: Try to extract TOC (NCX or nav document)
+                    tocEntries = extractToc(zip)
+                }
 
                 val loaded = EpubState.Loaded(
-                    title = file.nameWithoutExtension,
-                    author = null,
-                    description = null,
-                    chapterCount = 0,
-                    coverPath = null,
+                    title = metadata.title ?: file.nameWithoutExtension,
+                    author = metadata.author,
+                    description = metadata.description,
+                    chapterCount = chapters.size,
+                    coverPath = metadata.coverId?.let { resolveHref(it) },
                     filePath = file.absolutePath,
-                    totalEstimatedCharacters = 0
+                    totalEstimatedCharacters = chapters.size.toLong() * 1000L
                 )
                 state = loaded
                 loaded
@@ -175,237 +180,452 @@ class EpubParser(private val context: Context) {
         }
     }
 
-    /**
-     * Returns the list of chapters in reading order.
-     *
-     * Each chapter corresponds to a spine item in the EPUB's OPF manifest,
-     * with a title derived from the TOC or the spine item's own title/link.
-     */
     suspend fun getChapters(): List<EpubChapter> = mutex.withLock {
         return@withLock chapters
     }
 
-    /**
-     * Returns the table of contents as a flat list of entries.
-     *
-     * The TOC is extracted from the EPUB's NCX or Navigation Document.
-     * Nested entries are flattened with depth indicators.
-     */
     suspend fun getTableOfContents(): List<TocEntry> = mutex.withLock {
         return@withLock tocEntries
     }
 
-    /**
-     * Returns the raw Readium Publication object for advanced use cases.
-     *
-     * This provides direct access to the full Readium publication model
-     * including resources, links, and manifest data.
-     */
-    fun getPublication(): Publication? = publication
-
-    /**
-     * Returns the currently loaded file, or null if none is loaded.
-     */
     fun getCurrentFile(): File? = currentFile
 
     /**
-     * Extracts the cover image from the EPUB.
-     *
-     * The cover is identified from the publication metadata or by looking
-     * for common cover image patterns in the EPUB resources.
-     *
-     * @return [CoverResult.Success] with the cover bitmap,
-     *         [CoverResult.NotFound] if no cover exists, or
-     *         [CoverResult.Error] on failure.
+     * Returns the raw XHTML content for a chapter by its index.
+     * This is used by ChapterExtractor and EpubStructuredExtractor.
      */
+    suspend fun getChapterXhtml(chapterIndex: Int): String? = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            try {
+                val file = currentFile ?: return@withContext null
+                if (chapterIndex < 0 || chapterIndex >= chapters.size) return@withContext null
+                val chapter = chapters[chapterIndex]
+                val resolvedHref = resolveHref(chapter.href)
+
+                ZipFile(file).use { zip ->
+                    // Try the resolved path directly, then with opfBasePath prefix
+                    val entry = zip.getEntry(resolvedHref)
+                        ?: zip.getEntry(opfBasePath + resolvedHref)
+                        ?: return@withContext null
+
+                    zip.getInputStream(entry).bufferedReader().readText()
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    /**
+     * Returns the raw bytes of an internal resource by its href path.
+     * Used for cover image extraction.
+     */
+    suspend fun getResourceBytes(href: String): ByteArray? = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            try {
+                val file = currentFile ?: return@withContext null
+                val resolvedHref = resolveHref(href)
+
+                ZipFile(file).use { zip ->
+                    val entry = zip.getEntry(resolvedHref)
+                        ?: zip.getEntry(opfBasePath + resolvedHref)
+                        ?: return@withContext null
+
+                    zip.getInputStream(entry).readBytes()
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
     suspend fun extractCover(): CoverResult = mutex.withLock {
         withContext(Dispatchers.IO) {
-            val pub = publication ?: return@withContext CoverResult.Error("No EPUB loaded")
-
             try {
-                // Try to find the cover via the "cover" link relation
-                val coverLink = pub.linksWithRel("cover").firstOrNull()
-                if (coverLink != null) {
-                    val resource = pub.get(coverLink)
-                    if (resource != null) {
-                        val bytes = resource.read().getOrNull()
-                        if (bytes != null && bytes.isNotEmpty()) {
+                val file = currentFile
+                    ?: return@withContext CoverResult.Error("No EPUB loaded")
+
+                ZipFile(file).use { zip ->
+                    // Strategy 1: Check manifest items with cover-image property
+                    val coverItem = manifestItems.values.firstOrNull {
+                        it.properties.contains("cover-image")
+                    }
+                    if (coverItem != null) {
+                        val bytes = loadZipEntryBytes(zip, coverItem.href)
+                        if (bytes != null) {
                             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                             if (bitmap != null) {
                                 return@withContext CoverResult.Success(
                                     bitmap = bitmap,
-                                    mimeType = coverLink.mediaType?.toString() ?: "image/jpeg"
+                                    mimeType = coverItem.mediaType
                                 )
                             }
                         }
                     }
-                }
 
-                // Fallback: search for common cover image resource names in reading order
-                val coverResourceNames = listOf(
-                    "cover",
-                    "Cover",
-                    "COVER",
-                    "cover-image",
-                    "cover_image"
-                )
-                for (link in pub.readingOrder) {
-                    val href = link.href.toString()
-                    val nameWithoutExt = href.substringAfterLast("/").substringBeforeLast(".")
-                    if (nameWithoutExt in coverResourceNames) {
-                        val resource = pub.get(link)
-                        if (resource != null) {
-                            val bytes = resource.read().getOrNull()
-                            if (bytes != null && bytes.isNotEmpty()) {
+                    // Strategy 2: Check for cover via metadata cover id
+                    val coverId = metadata.coverId
+                    if (coverId != null) {
+                        val coverManifestItem = manifestItems[coverId]
+                        if (coverManifestItem != null) {
+                            val bytes = loadZipEntryBytes(zip, coverManifestItem.href)
+                            if (bytes != null) {
                                 val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                                 if (bitmap != null) {
                                     return@withContext CoverResult.Success(
                                         bitmap = bitmap,
-                                        mimeType = link.mediaType?.toString() ?: "image/jpeg"
+                                        mimeType = coverManifestItem.mediaType
                                     )
                                 }
                             }
                         }
                     }
-                }
 
-                // Fallback: search resources for cover-type patterns
-                for (link in pub.resources) {
-                    val href = link.href.toString()
-                    val nameWithoutExt = href.substringAfterLast("/").substringBeforeLast(".")
-                    if (nameWithoutExt in coverResourceNames) {
-                        val resource = pub.get(link)
-                        if (resource != null) {
-                            val bytes = resource.read().getOrNull()
-                            if (bytes != null && bytes.isNotEmpty()) {
+                    // Strategy 3: Search for common cover image file names
+                    val coverNames = listOf("cover", "Cover", "COVER", "cover-image", "cover_image")
+                    for ((_, item) in manifestItems) {
+                        if (!item.mediaType.startsWith("image/")) continue
+                        val nameWithoutExt = item.href.substringAfterLast("/").substringBeforeLast(".")
+                        if (nameWithoutExt in coverNames) {
+                            val bytes = loadZipEntryBytes(zip, item.href)
+                            if (bytes != null) {
                                 val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                                 if (bitmap != null) {
                                     return@withContext CoverResult.Success(
                                         bitmap = bitmap,
-                                        mimeType = link.mediaType?.toString() ?: "image/jpeg"
+                                        mimeType = item.mediaType
                                     )
                                 }
                             }
                         }
                     }
-                }
 
-                CoverResult.NotFound()
+                    CoverResult.NotFound()
+                }
             } catch (e: Exception) {
                 CoverResult.Error("Failed to extract cover: ${e.message}", e)
             }
         }
     }
 
-    /**
-     * Closes the EPUB file and releases all resources.
-     * After calling this, [state] will be [EpubState.Idle].
-     */
     suspend fun close() = mutex.withLock {
         closeInternal()
         state = EpubState.Idle
     }
 
-    // ---- Private helpers ----
+    // ---- Private: ZIP helpers ----
 
-    /**
-     * Extracts chapters from the publication's reading order (spine).
-     *
-     * Each spine item becomes an [EpubChapter] with a title derived from
-     * the TOC when available, or from the spine item's own title/link.
-     */
-    private fun extractChapters(pub: Publication): List<EpubChapter> {
-        val spine = pub.readingOrder
-        if (spine.isEmpty()) return emptyList()
+    private fun loadZipEntryBytes(zip: ZipFile, href: String): ByteArray? {
+        val resolvedHref = resolveHref(href)
+        val entry = zip.getEntry(resolvedHref)
+            ?: zip.getEntry(opfBasePath + resolvedHref)
+            ?: return null
+        return zip.getInputStream(entry).readBytes()
+    }
 
-        // Build a map of href -> TOC title for quick lookup
-        val tocTitleMap = mutableMapOf<String, String>()
-        buildTocTitleMap(pub.tableOfContents, tocTitleMap)
+    private fun resolveHref(href: String): String {
+        if (href.startsWith("/") || href.startsWith("http://") || href.startsWith("https://")) {
+            return href
+        }
+        return opfBasePath + href
+    }
 
-        return spine.mapIndexed { index, link ->
-            val href = link.href.toString()
-            // Try to get title from TOC, then from link title, then fallback
-            val title = tocTitleMap[href]
-                ?: link.title
+    // ---- Private: OPF parsing ----
+
+    private fun findOpfPath(zip: ZipFile): String? {
+        val containerEntry = zip.getEntry("META-INF/container.xml") ?: return null
+        val xml = zip.getInputStream(containerEntry).bufferedReader().readText()
+
+        val factory = XmlPullParserFactory.newInstance()
+        factory.isNamespaceAware = false
+        val parser = factory.newPullParser()
+        parser.setInput(StringReader(xml))
+
+        var eventType = parser.eventType
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            if (eventType == XmlPullParser.START_TAG && parser.name == "rootfile") {
+                val fullPath = parser.getAttributeValue(null, "full-path")
+                if (fullPath != null) return fullPath
+            }
+            eventType = parser.next()
+        }
+        return null
+    }
+
+    private fun parseOpf(xml: String) {
+        val factory = XmlPullParserFactory.newInstance()
+        factory.isNamespaceAware = false
+        val parser = factory.newPullParser()
+        parser.setInput(StringReader(xml))
+
+        val manifest = mutableMapOf<String, ManifestItem>()
+        val spine = mutableListOf<String>()
+        var inMetadata = false
+        var inManifest = false
+        var inSpine = false
+        var currentText = StringBuilder()
+        var currentTag = ""
+
+        var eventType = parser.eventType
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            when (eventType) {
+                XmlPullParser.START_TAG -> {
+                    val tagName = parser.name
+                    when {
+                        tagName == "metadata" -> inMetadata = true
+                        tagName == "manifest" -> inManifest = true
+                        tagName == "spine" -> inSpine = true
+                    }
+                    if (inManifest && tagName == "item") {
+                        val id = parser.getAttributeValue(null, "id") ?: ""
+                        val href = parser.getAttributeValue(null, "href") ?: ""
+                        val mediaType = parser.getAttributeValue(null, "media-type") ?: ""
+                        val properties = parser.getAttributeValue(null, "properties") ?: ""
+                        manifest[id] = ManifestItem(
+                            id = id,
+                            href = href,
+                            mediaType = mediaType,
+                            properties = properties.split("\\s+".toRegex()).filter { it.isNotBlank() }
+                        )
+                    }
+                    if (inSpine && tagName == "itemref") {
+                        val idref = parser.getAttributeValue(null, "idref")
+                        if (idref != null) spine.add(idref)
+                    }
+                    currentTag = tagName
+                    currentText = StringBuilder()
+                }
+                XmlPullParser.TEXT -> {
+                    currentText.append(parser.text ?: "")
+                }
+                XmlPullParser.END_TAG -> {
+                    val tagName = parser.name
+                    val text = currentText.toString().trim()
+                    if (inMetadata) {
+                        when (tagName) {
+                            "dc:title" -> metadata.title = text
+                            "dc:creator" -> metadata.author = text
+                            "dc:description" -> metadata.description = text
+                            "meta" -> {
+                                val name = parser.getAttributeValue(null, "name") ?: ""
+                                val content = parser.getAttributeValue(null, "content") ?: ""
+                                if (name == "cover") metadata.coverId = content
+                            }
+                        }
+                    }
+                    when {
+                        tagName == "metadata" -> inMetadata = false
+                        tagName == "manifest" -> inManifest = false
+                        tagName == "spine" -> inSpine = false
+                    }
+                }
+            }
+            eventType = parser.next()
+        }
+
+        manifestItems = manifest
+        spineRefs = spine
+    }
+
+    private fun buildChaptersFromSpine(): List<EpubChapter> {
+        return spineRefs.mapIndexed { index, idref ->
+            val item = manifestItems[idref]
+            val href = item?.href ?: ""
+            val title = item?.id?.replace("_", " ")?.replace("-", " ")?.capitalizeWords()
                 ?: "Chapter ${index + 1}"
-
             EpubChapter(
                 index = index,
                 title = title,
                 href = href,
-                mediaType = link.mediaType?.toString() ?: "application/xhtml+xml"
+                mediaType = item?.mediaType ?: "application/xhtml+xml"
             )
         }
     }
 
-    /**
-     * Recursively builds a flat map of href -> title from the TOC tree.
-     */
-    private fun buildTocTitleMap(links: List<Link>, map: MutableMap<String, String>) {
-        for (link in links) {
-            val title = link.title ?: ""
-            if (title.isNotBlank()) {
-                map[link.href.toString()] = title
-            }
-            if (link.children.isNotEmpty()) {
-                buildTocTitleMap(link.children, map)
+    // ---- Private: TOC extraction ----
+
+    private fun extractToc(zip: ZipFile): List<TocEntry> {
+        // Try NCX first (EPUB 2 style)
+        val ncxItem = manifestItems.values.firstOrNull {
+            it.mediaType == "application/x-dtbncx+xml"
+        }
+        if (ncxItem != null) {
+            val ncxEntry = zip.getEntry(resolveHref(ncxItem.href))
+            if (ncxEntry != null) {
+                val xml = zip.getInputStream(ncxEntry).bufferedReader().readText()
+                return parseNcxToc(xml)
             }
         }
-    }
 
-    /**
-     * Extracts the table of contents as a flat list of [TocEntry] with depth info.
-     */
-    private fun extractToc(pub: Publication): List<TocEntry> {
-        return flattenToc(pub.tableOfContents, depth = 0)
-    }
-
-    /**
-     * Recursively flattens the TOC tree into a list of [TocEntry].
-     */
-    private fun flattenToc(links: List<Link>, depth: Int): List<TocEntry> {
-        val result = mutableListOf<TocEntry>()
-        for (link in links) {
-            val entry = TocEntry(
-                title = link.title ?: "",
-                href = link.href.toString(),
-                depth = depth,
-                children = emptyList() // Flattened; depth carries the nesting info
-            )
-            if (entry.title.isNotBlank()) {
-                result.add(entry)
-            }
-            if (link.children.isNotEmpty()) {
-                result.addAll(flattenToc(link.children, depth + 1))
+        // Try nav document (EPUB 3 style)
+        val navItem = manifestItems.values.firstOrNull {
+            it.properties.contains("nav")
+        }
+        if (navItem != null) {
+            val navEntry = zip.getEntry(resolveHref(navItem.href))
+            if (navEntry != null) {
+                val xml = zip.getInputStream(navEntry).bufferedReader().readText()
+                return parseNavToc(xml)
             }
         }
-        return result
+
+        return emptyList()
     }
 
-    /**
-     * Extracts the author string from publication metadata.
-     * Handles both single and multiple authors.
-     */
-    private fun extractAuthor(metadata: org.readium.r2.shared.publication.Metadata): String? {
-        val authors = metadata.authors
-        if (authors.isEmpty()) return null
-        return authors.joinToString(", ") { author ->
-            author.name
+    private fun parseNcxToc(xml: String): List<TocEntry> {
+        val entries = mutableListOf<TocEntry>()
+        try {
+            val factory = XmlPullParserFactory.newInstance()
+            factory.isNamespaceAware = false
+            val parser = factory.newPullParser()
+            parser.setInput(StringReader(xml))
+
+            var eventType = parser.eventType
+            var inNavPoint = false
+            var currentLabel = ""
+            var currentSrc = ""
+            var currentDepth = 0
+            var depthStack = mutableListOf<Int>()
+
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                when (eventType) {
+                    XmlPullParser.START_TAG -> {
+                        when (parser.name) {
+                            "navPoint" -> {
+                                inNavPoint = true
+                                currentLabel = ""
+                                currentSrc = ""
+                                depthStack.add(currentDepth)
+                                currentDepth++
+                            }
+                            "text" -> {
+                                if (inNavPoint) {
+                                    // Read the text content
+                                }
+                            }
+                        }
+                    }
+                    XmlPullParser.TEXT -> {
+                        if (inNavPoint && parser.name == null) {
+                            // This is text content of the current element
+                        }
+                    }
+                    XmlPullParser.END_TAG -> {
+                        when (parser.name) {
+                            "text" -> {
+                                // Already handled via nextText
+                            }
+                            "navPoint" -> {
+                                if (currentSrc.isNotBlank()) {
+                                    entries.add(
+                                        TocEntry(
+                                            title = currentLabel,
+                                            href = currentSrc,
+                                            depth = depthStack.lastOrNull() ?: 0
+                                        )
+                                    )
+                                }
+                                depthStack.removeLastOrNull()
+                                currentDepth = depthStack.lastOrNull() ?: 0
+                                inNavPoint = false
+                            }
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+        } catch (e: Exception) {
+            // Return whatever we parsed
         }
+        return entries
     }
 
-    /**
-     * Finds the cover image path from the publication.
-     */
-    private fun findCoverPath(pub: Publication): String? {
-        return pub.linksWithRel("cover").firstOrNull()?.href?.toString()
+    private fun parseNavToc(xml: String): List<TocEntry> {
+        val entries = mutableListOf<TocEntry>()
+        try {
+            val factory = XmlPullParserFactory.newInstance()
+            factory.isNamespaceAware = false
+            val parser = factory.newPullParser()
+            parser.setInput(StringReader(xml))
+
+            var eventType = parser.eventType
+            var inNavOl = false
+            var inLi = false
+            var inA = false
+            var currentLabel = ""
+            var currentHref = ""
+            var depth = 0
+
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                when (eventType) {
+                    XmlPullParser.START_TAG -> {
+                        when (parser.name) {
+                            "nav" -> { /* EPUB 3 nav element */ }
+                            "ol" -> {
+                                inNavOl = true
+                                depth++
+                            }
+                            "li" -> {
+                                inLi = true
+                                currentLabel = ""
+                                currentHref = ""
+                            }
+                            "a" -> {
+                                if (inLi) {
+                                    inA = true
+                                    currentHref = parser.getAttributeValue(null, "href") ?: ""
+                                }
+                            }
+                        }
+                    }
+                    XmlPullParser.TEXT -> {
+                        if (inA) {
+                            currentLabel += (parser.text ?: "").trim()
+                        }
+                    }
+                    XmlPullParser.END_TAG -> {
+                        when (parser.name) {
+                            "a" -> inA = false
+                            "li" -> {
+                                if (currentHref.isNotBlank()) {
+                                    entries.add(
+                                        TocEntry(
+                                            title = currentLabel,
+                                            href = currentHref,
+                                            depth = depth - 1
+                                        )
+                                    )
+                                }
+                                inLi = false
+                            }
+                            "ol" -> {
+                                depth--
+                                inNavOl = false
+                            }
+                        }
+                    }
+                }
+                eventType = parser.next()
+            }
+        } catch (e: Exception) {
+            // Return whatever we parsed
+        }
+        return entries
     }
 
     private fun closeInternal() {
-        publication?.close()
-        publication = null
         currentFile = null
         chapters = emptyList()
         tocEntries = emptyList()
+        metadata = EpubMetadata()
+        manifestItems = emptyMap()
+        spineRefs = emptyList()
+        opfBasePath = ""
+    }
+
+    private fun String.capitalizeWords(): String {
+        return split(" ").joinToString(" ") { word ->
+            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        }
     }
 }

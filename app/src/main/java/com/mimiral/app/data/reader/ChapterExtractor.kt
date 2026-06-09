@@ -5,7 +5,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.readium.r2.shared.util.Try
 
 /**
  * Result of a chapter text extraction operation.
@@ -193,45 +192,12 @@ class ChapterExtractor(
                 }
 
                 val chapter = chapters[chapterIndex]
-                val pub = epubParser.getPublication()
-                if (pub == null) {
-                    return@withContext StructuredChapterExtractionResult.Error(
-                        "Publication not loaded",
-                        chapterIndex
-                    )
-                }
-
-                val link = pub.readingOrder.getOrNull(chapterIndex)
+                val xhtml = epubParser.getChapterXhtml(chapterIndex)
                     ?: return@withContext StructuredChapterExtractionResult.Error(
-                        "No spine item for chapter $chapterIndex",
+                        "Failed to load XHTML for chapter ${chapter.title}",
                         chapterIndex
                     )
 
-                val resource = pub.get(link)
-                    ?: return@withContext StructuredChapterExtractionResult.Error(
-                        "Failed to get resource for chapter ${chapter.title}",
-                        chapterIndex
-                    )
-
-                val readResult = resource.read()
-                val bytes = when (readResult) {
-                    is Try.Success -> readResult.value
-                    is Try.Failure -> {
-                        return@withContext StructuredChapterExtractionResult.Error(
-                            "Failed to read resource: ${readResult.value.message}",
-                            chapterIndex
-                        )
-                    }
-                }
-
-                if (bytes.isEmpty()) {
-                    return@withContext StructuredChapterExtractionResult.Error(
-                        "Empty resource for chapter ${chapter.title}",
-                        chapterIndex
-                    )
-                }
-
-                val xhtml = String(bytes, Charsets.UTF_8)
                 val blocks = structuredExtractor.extract(xhtml)
                 val charCount = blocks.sumOf { it.text.length }
 
@@ -314,9 +280,6 @@ class ChapterExtractor(
      * Loads a chapter from the EPUB, strips HTML, caches it, and returns the result.
      */
     private suspend fun loadAndCacheChapter(chapterIndex: Int): ChapterExtractionResult {
-        val pub = epubParser.getPublication()
-            ?: return ChapterExtractionResult.Error("No EPUB loaded", chapterIndex)
-
         val chapters = epubParser.getChapters()
         if (chapterIndex < 0 || chapterIndex >= chapters.size) {
             return ChapterExtractionResult.Error(
@@ -327,38 +290,12 @@ class ChapterExtractor(
 
         val chapter = chapters[chapterIndex]
 
-        // Find the reading order link for this chapter
-        val link = pub.readingOrder.getOrNull(chapterIndex)
+        // Read the XHTML content from the EPUB ZIP
+        val xhtml = epubParser.getChapterXhtml(chapterIndex)
             ?: return ChapterExtractionResult.Error(
-                "No spine item for chapter $chapterIndex",
+                "Failed to load XHTML for chapter ${chapter.title}",
                 chapterIndex
             )
-
-        // Read the XHTML content from the publication resource
-        val resource = pub.get(link)
-            ?: return ChapterExtractionResult.Error(
-                "Failed to get resource for chapter ${chapter.title}",
-                chapterIndex
-            )
-
-        val readResult = resource.read()
-        val bytes = when (readResult) {
-            is Try.Success -> readResult.value
-            is Try.Failure -> {
-                val msg = "Failed to read resource for chapter " +
-                    "${chapter.title}: ${readResult.value.message}"
-                return ChapterExtractionResult.Error(msg, chapterIndex)
-            }
-        }
-
-        if (bytes.isEmpty()) {
-            return ChapterExtractionResult.Error(
-                "Empty resource for chapter ${chapter.title}",
-                chapterIndex
-            )
-        }
-
-        val xhtml = String(bytes, Charsets.UTF_8)
 
         // Strip HTML tags and normalize whitespace
         val cleanText = stripHtmlTags(xhtml)
@@ -466,22 +403,12 @@ class ChapterExtractor(
      * Returns null on failure instead of an error result.
      */
     private suspend fun loadAndCacheChapterSilent(chapterIndex: Int): CachedChapter? {
-        val pub = epubParser.getPublication() ?: return null
         val chapters = epubParser.getChapters()
         if (chapterIndex !in chapters.indices) return null
 
         val chapter = chapters[chapterIndex]
-        val link = pub.readingOrder.getOrNull(chapterIndex) ?: return null
+        val xhtml = epubParser.getChapterXhtml(chapterIndex) ?: return null
 
-        val resource = pub.get(link) ?: return null
-
-        val bytes = when (val readResult = resource.read()) {
-            is Try.Success -> readResult.value
-            is Try.Failure -> return null
-        }
-        if (bytes.isEmpty()) return null
-
-        val xhtml = String(bytes, Charsets.UTF_8)
         val cleanText = stripHtmlTags(xhtml)
         val truncatedText = if (cleanText.length > config.maxCharactersPerChapter) {
             cleanText.substring(0, config.maxCharactersPerChapter)
