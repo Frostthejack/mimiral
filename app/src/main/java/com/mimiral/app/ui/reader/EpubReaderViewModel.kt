@@ -6,9 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.ReadingTimeTracker
-import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.reader.EpubParser
 import com.mimiral.app.data.reader.EpubState
+import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.ReadingTimeRepository
 import com.mimiral.app.tts.TTSState

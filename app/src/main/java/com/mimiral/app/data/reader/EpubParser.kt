@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import java.io.File
 import java.io.IOException
+import java.io.StringReader
 import java.util.zip.ZipFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -12,7 +13,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
-import java.io.StringReader
 
 /**
  * Represents the state of an EPUB document being parsed.
@@ -285,7 +285,9 @@ class EpubParser(private val context: Context) {
                     val coverNames = listOf("cover", "Cover", "COVER", "cover-image", "cover_image")
                     for ((_, item) in manifestItems) {
                         if (!item.mediaType.startsWith("image/")) continue
-                        val nameWithoutExt = item.href.substringAfterLast("/").substringBeforeLast(".")
+                        val nameWithoutExt = item.href.substringAfterLast("/").substringBeforeLast(
+                            "."
+                        )
                         if (nameWithoutExt in coverNames) {
                             val bytes = loadZipEntryBytes(zip, item.href)
                             if (bytes != null) {
@@ -385,7 +387,8 @@ class EpubParser(private val context: Context) {
                             id = id,
                             href = href,
                             mediaType = mediaType,
-                            properties = properties.split("\\s+".toRegex()).filter { it.isNotBlank() }
+                            properties = properties.split("\\s+".toRegex())
+                                .filter { it.isNotBlank() }
                         )
                     }
                     if (inSpine && tagName == "itemref") {
