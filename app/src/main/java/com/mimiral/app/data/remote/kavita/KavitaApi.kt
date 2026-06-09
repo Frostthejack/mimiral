@@ -690,7 +690,7 @@ interface KavitaApi {
         @Query("seriesId") seriesId: Int? = null,
         @Query("chapterId") chapterId: Int? = null
     ): Response<List<KavitaReview>>
-=======
+
     // ==================== License ====================
 
     /**
