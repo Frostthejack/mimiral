@@ -841,4 +841,127 @@ interface KavitaApi {
     @POST("api/Server/cleanup-want-to-read")
     suspend fun cleanupWantToRead(): Response<Unit>
 
+    // ==================== Reading Lists ====================
+
+    /**
+     * Browse all reading lists.
+     * GET /api/ReadingList/lists
+     *
+     * @return List of reading lists
+     */
+    @GET("api/ReadingList/lists")
+    suspend fun getReadingLists(): Response<List<KavitaReadingList>>
+
+    /**
+     * Get items in a reading list with read/unread status and progress.
+     * GET /api/ReadingList/items
+     *
+     * @param readingListId The reading list ID
+     * @param pageNumber Page number (0-based)
+     * @param pageSize Items per page
+     * @return Paginated reading list items
+     */
+    @GET("api/ReadingList/items")
+    suspend fun getReadingListItems(
+        @Query("readingListId") readingListId: Int,
+        @Query("pageNumber") pageNumber: Int = 0,
+        @Query("pageSize") pageSize: Int = 20
+    ): Response<KavitaReadingListItemsResponse>
+
+    /**
+     * Get the next chapter to read in reading-list order.
+     * Use this at chapter end instead of series next-chapter.
+     * GET /api/ReadingList/next-chapter
+     *
+     * @param readingListId The reading list ID
+     * @param seriesId Current series ID
+     * @param volumeId Current volume ID
+     * @param chapterId Current chapter ID
+     * @return Next chapter info
+     */
+    @GET("api/ReadingList/next-chapter")
+    suspend fun getReadingListNextChapter(
+        @Query("readingListId") readingListId: Int,
+        @Query("seriesId") seriesId: Int,
+        @Query("volumeId") volumeId: Int,
+        @Query("chapterId") chapterId: Int
+    ): Response<KavitaReadingListNextChapter>
+
+    /**
+     * Create a new reading list.
+     * POST /api/ReadingList/create
+     *
+     * @param request Create request with name and optional summary
+     */
+    @POST("api/ReadingList/create")
+    suspend fun createReadingList(
+        @Body request: KavitaReadingListCreateRequest
+    ): Response<KavitaReadingList>
+
+    /**
+     * Add all chapters from a series to a reading list.
+     * POST /api/ReadingList/update-by-series
+     *
+     * @param request Update request with reading list and series IDs
+     */
+    @POST("api/ReadingList/update-by-series")
+    suspend fun updateReadingListBySeries(
+        @Body request: KavitaReadingListUpdateBySeriesRequest
+    ): Response<Unit>
+
+    /**
+     * Add multiple items (series, chapters, volumes) to a reading list.
+     * POST /api/ReadingList/update-by-multiple
+     *
+     * @param request Update request with reading list ID and item IDs
+     */
+    @POST("api/ReadingList/update-by-multiple")
+    suspend fun updateReadingListByMultiple(
+        @Body request: KavitaReadingListUpdateByMultipleRequest
+    ): Response<Unit>
+
+    /**
+     * Reorder an item's position in a reading list.
+     * POST /api/ReadingList/update-position
+     *
+     * @param request Position update request
+     */
+    @POST("api/ReadingList/update-position")
+    suspend fun updateReadingListPosition(
+        @Body request: KavitaReadingListUpdatePositionRequest
+    ): Response<Unit>
+
+    /**
+     * Remove read items from a reading list (cleanup).
+     * POST /api/ReadingList/remove-read
+     *
+     * @param request Remove-read request with reading list ID
+     */
+    @POST("api/ReadingList/remove-read")
+    suspend fun removeReadFromReadingList(
+        @Body request: KavitaReadingListRemoveReadRequest
+    ): Response<Unit>
+
+    /**
+     * Update a reading list's name and/or summary.
+     * POST /api/ReadingList/update
+     *
+     * @param request Update request
+     */
+    @POST("api/ReadingList/update")
+    suspend fun updateReadingList(
+        @Body request: KavitaReadingListUpdateRequest
+    ): Response<Unit>
+
+    /**
+     * Delete a reading list.
+     * POST /api/ReadingList/delete
+     *
+     * @param request Delete request with reading list ID
+     */
+    @POST("api/ReadingList/delete")
+    suspend fun deleteReadingList(
+        @Body request: KavitaReadingListDeleteRequest
+    ): Response<Unit>
+
 }
