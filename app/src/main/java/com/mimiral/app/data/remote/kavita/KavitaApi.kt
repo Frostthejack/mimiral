@@ -813,7 +813,7 @@ interface KavitaApi {
 
     /**
      * Get the Want To Read list with filtering and pagination.
-     * GET /api/want-to-read/v2
+     * GET /api/want-to-read
      *
      * @param pageNumber Page number (0-based)
      * @param pageSize Items per page
@@ -823,7 +823,7 @@ interface KavitaApi {
      * @param sortDirection Sort direction (Asc, Desc)
      * @return Paginated Want To Read response
      */
-    @GET("api/want-to-read/v2")
+    @GET("api/want-to-read")
     suspend fun getWantToRead(
         @Query("PageNumber") pageNumber: Int = 0,
         @Query("PageSize") pageSize: Int = 20,

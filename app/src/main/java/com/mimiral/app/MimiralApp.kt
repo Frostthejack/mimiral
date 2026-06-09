@@ -19,11 +19,19 @@ class MimiralApp : Application() {
     @Inject
     lateinit var externalBookHandler: ExternalBookHandler
 
+    @Inject
+    lateinit var authService: com.mimiral.app.data.remote.kavita.KavitaAuthService
+
     override fun onCreate() {
         super.onCreate()
 
         // Initialize PDFBox resource loader for Android
         com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)
+
+        // Load saved Kavita auth state from DB
+        kotlinx.coroutines.runBlocking {
+            authService.initialize()
+        }
 
         if (BuildConfig.DEBUG) {
             enableStrictMode()
