@@ -3,6 +3,7 @@ package com.mimiral.app.data.reader
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import java.io.File
 import java.io.IOException
 import java.io.StringReader
@@ -82,6 +83,10 @@ sealed class CoverResult {
  */
 class EpubParser(private val context: Context) {
 
+    companion object {
+        private const val TAG = "EpubParser"
+    }
+
     private var currentFile: File? = null
     private var chapters: List<EpubChapter> = emptyList()
     private var tocEntries: List<TocEntry> = emptyList()
@@ -150,6 +155,10 @@ class EpubParser(private val context: Context) {
 
                     // Step 3: Build chapter list from spine
                     chapters = buildChaptersFromSpine()
+                    Log.d(TAG, "openFile: parsed ${chapters.size} chapters from spine")
+                    for (ch in chapters) {
+                        Log.d(TAG, "  chapter[${ch.index}]: title='${ch.title}' href='${ch.href}'")
+                    }
 
                     // Step 4: Try to extract TOC (NCX or nav document)
                     tocEntries = extractToc(zip)
@@ -164,6 +173,7 @@ class EpubParser(private val context: Context) {
                     filePath = file.absolutePath,
                     totalEstimatedCharacters = chapters.size.toLong() * 1000L
                 )
+                Log.d(TAG, "openFile: success title='${loaded.title}' chapters=${loaded.chapterCount}")
                 state = loaded
                 loaded
             } catch (e: IOException) {
@@ -198,19 +208,35 @@ class EpubParser(private val context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val file = currentFile ?: return@withContext null
-                if (chapterIndex < 0 || chapterIndex >= chapters.size) return@withContext null
+                if (chapterIndex < 0 || chapterIndex >= chapters.size) {
+                    Log.w(TAG, "getChapterXhtml: chapterIndex $chapterIndex out of bounds (size=${chapters.size})")
+                    return@withContext null
+                }
                 val chapter = chapters[chapterIndex]
                 val resolvedHref = resolveHref(chapter.href)
+                Log.d(TAG, "getChapterXhtml[$chapterIndex]: href='${chapter.href}' resolved='$resolvedHref' opfBase='$opfBasePath'")
 
                 ZipFile(file).use { zip ->
                     // Try the resolved path directly, then with opfBasePath prefix
                     val entry = zip.getEntry(resolvedHref)
                         ?: zip.getEntry(opfBasePath + resolvedHref)
-                        ?: return@withContext null
+                    if (entry == null) {
+                        // List available entries for debugging
+                        val available = zip.entries().asSequence()
+                            .map { it.name }
+                            .filter { it.contains(chapter.href.substringBeforeLast(".")) }
+                            .take(5)
+                            .toList()
+                        Log.w(TAG, "getChapterXhtml[$chapterIndex]: entry not found for '$resolvedHref' or '${opfBasePath + resolvedHref}'. Similar entries: $available")
+                        return@withContext null
+                    }
 
-                    zip.getInputStream(entry).bufferedReader().readText()
+                    val text = zip.getInputStream(entry).bufferedReader().readText()
+                    Log.d(TAG, "getChapterXhtml[$chapterIndex]: loaded ${text.length} chars")
+                    text
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "getChapterXhtml[$chapterIndex]: error", e)
                 null
             }
         }

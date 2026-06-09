@@ -1,6 +1,7 @@
 package com.mimiral.app.ui.reader
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -438,12 +439,15 @@ class ReadingModeViewModel @Inject constructor(
                 val parser = EpubParser(appContext)
                 val state = parser.openFile(File(filePath))
                 if (state !is EpubState.Loaded) {
+                    Log.w("ReadingModeVM", "loadEpubChapters: openFile failed: $state")
                     parser.close()
                     return@withContext emptyList<ReadingChapter>()
                 }
 
                 val epubChapters = parser.getChapters()
+                Log.d("ReadingModeVM", "loadEpubChapters: got ${epubChapters.size} epub chapters")
                 if (epubChapters.isEmpty()) {
+                    Log.w("ReadingModeVM", "loadEpubChapters: no chapters found in EPUB spine")
                     parser.close()
                     return@withContext emptyList<ReadingChapter>()
                 }
