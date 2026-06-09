@@ -841,6 +841,80 @@ interface KavitaApi {
     @POST("api/Server/cleanup-want-to-read")
     suspend fun cleanupWantToRead(): Response<Unit>
 
+    // ==================== Collections ====================
+
+    /**
+     * Get all collections.
+     * GET /api/Collection
+     *
+     * @return List of all collections with cover images
+     */
+    @GET("api/Collection")
+    suspend fun getCollections(): Response<List<KavitaCollection>>
+
+    /**
+     * Get series in a collection (paginated).
+     * GET /api/Series/series-by-collection
+     *
+     * @param collectionId The collection ID
+     * @param pageNumber Page number for pagination
+     * @param pageSize Items per page
+     * @return Paginated series list for the collection
+     */
+    @GET("api/Series/series-by-collection")
+    suspend fun getSeriesByCollection(
+        @Query("collectionId") collectionId: Int,
+        @Query("pageNumber") pageNumber: Int = 1,
+        @Query("pageSize") pageSize: Int = 20
+    ): Response<KavitaCollectionSeriesPage>
+
+    /**
+     * Create or update a collection by adding/removing series.
+     * POST /api/Collection/update-series
+     *
+     * When tagId=0, creates a new collection.
+     * When tagId>0, updates an existing collection's series membership.
+     *
+     * @param request The collection update request
+     */
+    @POST("api/Collection/update-series")
+    suspend fun updateCollectionSeries(
+        @Body request: KavitaCollectionUpdateRequest
+    ): Response<Unit>
+
+    /**
+     * Update series membership for an existing collection (add/remove).
+     * POST /api/Collection/update-for-series
+     *
+     * @param request Series IDs and collection ID
+     */
+    @POST("api/Collection/update-for-series")
+    suspend fun updateForSeries(
+        @Body request: KavitaCollectionSeriesRequest
+    ): Response<Unit>
+
+    /**
+     * Update collection metadata (title, summary, promoted).
+     * POST /api/Collection/update
+     *
+     * @param request The collection edit request
+     */
+    @POST("api/Collection/update")
+    suspend fun updateCollection(
+        @Body request: KavitaCollectionEditRequest
+    ): Response<Unit>
+
+    /**
+     * Delete a collection.
+     * DELETE /api/Collection
+     *
+     * @param tagId The collection ID to delete
+     */
+    @DELETE("api/Collection")
+    suspend fun deleteCollection(
+        @Query("tagId") tagId: Int
+    ): Response<Unit>
+
     // ==================== Reading Lists ====================
 
     /**
@@ -963,5 +1037,6 @@ interface KavitaApi {
     suspend fun deleteReadingList(
         @Body request: KavitaReadingListDeleteRequest
     ): Response<Unit>
+
 
 }

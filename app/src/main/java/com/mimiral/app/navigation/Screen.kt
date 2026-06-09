@@ -60,6 +60,9 @@ sealed class Screen(val route: String) {
         fun createRoute(seriesId: Int): String = "kavita_series/$seriesId"
     }
 
+    // Kavita collections browsing
+    object KavitaCollections : Screen("kavita_collections")
+
     // Reading list detail
     object ReadingListDetail : Screen("reading_list_detail/{listId}") {
         fun createRoute(listId: Int): String = "reading_list_detail/$listId"
@@ -81,4 +84,16 @@ sealed class Screen(val route: String) {
 
     // Want To Read list (Kavita)
     object WantToRead : Screen("want_to_read")
+
+    // Kavita OPDS feed categories (Collections, Reading Lists, WTR, On Deck, etc.)
+    object KavitaOpdsFeeds : Screen("kavita_opds_feeds")
+
+    // Kavita OPDS direct feed browsing (receives URL + title as args)
+    object KavitaOpdsBrowse : Screen("kavita_opds_browse/{feedUrl}/{feedTitle}") {
+        fun createRoute(feedUrl: String, feedTitle: String): String {
+            val encodedUrl = java.net.URLEncoder.encode(feedUrl, "UTF-8")
+            val encodedTitle = java.net.URLEncoder.encode(feedTitle, "UTF-8")
+            return "kavita_opds_browse/$encodedUrl/$encodedTitle"
+        }
+    }
 }

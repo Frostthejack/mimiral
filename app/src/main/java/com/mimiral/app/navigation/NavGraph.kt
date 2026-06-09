@@ -21,6 +21,9 @@ import com.mimiral.app.ui.collections.CollectionsScreen
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.discover.KavitaBookmarksScreen
 import com.mimiral.app.ui.discover.KavitaSeriesScreen
+import com.mimiral.app.ui.discover.KavitaCollectionsScreen
+import com.mimiral.app.ui.discover.KavitaOpdsFeedScreen
+import com.mimiral.app.ui.opds.KavitaOpdsBrowseScreen
 import com.mimiral.app.ui.goals.ReadingGoalsScreen
 import com.mimiral.app.ui.library.AddBooksScreen
 import com.mimiral.app.ui.wanttoread.WantToReadScreen
@@ -446,6 +449,42 @@ fun MimiralNavGraph(navController: NavHostController) {
             // Kavita bookmark viewer
             composable(Screen.KavitaBookmarks.route) {
                 KavitaBookmarksScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // Kavita collections browsing
+            composable(Screen.KavitaCollections.route) {
+                KavitaCollectionsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToSeries = { seriesId ->
+                        navController.navigate("kavita_series/$seriesId")
+                    }
+                )
+            }
+
+            // Kavita OPDS feed categories
+            composable(Screen.KavitaOpdsFeeds.route) {
+                KavitaOpdsFeedScreen(
+                    onOpenDrawer = openDrawer,
+                    onNavigateToOpdsBrowse = { feedUrl, feedTitle ->
+                        navController.navigate(
+                            Screen.KavitaOpdsBrowse.createRoute(feedUrl, feedTitle)
+                        )
+                    }
+                )
+            }
+
+            // Kavita OPDS direct feed browsing
+            composable(
+                route = Screen.KavitaOpdsBrowse.route,
+                arguments = listOf(
+                    navArgument("feedUrl") { type = NavType.StringType },
+                    navArgument("feedTitle") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                // URL-decoded args are passed to SavedStateHandle automatically
+                KavitaOpdsBrowseScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

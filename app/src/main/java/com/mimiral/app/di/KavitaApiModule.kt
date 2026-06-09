@@ -82,8 +82,21 @@ object KavitaApiModule {
 
     @Provides
     @Singleton
-    @KavitaApiClient
     fun provideKavitaApi(
+        @KavitaApiClient okHttpClient: OkHttpClient
+    ): KavitaApi {
+        val retrofit = Retrofit.Builder()
+            .baseUrl(PLACEHOLDER_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        return retrofit.create(KavitaApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @KavitaApiClient
+    fun provideKavitaApiQualified(
         @KavitaApiClient okHttpClient: OkHttpClient
     ): KavitaApi {
         val retrofit = Retrofit.Builder()
