@@ -78,4 +78,7 @@ sealed class Screen(val route: String) {
 
     // Kavita bookmark viewer
     object KavitaBookmarks : Screen("kavita_bookmarks")
+
+    // Want To Read list (Kavita)
+    object WantToRead : Screen("want_to_read")
 }

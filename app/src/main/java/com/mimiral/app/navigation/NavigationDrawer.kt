@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -70,7 +71,8 @@ val drawerSections = listOf(
         title = "Discover",
         items = listOf(
             DrawerNavItem(Screen.Discover, "Discover", Icons.Filled.Explore),
-            DrawerNavItem(Screen.KavitaBookmarks, "Bookmarks", Icons.Filled.Bookmarks)
+            DrawerNavItem(Screen.KavitaBookmarks, "Bookmarks", Icons.Filled.Bookmarks),
+            DrawerNavItem(Screen.WantToRead, "Want To Read", Icons.Outlined.BookmarkAdd)
         )
     ),
     DrawerSection(

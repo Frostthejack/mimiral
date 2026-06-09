@@ -787,4 +787,58 @@ interface KavitaApi {
     @GET("api/Scrobbling/holds")
     suspend fun getScrobbleHolds(): Response<List<Int>>
 
+    // ==================== Want To Read ====================
+
+    /**
+     * Add a series to the Want To Read list.
+     * POST /api/want-to-read/add-series
+     *
+     * @param request Contains the series ID to add
+     */
+    @POST("api/want-to-read/add-series")
+    suspend fun addToWantToRead(
+        @Body request: KavitaWantToReadAddRequest
+    ): Response<Unit>
+
+    /**
+     * Remove a series from the Want To Read list.
+     * POST /api/want-to-read/remove-series
+     *
+     * @param request Contains the series ID to remove
+     */
+    @POST("api/want-to-read/remove-series")
+    suspend fun removeFromWantToRead(
+        @Body request: KavitaWantToReadRemoveRequest
+    ): Response<Unit>
+
+    /**
+     * Get the Want To Read list with filtering and pagination.
+     * GET /api/want-to-read/v2
+     *
+     * @param pageNumber Page number (0-based)
+     * @param pageSize Items per page
+     * @param searchQuery Optional search query filter
+     * @param libraryId Optional library ID filter
+     * @param sortBy Sort field (SortName, CreatedDate, LastChapterAdded, Pages)
+     * @param sortDirection Sort direction (Asc, Desc)
+     * @return Paginated Want To Read response
+     */
+    @GET("api/want-to-read/v2")
+    suspend fun getWantToRead(
+        @Query("PageNumber") pageNumber: Int = 0,
+        @Query("PageSize") pageSize: Int = 20,
+        @Query("SearchQuery") searchQuery: String? = null,
+        @Query("LibraryId") libraryId: Int? = null,
+        @Query("SortBy") sortBy: String? = null,
+        @Query("SortDirection") sortDirection: String? = null
+    ): Response<KavitaWantToReadResponse>
+
+    /**
+     * Run auto-cleanup on the Want To Read list.
+     * Removes series that have been fully read.
+     * POST /api/Server/cleanup-want-to-read
+     */
+    @POST("api/Server/cleanup-want-to-read")
+    suspend fun cleanupWantToRead(): Response<Unit>
+
 }

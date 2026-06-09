@@ -64,6 +64,7 @@ import com.mimiral.app.data.remote.ChapterDto
 import com.mimiral.app.data.remote.VolumeDto
 import com.mimiral.app.data.remote.kavita.KavitaReview
 import com.mimiral.app.ui.discover.RatingReviewViewModel
+import com.mimiral.app.ui.wanttoread.WantToReadToggleChip
 
 // ── Series List Screen ──
 
@@ -74,7 +75,8 @@ fun KavitaSeriesScreen(
     markReadViewModel: KavitaMarkReadViewModel = hiltViewModel(),
     ratingViewModel: RatingReviewViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToReader: (String) -> Unit = {}
+    onNavigateToReader: (String) -> Unit = {},
+    seriesId: Int = 0
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val markReadState by markReadViewModel.uiState.collectAsState()
@@ -408,7 +410,7 @@ private fun SeriesHeaderCard(
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Series Details",
                         style = MaterialTheme.typography.titleLarge,
@@ -429,6 +431,11 @@ private fun SeriesHeaderCard(
                         }
                     }
                 }
+            }
+            // Want To Read toggle chip
+            if (seriesId > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                WantToReadToggleChip(seriesId = seriesId)
             }
             if (seriesDetail != null) {
                 val readCount = seriesDetail.totalCount - seriesDetail.unreadCount
