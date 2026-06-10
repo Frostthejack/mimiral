@@ -306,7 +306,10 @@ class KavitaRepository @Inject constructor(
             // Step 1: Download bytes
             val downloadResponse = kavitaApi.downloadBook(chapterId)
             if (!downloadResponse.isSuccessful) {
-                _downloadState.value = DownloadState.Failed(title, "HTTP ${downloadResponse.code()}")
+                _downloadState.value = DownloadState.Failed(
+                    title,
+                    "HTTP ${downloadResponse.code()}"
+                )
                 return@withContext KavitaResult.Error(
                     message = "Download failed: HTTP ${downloadResponse.code()}",
                     code = downloadResponse.code()

@@ -270,12 +270,6 @@ interface KavitaApi {
     // ==================== Mark Read / Unread ====================
 
     /**
-     * Mark a chapter as read.
-     * POST /api/Reader/mark-chapter-read
-     *
-     * @param request Chapter read request
-     */
-    /**
      * Download a book file from Kavita.
      * GET /api/download/chapter?chapterId={chapterId}
      *

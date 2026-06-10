@@ -525,11 +525,17 @@ class ReadingModeViewModel @Inject constructor(
             try {
                 val file = File(filePath)
                 // On Android 10+ with scoped storage, copy to cache if direct access fails
-                val effectiveFile = if (file.exists()) file else {
+                val effectiveFile = if (file.exists()) {
+                    file
+                } else {
                     try {
                         val uri = android.net.Uri.parse("file://$filePath")
-                        val inputStream = appContext.contentResolver.openInputStream(uri) ?: return@withContext emptyList()
-                        val cacheFile = File(appContext.cacheDir, "pdf_reading_${filePath.hashCode().toString(16)}.pdf")
+                        val inputStream = appContext.contentResolver.openInputStream(uri)
+                            ?: return@withContext emptyList()
+                        val cacheFile = File(
+                            appContext.cacheDir,
+                            "pdf_reading_${filePath.hashCode().toString(16)}.pdf"
+                        )
                         FileOutputStream(cacheFile).use { out: java.io.OutputStream ->
                             inputStream.copyTo(out)
                         }
@@ -627,13 +633,18 @@ class ReadingModeViewModel @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 val directFile = File(filePath)
-                val file = if (directFile.exists()) directFile else {
+                val file = if (directFile.exists()) {
+                    directFile
+                } else {
                     // Scoped storage: copy to cache via ContentResolver
                     try {
                         val uri = android.net.Uri.parse("file://$filePath")
                         val inputStream = appContext.contentResolver.openInputStream(uri)
                             ?: return@withContext emptyList()
-                        val cacheFile = File(appContext.cacheDir, "txt_cache_${filePath.hashCode().toString(16)}.txt")
+                        val cacheFile = File(
+                            appContext.cacheDir,
+                            "txt_cache_${filePath.hashCode().toString(16)}.txt"
+                        )
                         FileOutputStream(cacheFile).use { out ->
                             inputStream.copyTo(out)
                         }

@@ -117,20 +117,32 @@ class EpubParser(private val context: Context) {
         withContext(Dispatchers.IO) {
             try {
                 val directFile = File(filePath)
-                val file = if (directFile.exists()) directFile else {
+                val file = if (directFile.exists()) {
+                    directFile
+                } else {
                     // Scoped storage: copy to cache via ContentResolver
                     try {
-                        val uri = android.net.Uri.parse("file://$filePath")
+                        val uri = android.net.Uri.parse(
+                            "file://$filePath"
+                        )
                         val inputStream = context.contentResolver.openInputStream(uri)
-                            ?: return@withContext EpubState.Error("Cannot open file: $filePath").also { state = it }
-                        val cacheFile = java.io.File(context.cacheDir, "epub_cache_${filePath.hashCode().toString(16)}.epub")
-                        java.io.FileOutputStream(cacheFile).use { out: java.io.OutputStream ->
+                            ?: return@withContext EpubState.Error(
+                                "Cannot open file: $filePath"
+                            ).also { state = it }
+                        val cacheFile = java.io.File(
+                            context.cacheDir,
+                            "epub_cache_${filePath.hashCode().toString(16)}.epub"
+                        )
+                        java.io.FileOutputStream(cacheFile).use {
+                                out: java.io.OutputStream ->
                             inputStream.copyTo(out)
                         }
                         inputStream.close()
                         cacheFile
                     } catch (e: Exception) {
-                        return@withContext EpubState.Error("Failed to access file: ${e.message}").also { state = it }
+                        return@withContext EpubState.Error(
+                            "Failed to access file: ${e.message}"
+                        ).also { state = it }
                     }
                 }
                 openFileInternal(file, filePath)
@@ -150,80 +162,83 @@ class EpubParser(private val context: Context) {
 
     private fun openFileInternal(file: File, originalPath: String): EpubState {
         return try {
-                if (!file.exists()) {
-                    val error = EpubState.Error("File not found: ${file.absolutePath}")
-                    state = error
-                    return error
-                }
-
-                if (!file.canRead()) {
-                    val error = EpubState.Error("Cannot read file: ${file.absolutePath}")
-                    state = error
-                    return error
-                }
-
-                closeInternal()
-                currentFile = file
-
-                ZipFile(file).use { zip ->
-                    // Step 1: Read META-INF/container.xml to find OPF path
-                    val opfPath = findOpfPath(zip)
-                        ?: return EpubState.Error(
-                            "Could not find OPUB package document (OPF)"
-                        ).also { state = it }
-
-                    // Step 2: Parse OPF for metadata, manifest, and spine
-                    val opfEntry = zip.getEntry(opfPath)
-                        ?: return EpubState.Error(
-                            "OPF file not found in EPUB: $opfPath"
-                        ).also { state = it }
-
-                    val opfXml = zip.getInputStream(opfEntry).bufferedReader().readText()
-                    opfBasePath = if (opfPath.contains("/")) {
-                        opfPath.substringBeforeLast("/") + "/"
-                    } else {
-                        ""
-                    }
-
-                    parseOpf(opfXml)
-
-                    // Step 3: Build chapter list from spine
-                    chapters = buildChaptersFromSpine()
-                    Log.d(TAG, "openFile: parsed ${chapters.size} chapters from spine")
-                    for (ch in chapters) {
-                        Log.d(TAG, "  chapter[${ch.index}]: title='${ch.title}' href='${ch.href}'")
-                    }
-
-                    // Step 4: Try to extract TOC (NCX or nav document)
-                    tocEntries = extractToc(zip)
-                }
-
-                val loaded = EpubState.Loaded(
-                    title = metadata.title ?: file.nameWithoutExtension,
-                    author = metadata.author,
-                    description = metadata.description,
-                    chapterCount = chapters.size,
-                    coverPath = metadata.coverId?.let { resolveHref(it) },
-                    filePath = file.absolutePath,
-                    totalEstimatedCharacters = chapters.size.toLong() * 1000L
-                )
-                Log.d(TAG, "openFile: success title='${loaded.title}' chapters=${loaded.chapterCount}")
-                state = loaded
-                loaded
-            } catch (e: IOException) {
-                closeInternal()
-                val error = EpubState.Error("Failed to open EPUB: ${e.message}", e)
+            if (!file.exists()) {
+                val error = EpubState.Error("File not found: ${file.absolutePath}")
                 state = error
-                error
-            } catch (e: Exception) {
-                closeInternal()
-                val error = EpubState.Error("Unexpected error parsing EPUB: ${e.message}", e)
-                state = error
-                error
+                return error
             }
-        }
 
-        suspend fun getChapters(): List<EpubChapter> = mutex.withLock {
+            if (!file.canRead()) {
+                val error = EpubState.Error("Cannot read file: ${file.absolutePath}")
+                state = error
+                return error
+            }
+
+            closeInternal()
+            currentFile = file
+
+            ZipFile(file).use { zip ->
+                // Step 1: Read META-INF/container.xml to find OPF path
+                val opfPath = findOpfPath(zip)
+                    ?: return EpubState.Error(
+                        "Could not find OPUB package document (OPF)"
+                    ).also { state = it }
+
+                // Step 2: Parse OPF for metadata, manifest, and spine
+                val opfEntry = zip.getEntry(opfPath)
+                    ?: return EpubState.Error(
+                        "OPF file not found in EPUB: $opfPath"
+                    ).also { state = it }
+
+                val opfXml = zip.getInputStream(opfEntry).bufferedReader().readText()
+                opfBasePath = if (opfPath.contains("/")) {
+                    opfPath.substringBeforeLast("/") + "/"
+                } else {
+                    ""
+                }
+
+                parseOpf(opfXml)
+
+                // Step 3: Build chapter list from spine
+                chapters = buildChaptersFromSpine()
+                Log.d(TAG, "openFile: parsed ${chapters.size} chapters from spine")
+                for (ch in chapters) {
+                    Log.d(TAG, "  chapter[${ch.index}]: title='${ch.title}' href='${ch.href}'")
+                }
+
+                // Step 4: Try to extract TOC (NCX or nav document)
+                tocEntries = extractToc(zip)
+            }
+
+            val loaded = EpubState.Loaded(
+                title = metadata.title ?: file.nameWithoutExtension,
+                author = metadata.author,
+                description = metadata.description,
+                chapterCount = chapters.size,
+                coverPath = metadata.coverId?.let { resolveHref(it) },
+                filePath = file.absolutePath,
+                totalEstimatedCharacters = chapters.size.toLong() * 1000L
+            )
+            Log.d(
+                TAG,
+                "openFile: success title='${loaded.title}' chapters=${loaded.chapterCount}"
+            )
+            state = loaded
+            loaded
+        } catch (e: IOException) {
+            closeInternal()
+            val error = EpubState.Error("Failed to open EPUB: ${e.message}", e)
+            state = error
+            error
+        } catch (e: Exception) {
+            closeInternal()
+            val error = EpubState.Error("Unexpected error parsing EPUB: ${e.message}", e)
+            state = error
+            error
+        }
+    }
+
+    suspend fun getChapters(): List<EpubChapter> = mutex.withLock {
         return@withLock chapters
     }
 
@@ -242,12 +257,20 @@ class EpubParser(private val context: Context) {
             try {
                 val file = currentFile ?: return@withContext null
                 if (chapterIndex < 0 || chapterIndex >= chapters.size) {
-                    Log.w(TAG, "getChapterXhtml: chapterIndex $chapterIndex out of bounds (size=${chapters.size})")
+                    Log.w(
+                        TAG,
+                        "getChapterXhtml: chapterIndex $chapterIndex " +
+                            "out of bounds (size=${chapters.size})"
+                    )
                     return@withContext null
                 }
                 val chapter = chapters[chapterIndex]
                 val resolvedHref = resolveHref(chapter.href)
-                Log.d(TAG, "getChapterXhtml[$chapterIndex]: href='${chapter.href}' resolved='$resolvedHref' opfBase='$opfBasePath'")
+                Log.d(
+                    TAG,
+                    "getChapterXhtml[$chapterIndex]: href='${chapter.href}' " +
+                        "resolved='$resolvedHref' opfBase='$opfBasePath'"
+                )
 
                 ZipFile(file).use { zip ->
                     // Try the resolved path directly, then with opfBasePath prefix
@@ -260,7 +283,12 @@ class EpubParser(private val context: Context) {
                             .filter { it.contains(chapter.href.substringBeforeLast(".")) }
                             .take(5)
                             .toList()
-                        Log.w(TAG, "getChapterXhtml[$chapterIndex]: entry not found for '$resolvedHref' or '${opfBasePath + resolvedHref}'. Similar entries: $available")
+                        Log.w(
+                            TAG,
+                            "getChapterXhtml[$chapterIndex]: entry not found for " +
+                                "'$resolvedHref' or '${opfBasePath + resolvedHref}'. " +
+                                "Similar entries: $available"
+                        )
                         return@withContext null
                     }
 

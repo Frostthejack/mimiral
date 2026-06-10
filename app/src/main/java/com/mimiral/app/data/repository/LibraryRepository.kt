@@ -7,10 +7,10 @@ import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.scanner.FileScanner
 import com.mimiral.app.data.local.scanner.ScanState
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
-import java.io.File
 
 /**
  * High-level repository coordinating file scanning with the local database.

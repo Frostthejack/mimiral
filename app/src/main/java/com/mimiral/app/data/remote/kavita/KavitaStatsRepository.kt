@@ -36,7 +36,10 @@ class KavitaStatsRepository @Inject constructor(
             if (response.isSuccessful) {
                 KavitaResult.Success(response.body() ?: emptyList())
             } else {
-                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+                KavitaResult.Error(
+                    message = "HTTP ${response.code()}: ${response.message()}",
+                    code = response.code()
+                )
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching reading activity: ${e.message}", e)
@@ -54,7 +57,10 @@ class KavitaStatsRepository @Inject constructor(
             if (response.isSuccessful) {
                 KavitaResult.Success(response.body() ?: emptyList())
             } else {
-                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+                KavitaResult.Error(
+                    message = "HTTP ${response.code()}: ${response.message()}",
+                    code = response.code()
+                )
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching genre breakdown: ${e.message}", e)
@@ -72,7 +78,10 @@ class KavitaStatsRepository @Inject constructor(
             if (response.isSuccessful) {
                 KavitaResult.Success(response.body() ?: emptyList())
             } else {
-                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+                KavitaResult.Error(
+                    message = "HTTP ${response.code()}: ${response.message()}",
+                    code = response.code()
+                )
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching pages per year: ${e.message}", e)
@@ -90,7 +99,10 @@ class KavitaStatsRepository @Inject constructor(
             if (response.isSuccessful) {
                 KavitaResult.Success(response.body() ?: emptyList())
             } else {
-                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+                KavitaResult.Error(
+                    message = "HTTP ${response.code()}: ${response.message()}",
+                    code = response.code()
+                )
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching reading pace: ${e.message}", e)
@@ -108,7 +120,10 @@ class KavitaStatsRepository @Inject constructor(
             if (response.isSuccessful) {
                 KavitaResult.Success(response.body() ?: emptyList())
             } else {
-                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+                KavitaResult.Error(
+                    message = "HTTP ${response.code()}: ${response.message()}",
+                    code = response.code()
+                )
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching favorite authors: ${e.message}", e)
@@ -126,9 +141,17 @@ class KavitaStatsRepository @Inject constructor(
         return try {
             val response = kavitaApi.getSeriesReadingHistory(seriesId)
             if (response.isSuccessful) {
-                KavitaResult.Success(response.body() ?: KavitaSeriesReadingHistory(seriesId = seriesId, totalPagesRead = 0))
+                KavitaResult.Success(
+                    response.body() ?: KavitaSeriesReadingHistory(
+                        seriesId = seriesId,
+                        totalPagesRead = 0
+                    )
+                )
             } else {
-                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+                KavitaResult.Error(
+                    message = "HTTP ${response.code()}: ${response.message()}",
+                    code = response.code()
+                )
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching series reading history: ${e.message}", e)
