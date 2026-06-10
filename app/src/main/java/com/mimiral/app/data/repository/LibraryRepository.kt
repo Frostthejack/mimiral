@@ -10,6 +10,7 @@ import com.mimiral.app.data.local.scanner.ScanState
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 
 /**
  * High-level repository coordinating file scanning with the local database.
@@ -54,9 +55,12 @@ class LibraryRepository @Inject constructor(
      * Trigger a full scan of device storage for new ebook files.
      * Delegates to [FileScanner.startScan] which runs asynchronously.
      * The scan state can be observed via [FileScanner.scanState].
+     *
+     * In addition to the default Downloads/Documents directories, this also
+     * scans any user-configured scan folders passed as [additionalRoots].
      */
-    fun refreshLibrary() {
-        fileScanner.startScan()
+    fun refreshLibrary(additionalRoots: List<File> = emptyList()) {
+        fileScanner.startScan(additionalRoots = additionalRoots)
     }
 
     /**

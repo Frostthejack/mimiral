@@ -101,7 +101,7 @@ object BookFormatDetector {
  * Repository for Kavita server book operations.
  *
  * Orchestrates:
- * - Book download (via KavitaClient)
+ * - Book download (via KavitaApi)
  * - File storage (to app's internal files directory)
  * - Database insertion (via BookRepository)
  * - Cover image download and storage
@@ -111,7 +111,7 @@ object BookFormatDetector {
 @Singleton
 class KavitaRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val kavitaClient: KavitaClient,
+    private val kavitaApi: KavitaApi,
     private val serverDao: ServerDao,
     private val bookRepository: BookRepository
 ) {
@@ -131,39 +131,42 @@ class KavitaRepository @Inject constructor(
         serverDao.getActiveServerByType("KAVITA")
 
     /**
-     * Create a KavitaClient from the active server configuration in the database.
-     * Returns null if no server is configured.
-     */
-    private suspend fun createClientFromDb(): KavitaClient? {
-        val activeServer = serverDao.getActiveServerByType("KAVITA") ?: return null
-        if (activeServer.url.isBlank()) return null
-        return KavitaClient.create(
-            baseUrl = activeServer.url,
-            apiKey = activeServer.apiKey
-        )
-    }
-
-    /**
      * List all Kavita libraries.
      */
     suspend fun getLibraries(): KavitaResult<List<KavitaLibrary>> {
-        val client = createClientFromDb() ?: return KavitaResult.Error(
-            message = "No Kavita server configured. Please add a Kavita server in Settings."
-        )
-        return client.getLibraries()
+        return try {
+            val response = kavitaApi.getLibraries()
+            if (response.isSuccessful) {
+                KavitaResult.Success(response.body() ?: emptyList())
+            } else {
+                KavitaResult.Error(
+                    message = "HTTP ${response.code()}: ${response.message()}",
+                    code = response.code()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching libraries: ${e.message}", e)
+            KavitaResult.Error(message = "Network error: ${e.message}", cause = e)
+        }
     }
 
     /**
      * Get all series in a library.
      */
     suspend fun getSeriesForLibrary(libraryId: Int): KavitaResult<List<KavitaSeries>> {
-        val client = createClientFromDb() ?: return KavitaResult.Error(
-            message = "No Kavita server configured. Please add a Kavita server in Settings."
-        )
-        val result = client.getSeries(libraryId = libraryId)
-        return when (result) {
-            is KavitaResult.Success -> KavitaResult.Success(result.data)
-            is KavitaResult.Error -> result
+        return try {
+            val response = kavitaApi.getSeries(libraryId = libraryId)
+            if (response.isSuccessful) {
+                KavitaResult.Success(response.body()?.items ?: emptyList())
+            } else {
+                KavitaResult.Error(
+                    message = "HTTP ${response.code()}: ${response.message()}",
+                    code = response.code()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching series: ${e.message}", e)
+            KavitaResult.Error(message = "Network error: ${e.message}", cause = e)
         }
     }
 
@@ -171,22 +174,27 @@ class KavitaRepository @Inject constructor(
      * Get detailed series metadata including volumes.
      */
     suspend fun getSeriesMetadata(seriesId: Int): KavitaResult<KavitaSeries> {
-        val client = createClientFromDb() ?: return KavitaResult.Error(
-            message = "No Kavita server configured. Please add a Kavita server in Settings."
-        )
-        val volumesResult = client.getVolumes(seriesId)
-        if (volumesResult is KavitaResult.Error) return volumesResult
-        val volumes = (volumesResult as KavitaResult.Success).data
-        // Return a KavitaSeries with the volumes populated
-        // We need basic series info; use a minimal series with volumes
-        return KavitaResult.Success(
-            KavitaSeries(
-                id = seriesId,
-                name = "",
-                libraryId = 0,
-                volumes = volumes
+        return try {
+            val volumesResponse = kavitaApi.getVolumes(seriesId)
+            if (!volumesResponse.isSuccessful) {
+                return KavitaResult.Error(
+                    message = "HTTP ${volumesResponse.code()}: ${volumesResponse.message()}",
+                    code = volumesResponse.code()
+                )
+            }
+            val volumes = volumesResponse.body() ?: emptyList()
+            KavitaResult.Success(
+                KavitaSeries(
+                    id = seriesId,
+                    name = "",
+                    libraryId = 0,
+                    volumes = volumes
+                )
             )
-        )
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching series metadata: ${e.message}", e)
+            KavitaResult.Error(message = "Network error: ${e.message}", cause = e)
+        }
     }
 
     /**
@@ -216,32 +224,59 @@ class KavitaRepository @Inject constructor(
      * Tests connectivity and returns the server info.
      */
     suspend fun testConnection(server: ServerEntity): KavitaResult<KavitaServerInfo> {
-        val testClient = KavitaClient(
-            baseUrl = server.url,
-            apiKey = server.apiKey,
-            jwtToken = server.jwtToken
-        )
-        if (server.apiKey.isNullOrBlank() && server.jwtToken.isNullOrBlank()) {
-            // Try username/password login
-            if (!server.username.isNullOrBlank() && !server.password.isNullOrBlank()) {
-                when (
-                    val loginResult = testClient.login(
-                        server.username,
-                        server.password
-                    )
-                ) {
-                    is KavitaResult.Success -> {
-                        // Update stored token
-                        serverDao.updateServer(
-                            server.copy(jwtToken = loginResult.data)
-                        )
-                        return testClient.getServerInfo()
-                    }
-                    is KavitaResult.Error -> return loginResult
-                }
+        // For testConnection, we use the KavitaApi (which resolves server URL from DB)
+        // but for testing a specific server URL, we need the base URL check first.
+        // The KavitaApi uses KavitaBaseUrlInterceptor which resolves from DB,
+        // so we rely on getServerInfo() which tests the configured server.
+        return try {
+            val response = kavitaApi.getServerInfo()
+            if (response.isSuccessful) {
+                val info = response.body() ?: KavitaServerInfo()
+                KavitaResult.Success(info)
+            } else {
+                KavitaResult.Error(
+                    message = "HTTP ${response.code()}: ${response.message()}",
+                    code = response.code()
+                )
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error testing connection: ${e.message}", e)
+            KavitaResult.Error(message = "Connection error: ${e.message}", cause = e)
         }
-        return testClient.getServerInfo()
+    }
+
+    /**
+     * Authenticate with username/password for a specific server.
+     * Returns the JWT token on success.
+     */
+    suspend fun loginWithCredentials(
+        server: ServerEntity,
+        username: String,
+        password: String
+    ): KavitaResult<String> {
+        return try {
+            val request = KavitaLoginRequest(username = username, password = password)
+            val response = kavitaApi.login(request)
+            if (response.isSuccessful) {
+                val loginResponse = response.body()
+                val token = loginResponse?.token ?: ""
+                if (token.isNotBlank()) {
+                    // Update stored token
+                    serverDao.updateServer(server.copy(jwtToken = token))
+                    KavitaResult.Success(token)
+                } else {
+                    KavitaResult.Error(message = "Empty token in login response")
+                }
+            } else {
+                KavitaResult.Error(
+                    message = "Login failed: HTTP ${response.code()}",
+                    code = response.code()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Login error: ${e.message}", e)
+            KavitaResult.Error(message = "Network error: ${e.message}", cause = e)
+        }
     }
 
     /**
@@ -265,26 +300,23 @@ class KavitaRepository @Inject constructor(
         seriesId: Int? = null,
         author: String? = null
     ): KavitaResult<Int> = withContext(Dispatchers.IO) {
-        val client = createClientFromDb()
-        if (client == null) {
-            _downloadState.value = DownloadState.Failed(title, "No Kavita server configured")
-            return@withContext KavitaResult.Error(message = "No Kavita server configured")
-        }
         _downloadState.value = DownloadState.Downloading(bookTitle = title)
 
         try {
             // Step 1: Download bytes
-            val downloadResult = client.downloadBook(chapterId)
-            if (downloadResult is KavitaResult.Error) {
-                _downloadState.value = DownloadState.Failed(title, downloadResult.message)
+            val downloadResponse = kavitaApi.downloadBook(chapterId)
+            if (!downloadResponse.isSuccessful) {
+                _downloadState.value = DownloadState.Failed(title, "HTTP ${downloadResponse.code()}")
                 return@withContext KavitaResult.Error(
-                    message = downloadResult.message,
-                    code = downloadResult.code,
-                    cause = downloadResult.cause
+                    message = "Download failed: HTTP ${downloadResponse.code()}",
+                    code = downloadResponse.code()
                 )
             }
 
-            val bytes = (downloadResult as KavitaResult.Success).data
+            val bytes = downloadResponse.body()?.bytes() ?: run {
+                _downloadState.value = DownloadState.Failed(title, "Empty download response")
+                return@withContext KavitaResult.Error(message = "Empty download response")
+            }
             Log.d(TAG, "Downloaded ${bytes.size} bytes for: $title")
 
             // Step 2: Detect format
@@ -384,56 +416,37 @@ class KavitaRepository @Inject constructor(
 
     /**
      * Download and save a series cover image.
-     *
-     * Downloads the cover from Kavita, saves it to internal storage,
-     * and returns the local file path.
-     *
-     * @param seriesId The Kavita series ID
-     * @param bookFilePath The book file path to associate cover with
-     * @return Result with local cover path, or null if download failed
      */
     suspend fun downloadAndSaveCover(
         seriesId: Int,
         bookFilePath: String
     ): Result<String?> = withContext(Dispatchers.IO) {
         try {
-            val client = createClientFromDb() ?: return@withContext Result.success(null)
-            val result = client.downloadSeriesCover(seriesId)
-            when (result) {
-                is KavitaResult.Success -> {
-                    val bytes = result.data
-                    val extension = BookFormatDetector.formatToExtension(
-                        BookFormatDetector.detectFormat(bytes)
-                    )
-
-                    val coversDir = File(context.filesDir, COVERS_DIR)
-                    if (!coversDir.exists()) {
-                        coversDir.mkdirs()
-                    }
-
-                    val coverFileName = "series_${seriesId}_cover$extension"
-                    val coverFile = File(coversDir, coverFileName)
-
-                    FileOutputStream(coverFile).use { fos ->
-                        fos.write(bytes)
-                    }
-
-                    Log.d(
-                        TAG,
-                        "Saved cover to: ${coverFile.absolutePath} " +
-                            "(${bytes.size} bytes)"
-                    )
-                    Result.success(coverFile.absolutePath)
-                }
-                is KavitaResult.Error -> {
-                    Log.w(
-                        TAG,
-                        "Failed to download cover for series $seriesId: " +
-                            result.message
-                    )
-                    Result.success(null)
-                }
+            val response = kavitaApi.downloadSeriesCover(seriesId)
+            if (!response.isSuccessful) {
+                Log.w(TAG, "Failed to download cover for series $seriesId: HTTP ${response.code()}")
+                return@withContext Result.success(null)
             }
+
+            val bytes = response.body()?.bytes() ?: return@withContext Result.success(null)
+            val extension = BookFormatDetector.formatToExtension(
+                BookFormatDetector.detectFormat(bytes)
+            )
+
+            val coversDir = File(context.filesDir, COVERS_DIR)
+            if (!coversDir.exists()) {
+                coversDir.mkdirs()
+            }
+
+            val coverFileName = "series_${seriesId}_cover$extension"
+            val coverFile = File(coversDir, coverFileName)
+
+            FileOutputStream(coverFile).use { fos ->
+                fos.write(bytes)
+            }
+
+            Log.d(TAG, "Saved cover to: ${coverFile.absolutePath} (${bytes.size} bytes)")
+            Result.success(coverFile.absolutePath)
         } catch (e: Exception) {
             Log.e(TAG, "Error saving cover: ${e.message}", e)
             Result.success(null)
@@ -443,12 +456,6 @@ class KavitaRepository @Inject constructor(
     /**
      * Load a cover image from a local file path into a format
      * suitable for Coil image loading.
-     *
-     * Returns a File that can be used with Coil's AsyncImage
-     * via the imageUrl parameter.
-     *
-     * @param coverPath Local file path of the cover image
-     * @return The cover File if it exists, null otherwise
      */
     fun loadCoverFile(coverPath: String?): File? {
         if (coverPath == null) return null
@@ -458,12 +465,6 @@ class KavitaRepository @Inject constructor(
 
     /**
      * Push reading progress to Kavita.
-     *
-     * @param chapterId The chapter ID
-     * @param pageNum Current page number
-     * @param seriesId The series ID
-     * @param volumeId The volume ID
-     * @param libraryId The library ID
      */
     suspend fun pushProgress(
         chapterId: Int,
@@ -472,16 +473,28 @@ class KavitaRepository @Inject constructor(
         volumeId: Int,
         libraryId: Int
     ): KavitaResult<Unit> {
-        val client = createClientFromDb() ?: return KavitaResult.Error(
-            message = "No Kavita server configured. Please add a Kavita server in Settings."
-        )
-        return client.pushProgress(
-            chapterId = chapterId,
-            pageNum = pageNum,
-            seriesId = seriesId,
-            volumeId = volumeId,
-            libraryId = libraryId
-        )
+        return try {
+            val progress = KavitaProgressDto(
+                chapterId = chapterId,
+                pageNum = pageNum,
+                seriesId = seriesId,
+                volumeId = volumeId,
+                libraryId = libraryId,
+                lastModifiedUtc = java.time.Instant.now().toString()
+            )
+            val response = kavitaApi.pushProgressDto(progress)
+            if (response.isSuccessful) {
+                KavitaResult.Success(Unit)
+            } else {
+                KavitaResult.Error(
+                    message = "Progress push failed: HTTP ${response.code()}",
+                    code = response.code()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error pushing progress: ${e.message}", e)
+            KavitaResult.Error(message = "Network error: ${e.message}", cause = e)
+        }
     }
 
     /**
@@ -490,10 +503,23 @@ class KavitaRepository @Inject constructor(
     suspend fun pullProgress(
         seriesId: Int
     ): KavitaResult<List<KavitaProgress>> {
-        val client = createClientFromDb() ?: return KavitaResult.Error(
-            message = "No Kavita server configured. Please add a Kavita server in Settings."
-        )
-        return client.pullProgress(seriesId)
+        return try {
+            val response = kavitaApi.getProgressDto(seriesId)
+            if (response.isSuccessful) {
+                // The response is a single progress item per chapter; wrap in list
+                val progress = response.body()?.let { listOfNotNull(it) } ?: emptyList()
+                @Suppress("UNCHECKED_CAST")
+                KavitaResult.Success(progress as List<KavitaProgress>)
+            } else {
+                KavitaResult.Error(
+                    message = "Progress pull failed: HTTP ${response.code()}",
+                    code = response.code()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error pulling progress: ${e.message}", e)
+            KavitaResult.Error(message = "Network error: ${e.message}", cause = e)
+        }
     }
 
     /**
@@ -502,10 +528,32 @@ class KavitaRepository @Inject constructor(
     suspend fun getBookmarks(
         seriesId: Int
     ): KavitaResult<List<KavitaBookmark>> {
-        val client = createClientFromDb() ?: return KavitaResult.Error(
-            message = "No Kavita server configured. Please add a Kavita server in Settings."
-        )
-        return client.getBookmarks(seriesId)
+        return try {
+            val response = kavitaApi.getSeriesBookmarks(seriesId)
+            if (response.isSuccessful) {
+                val bookmarks = response.body()?.bookmarks ?: emptyList()
+                // Convert KavitaBookmarkDto to KavitaBookmark
+                val converted = bookmarks.map { dto ->
+                    KavitaBookmark(
+                        id = dto.id,
+                        chapterId = dto.chapterId,
+                        pageNum = dto.page,
+                        seriesId = dto.seriesId,
+                        volumeId = dto.volumeId,
+                        libraryId = dto.libraryId
+                    )
+                }
+                KavitaResult.Success(converted)
+            } else {
+                KavitaResult.Error(
+                    message = "Bookmarks fetch failed: HTTP ${response.code()}",
+                    code = response.code()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching bookmarks: ${e.message}", e)
+            KavitaResult.Error(message = "Network error: ${e.message}", cause = e)
+        }
     }
 
     /**

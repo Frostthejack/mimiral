@@ -31,6 +31,21 @@ interface KavitaApi {
     suspend fun login(@Body request: KavitaLoginRequest): Response<KavitaLoginResponse>
 
     /**
+     * Authenticate with username/password (alias for login).
+     * POST /api/Account/login — some code paths call login() with (username, password).
+     */
+    @POST("api/Account/login")
+    suspend fun loginWithCredentials(
+        @Body request: KavitaLoginRequest
+    ): Response<KavitaLoginResponse>
+
+    /**
+     * Test connection to the Kavita server using the base URL.
+     * GET /api/Server/info — lightweight connectivity check.
+     */
+    suspend fun testConnection(): Response<KavitaServerInfo> = getServerInfo()
+
+    /**
      * Fallback login endpoint for Kavita versions before v0.7.
      * POST /api/Auth/login
      *
@@ -260,6 +275,44 @@ interface KavitaApi {
      *
      * @param request Chapter read request
      */
+    /**
+     * Download a book file from Kavita.
+     * GET /api/download/chapter?chapterId={chapterId}
+     *
+     * @param chapterId The chapter ID to download
+     * @return Raw bytes of the book file
+     */
+    @GET("api/download/chapter")
+    suspend fun downloadBook(
+        @Query("chapterId") chapterId: Int
+    ): Response<okhttp3.ResponseBody>
+
+    /**
+     * Download a series cover image from Kavita.
+     * GET /api/image/series-cover?seriesId={seriesId}
+     *
+     * @param seriesId The series ID
+     * @return Raw bytes of the cover image
+     */
+    @GET("api/image/series-cover")
+    suspend fun downloadSeriesCover(
+        @Query("seriesId") seriesId: Int
+    ): Response<okhttp3.ResponseBody>
+
+    /**
+     * Download a book/volume cover image from Kavita.
+     * GET /api/image/book-cover?chapterId={chapterId}
+     *
+     * @param chapterId The chapter ID
+     * @return Raw bytes of the book cover image
+     */
+    @GET("api/image/book-cover")
+    suspend fun downloadBookCover(
+        @Query("chapterId") chapterId: Int
+    ): Response<okhttp3.ResponseBody>
+
+    // ==================== Bookmarks (hand-rolled operations) ====================
+
     @POST("api/Reader/mark-chapter-read")
     suspend fun markChapterRead(
         @Body request: KavitaMarkChapterReadRequest

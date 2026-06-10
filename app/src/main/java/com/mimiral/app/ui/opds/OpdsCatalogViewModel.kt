@@ -1,11 +1,13 @@
 package com.mimiral.app.ui.opds
 
+import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
-import com.mimiral.app.data.opds.OpdsEntry
-import com.mimiral.app.data.opds.OpdsFeed
-import com.mimiral.app.data.opds.OpdsRepository
+import com.mimiral.app.data.remote.opds.OpdsEntry
+import com.mimiral.app.data.remote.opds.OpdsFeed
+import com.mimiral.app.data.remote.opds.OpdsLink
+import com.mimiral.app.data.repository.OpdsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,17 +36,6 @@ class OpdsCatalogViewModel @Inject constructor(
 
     init {
         loadCatalogs()
-        seedDefaults()
-    }
-
-    private fun seedDefaults() {
-        viewModelScope.launch {
-            try {
-                opdsRepository.seedDefaultCatalogs()
-            } catch (_: Exception) {
-                // Ignore seeding errors
-            }
-        }
     }
 
     fun loadCatalogs() {
@@ -69,7 +60,11 @@ class OpdsCatalogViewModel @Inject constructor(
                 isLoading = true,
                 error = null
             )
-            val result = opdsRepository.fetchCatalogFeed(catalog)
+            val result = opdsRepository.fetchFeed(
+                feedUrl = catalog.url,
+                username = catalog.username,
+                password = catalog.password
+            )
             result.fold(
                 onSuccess = { feed ->
                     _uiState.value = _uiState.value.copy(
@@ -94,7 +89,12 @@ class OpdsCatalogViewModel @Inject constructor(
                 isLoading = true,
                 error = null
             )
-            val result = opdsRepository.fetchFeedByUrl(url)
+            val catalog = _uiState.value.selectedCatalog
+            val result = opdsRepository.fetchFeed(
+                feedUrl = url,
+                username = catalog?.username,
+                password = catalog?.password
+            )
             result.fold(
                 onSuccess = { feed ->
                     val newStack = _uiState.value.feedStack + feed
@@ -129,34 +129,55 @@ class OpdsCatalogViewModel @Inject constructor(
 
     fun downloadBook(entry: OpdsEntry) {
         val catalog = _uiState.value.selectedCatalog ?: return
+        val downloadLink = entry.preferredAcquisitionLink
+            ?: entry.acquisitionLinks.firstOrNull()
+        if (downloadLink == null) {
+            _uiState.value = _uiState.value.copy(
+                error = "No download link for: ${entry.title}"
+            )
+            return
+        }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isDownloading = true,
                 downloadProgress = "Downloading: ${entry.title}",
                 error = null
             )
-            try {
-                val bookId = opdsRepository.downloadBook(
-                    entry = entry,
-                    catalogName = catalog.name
-                )
-                _uiState.value = _uiState.value.copy(
-                    isDownloading = false,
-                    downloadProgress = "Downloaded: ${entry.title} (ID: $bookId)"
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isDownloading = false,
-                    error = "Download failed: ${e.message}"
-                )
-            }
+            val extension = downloadLink.fileExtension ?: "epub"
+            val fileName = entry.title.replace(Regex("[^a-zA-Z0-9._-]"), "_") + ".$extension"
+            val destPath = "${Environment.DIRECTORY_DOWNLOADS}/$fileName"
+            val result = opdsRepository.downloadBook(
+                downloadUrl = downloadLink.href,
+                destinationPath = destPath,
+                username = catalog.username,
+                password = catalog.password
+            )
+            result.fold(
+                onSuccess = {
+                    _uiState.value = _uiState.value.copy(
+                        isDownloading = false,
+                        downloadProgress = "Downloaded: ${entry.title}"
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isDownloading = false,
+                        error = "Download failed: ${e.message}"
+                    )
+                }
+            )
         }
     }
 
     fun addCatalog(name: String, url: String) {
         viewModelScope.launch {
             try {
-                opdsRepository.addCatalog(name = name, url = url)
+                val entity = OpdsCatalogEntity(
+                    name = name,
+                    url = url,
+                    isActive = true
+                )
+                opdsRepository.insertCatalog(entity)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = "Failed to add catalog: ${e.message}"
@@ -181,3 +202,14 @@ class OpdsCatalogViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 }
+
+private val OpdsLink.fileExtension: String?
+    get() {
+        val cleanType = type ?: return null
+        return when {
+            cleanType.contains("epub") -> "epub"
+            cleanType.contains("pdf") -> "pdf"
+            cleanType.contains("mobi") -> "mobi"
+            else -> null
+        }
+    }

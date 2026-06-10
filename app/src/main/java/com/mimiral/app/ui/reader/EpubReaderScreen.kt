@@ -115,48 +115,20 @@ fun EpubReaderScreen(
     val screenHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() }
 
     // Sample chapter text for pagination (simulated EPUB content)
-    val chapterText = remember {
-        """
-        Chapter 1: The Beginning
-
-        Welcome to Mimiral Reader.
-
-        This is the beginning of your book. The text you are reading is paginated using
-        Android's StaticLayout engine, which calculates line breaks and page boundaries
-        based on the screen dimensions, font size, line spacing, and margins you configure.
-
-        Tap the left or right side of the screen to turn pages, or swipe to navigate
-        between pages. You can also use volume keys if that setting is enabled.
-
-        The pagination engine recalculates page boundaries whenever you change text
-        settings like font size, line spacing, or margins. This ensures that the text
-        always fits properly on each page.
-
-        Custom fonts are supported in TTF and OTF format. You can load font files from
-        the app's assets directory and apply them to the reader. The font family selector
-        lets you choose between built-in fonts like Serif, Sans Serif, and Monospace, or
-        load your own custom fonts.
-
-        Line spacing can be adjusted using both a multiplier and extra spacing. The
-        multiplier scales the line height proportionally, while extra spacing adds a
-        fixed amount of space between lines. Margins can be adjusted independently for
-        each side of the page.
-
-        All your text settings are persisted using DataStore, so they will be remembered
-        the next time you open the app. This includes font size, line spacing, margins,
-        and font family selection.
-
-        This is a demonstration of the EPUB reader screen with customizable text
-        rendering. In production, actual EPUB content would be rendered here with proper
-        pagination from the Readium library integrated with the StaticLayout engine.
-
-        End of sample content. Thank you for using Mimiral Reader!
-        """.trimIndent()
+    // Falls back to placeholder text if book content has not loaded yet
+    val chapterText = remember(uiState.bookContent) {
+        uiState.bookContent ?: buildString {
+            append("Welcome to Mimiral Reader\n\n")
+            append("Chapter 1: The Beginning\n\n")
+            append("This is sample text for the reader view...\n\n")
+            // ... more hardcoded text
+            append("Loading book content...\n")
+        }
     }
 
-    // Paginate text whenever text settings change
+    // Paginate text whenever text settings or content changes
     var paginationResult by remember { mutableStateOf<PaginationResult?>(null) }
-    LaunchedEffect(textSettings, screenWidthPx, screenHeightPx) {
+    LaunchedEffect(chapterText, textSettings, screenWidthPx, screenHeightPx) {
         paginationResult = paginationEngine.paginate(
             text = chapterText,
             config = textSettings.toRenderConfig(),

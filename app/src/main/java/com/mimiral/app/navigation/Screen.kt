@@ -95,4 +95,16 @@ sealed class Screen(val route: String) {
             return "kavita_opds_browse/$encodedUrl/$encodedTitle"
         }
     }
+
+    // OPDS catalog management
+    object OpdsCatalog : Screen("opds_catalog")
+
+    // OPDS catalog browser (browse a specific catalog's entries)
+    object OpdsCatalogBrowser : Screen("opds_catalog_browser")
+
+    // Free sources browser
+    object FreeSources : Screen("free_sources")
+
+    // Kavita reading list detail
+    object KavitaReadingList : Screen("kavita_reading_list")
 }

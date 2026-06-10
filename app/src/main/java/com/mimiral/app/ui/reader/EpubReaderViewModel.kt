@@ -7,6 +7,8 @@ import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.ReadingTimeTracker
 import com.mimiral.app.data.reader.EpubParser
+import com.mimiral.app.data.reader.ChapterExtractor
+import com.mimiral.app.data.reader.ChapterExtractionResult
 import com.mimiral.app.data.reader.EpubState
 import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.repository.BookRepository
@@ -84,7 +86,9 @@ data class ReaderUiState(
     val currentTtsWordEnd: Int = -1,
     /** Sync status indicator for Kavita progress sync */
     val syncStatus: com.mimiral.app.data.remote.SyncStatus =
-        com.mimiral.app.data.remote.SyncStatus.IDLE
+        com.mimiral.app.data.remote.SyncStatus.IDLE,
+    /** Full extracted text content from the EPUB, or null if not yet loaded. */
+    val bookContent: String? = null
 )
 
 @HiltViewModel
@@ -117,9 +121,85 @@ class EpubReaderViewModel @Inject constructor(
     init {
         restoreProgress()
         loadToc()
+        loadBookContent()
         loadHighlights()
         autoSyncOnOpen()
         readingTimeTracker.startSession()
+    }
+
+    /**
+     * Load the full text content of the book using EpubParser + ChapterExtractor.
+     * Opens the EPUB file, extracts each chapter's text, and joins them into a
+     * single string stored in [ReaderUiState.bookContent].
+     */
+    private fun loadBookContent() {
+        if (bookId == -1) return
+
+        viewModelScope.launch {
+            try {
+                val book = bookRepository.getBookById(bookId)
+                if (book == null || book.filePath.isBlank()) {
+                    _uiState.update { it.copy(error = "Book file not found") }
+                    return@launch
+                }
+
+                val parser = EpubParser(appContext)
+                val result = parser.openFile(book.filePath)
+                when (result) {
+                    is EpubState.Loaded -> {
+                        val extractor = ChapterExtractor(parser)
+                        val chapters = parser.getChapters()
+                        val contentBuilder = StringBuilder()
+
+                        for (chIndex in chapters.indices) {
+                            when (val extractionResult = extractor.getChapter(chIndex)) {
+                                is ChapterExtractionResult.Success -> {
+                                    if (contentBuilder.isNotEmpty()) {
+                                        contentBuilder.append("\n\n")
+                                    }
+                                    contentBuilder.append(extractionResult.text)
+                                }
+                                is ChapterExtractionResult.Error -> {
+                                    // Log but continue — skip failed chapters
+                                    continue
+                                }
+                            }
+                            // Yield between chapters to avoid blocking the main thread
+                            kotlinx.coroutines.yield()
+                        }
+
+                        val fullText = contentBuilder.toString()
+                        _uiState.update {
+                            it.copy(
+                                bookContent = fullText,
+                                isLoading = false
+                            )
+                        }
+                        parser.close()
+                    }
+                    is EpubState.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "Failed to load EPUB: ${result.message}"
+                            )
+                        }
+                        parser.close()
+                    }
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        parser.close()
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Failed to load book content: ${e.message}"
+                    )
+                }
+            }
+        }
     }
 
     override fun onCleared() {
@@ -161,14 +241,8 @@ class EpubReaderViewModel @Inject constructor(
                     return@launch
                 }
 
-                val file = java.io.File(book.filePath)
-                if (!file.exists() || !file.canRead()) {
-                    setSampleChapters()
-                    return@launch
-                }
-
                 val parser = EpubParser(appContext)
-                val result = parser.openFile(file)
+                val result = parser.openFile(book.filePath)
                 when (result) {
                     is EpubState.Loaded -> {
                         val realChapters = parser.getChapters().map { ch ->
@@ -221,7 +295,6 @@ class EpubReaderViewModel @Inject constructor(
                     sessionStartPage = savedProgress.pageNumber
                     _uiState.update {
                         it.copy(
-                            isLoading = false,
                             currentChapter = savedProgress.chapterIndex,
                             currentPage = savedProgress.pageNumber,
                             progress = ReaderProgress(
@@ -235,7 +308,7 @@ class EpubReaderViewModel @Inject constructor(
                         )
                     }
                 } else {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _uiState.update { it.copy() }
                 }
                 // Load bookmarks for this book to check bookmark state
                 loadBookmarks()

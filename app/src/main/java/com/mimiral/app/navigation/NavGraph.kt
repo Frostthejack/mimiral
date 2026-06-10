@@ -54,6 +54,10 @@ import com.mimiral.app.ui.settings.ScrobblingViewModel
 import com.mimiral.app.ui.settings.SettingsScreen
 import com.mimiral.app.ui.settings.TTSSettingsScreen
 import com.mimiral.app.ui.statistics.StatisticsScreen
+import com.mimiral.app.ui.kavita.readinglists.KavitaReadingListScreen
+import com.mimiral.app.ui.freesources.FreeSourcesScreen
+import com.mimiral.app.ui.opds.OpdsCatalogScreen
+import com.mimiral.app.ui.opds.OpdsCatalogBrowserScreen
 import com.mimiral.app.ui.stats.StatsDashboardScreen
 import com.mimiral.app.ui.wanttoread.WantToReadScreen
 import kotlinx.coroutines.launch
@@ -186,10 +190,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onNavigateToKavitaSeries = { seriesId ->
                         navController.navigate(Screen.KavitaSeries.createRoute(seriesId))
                     },
-                    onContinueReading = {
-                        // Navigate to the Kavita series screen for continue reading
-                        // The VM's continuePoint is already loaded; the series screen
-                        // will show the Continue Reading button
+                    onContinueReading = { seriesId ->
+                        navController.navigate(Screen.KavitaSeries.createRoute(seriesId))
                     },
                     onOpenDrawer = openDrawer
                 )
@@ -264,7 +266,9 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
 
             composable(Screen.AccessibilitySettings.route) {
-                AccessibilitySettingsScreen()
+                AccessibilitySettingsScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
 
             composable(Screen.KavitaSetup.route) {
@@ -524,6 +528,34 @@ fun MimiralNavGraph(navController: NavHostController) {
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
+            }
+
+            // OPDS catalog management
+            composable(Screen.OpdsCatalog.route) {
+                OpdsCatalogScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // OPDS catalog browser
+            composable(Screen.OpdsCatalogBrowser.route) {
+                OpdsCatalogBrowserScreen()
+            }
+
+            // Free sources browser
+            composable(Screen.FreeSources.route) {
+                FreeSourcesScreen()
+            }
+
+            // Kavita reading list detail
+            composable(Screen.KavitaReadingList.route) {
+                KavitaReadingListScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToSeries = { seriesId ->
+                        navController.navigate(Screen.KavitaSeries.createRoute(seriesId))
+                    },
+                    onOpenDrawer = openDrawer
+                )
             }
         }
     }

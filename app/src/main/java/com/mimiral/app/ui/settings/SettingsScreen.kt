@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Highlight
 import androidx.compose.material.icons.filled.Keyboard
-import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Palette
@@ -38,7 +37,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
@@ -91,7 +89,6 @@ import com.mimiral.app.data.local.settings.ReadingModeSettingsRepository
 import com.mimiral.app.data.local.settings.ReadingModeTheme
 import com.mimiral.app.data.local.settings.SyncInterval
 import com.mimiral.app.data.local.settings.SyncSettingsRepository
-import com.mimiral.app.data.local.settings.TTSSettingsRepository
 import com.mimiral.app.data.local.settings.TtsHighlightColor
 import com.mimiral.app.ui.theme.MimiralThemeSwitcher
 import com.mimiral.app.ui.theme.MimiralThemeType
@@ -118,7 +115,6 @@ fun SettingsScreen(
     // Repositories
     val readerSettingsRepo = remember { ReaderSettingsRepository(context) }
     val librarySettingsRepo = remember { LibrarySettingsRepository(context) }
-    val ttsSettingsRepo = remember { TTSSettingsRepository(context) }
     val syncSettingsRepo = remember { SyncSettingsRepository(context) }
     val readingModeSettingsRepo = remember { ReadingModeSettingsRepository(context) }
 
@@ -128,9 +124,6 @@ fun SettingsScreen(
     )
     val librarySettings by librarySettingsRepo.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.LibrarySettings()
-    )
-    val ttsSettings by ttsSettingsRepo.settings.collectAsState(
-        initial = com.mimiral.app.data.local.settings.TTSSettings()
     )
     val syncSettings by syncSettingsRepository.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.SyncSettings()
@@ -728,189 +721,6 @@ fun SettingsScreen(
                 }
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    // TTS enabled toggle
-                    SettingsToggleRow(
-                        title = "Enable TTS",
-                        description = "Allow text-to-speech reading",
-                        icon = Icons.Default.RecordVoiceOver,
-                        checked = ttsSettings.isTTSEnabled,
-                        onCheckedChange = { enabled ->
-                            scope.launch { ttsSettingsRepo.setTTSEnabled(enabled) }
-                        }
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Auto-play on open
-                    SettingsToggleRow(
-                        title = "Auto-Play on Open",
-                        description = "Start TTS automatically when opening a book",
-                        icon = Icons.Default.RecordVoiceOver,
-                        checked = ttsSettings.autoPlayOnOpen,
-                        onCheckedChange = { enabled ->
-                            scope.launch { ttsSettingsRepo.setAutoPlayOnOpen(enabled) }
-                        }
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Highlight while reading
-                    SettingsToggleRow(
-                        title = "Highlight While Reading",
-                        description = "Highlight the current sentence during TTS playback",
-                        icon = Icons.Default.Palette,
-                        checked = ttsSettings.highlightWhileReading,
-                        onCheckedChange = { enabled ->
-                            scope.launch { ttsSettingsRepo.setHighlightWhileReading(enabled) }
-                        }
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Speech rate slider
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Speed,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "Speech Rate",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            Text(
-                                text = String.format("%.1fx", ttsSettings.speechRate),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Slider(
-                            value = ttsSettings.speechRate,
-                            onValueChange = { rate ->
-                                scope.launch { ttsSettingsRepo.setSpeechRate(rate) }
-                            },
-                            valueRange = 0.5f..3.0f,
-                            steps = 24,
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary
-                            )
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("0.5x", style = MaterialTheme.typography.labelSmall)
-                            Text("3.0x", style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Pitch slider
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Tune,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "Pitch",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            Text(
-                                text = String.format("%.1fx", ttsSettings.pitch),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Slider(
-                            value = ttsSettings.pitch,
-                            onValueChange = { pitch ->
-                                scope.launch { ttsSettingsRepo.setPitch(pitch) }
-                            },
-                            valueRange = 0.5f..2.0f,
-                            steps = 14,
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary
-                            )
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("0.5x", style = MaterialTheme.typography.labelSmall)
-                            Text("2.0x", style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Sleep timer default
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Timer,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "Default Sleep Timer",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        SleepTimerDropdown(
-                            selectedMinutes = ttsSettings.sleepTimerDefaultMinutes,
-                            onMinutesSelected = { minutes ->
-                                scope.launch {
-                                    ttsSettingsRepo.setSleepTimerDefaultMinutes(minutes)
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-
             // ═══════════════════════════════════════════════════
             // SECTION: Sync Preferences
             // ═══════════════════════════════════════════════════
@@ -980,6 +790,50 @@ fun SettingsScreen(
                         checked = syncSettings.syncOnWifiOnly,
                         onCheckedChange = { enabled ->
                             scope.launch { syncSettingsRepo.setSyncOnWifiOnly(enabled) }
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Content sync toggles
+                    Text(
+                        text = "Sync Content",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+
+                    SettingsToggleRow(
+                        title = "Reading Progress",
+                        description = "Sync current page and chapter",
+                        icon = Icons.Default.Sync,
+                        checked = syncSettings.syncReadingProgress,
+                        onCheckedChange = { enabled ->
+                            scope.launch { syncSettingsRepo.setSyncReadingProgress(enabled) }
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    SettingsToggleRow(
+                        title = "Bookmarks",
+                        description = "Sync bookmarks with Kavita",
+                        icon = Icons.Default.Book,
+                        checked = syncSettings.syncBookmarks,
+                        onCheckedChange = { enabled ->
+                            scope.launch { syncSettingsRepo.setSyncBookmarks(enabled) }
+                        }
+                    )
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    SettingsToggleRow(
+                        title = "Highlights & Notes",
+                        description = "Sync highlights and notes",
+                        icon = Icons.Default.Highlight,
+                        checked = syncSettings.syncHighlights,
+                        onCheckedChange = { enabled ->
+                            scope.launch { syncSettingsRepo.setSyncHighlights(enabled) }
                         }
                     )
                 }
@@ -1085,135 +939,6 @@ fun SettingsScreen(
                 }
             }
 
-            // ═══════════════════════════════════════════════════
-            // SECTION: Library Preferences
-            // ═══════════════════════════════════════════════════
-            SectionHeader(
-                title = "Library Preferences",
-                icon = Icons.Default.LibraryBooks
-            )
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    // Default sort option
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.LibraryBooks,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "Default Sort",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        SortOptionDropdown(
-                            selectedSort = librarySettings.sortOption,
-                            onSortSelected = { sort ->
-                                scope.launch { librarySettingsRepo.setSortOption(sort) }
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Default filter option
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Storage,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "Default Filter",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        FilterOptionDropdown(
-                            selectedFilter = librarySettings.filterOption,
-                            onFilterSelected = { filter ->
-                                scope.launch { librarySettingsRepo.setFilterOption(filter) }
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // View mode
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Settings,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "View Mode",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ViewModeSelector(
-                            selectedMode = librarySettings.viewMode,
-                            onModeSelected = { mode ->
-                                scope.launch { librarySettingsRepo.setViewMode(mode) }
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Supported file formats info
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Folder,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Column {
-                            Text(
-                                text = "Supported Formats",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "EPUB, PDF, DJVU, TXT, RTF, FB2, MOBI, CBZ, CBR",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
             // ═══════════════════════════════════════════════════
             // SECTION: Cloud & Sync (Kavita)
             // ═══════════════════════════════════════════════════
@@ -1992,133 +1717,6 @@ private fun SyncIntervalDropdown(
                         expanded = false
                     }
                 )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SortOptionDropdown(
-    selectedSort: com.mimiral.app.data.local.settings.SortOption,
-    onSortSelected: (com.mimiral.app.data.local.settings.SortOption) -> Unit
-) {
-    val options = com.mimiral.app.data.local.settings.SortOption.entries
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
-        OutlinedTextField(
-            value = selectedSort.displayName,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Sort By") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor()
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option.displayName) },
-                    onClick = {
-                        onSortSelected(option)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FilterOptionDropdown(
-    selectedFilter: com.mimiral.app.data.local.settings.FilterOption,
-    onFilterSelected: (com.mimiral.app.data.local.settings.FilterOption) -> Unit
-) {
-    val options = com.mimiral.app.data.local.settings.FilterOption.entries
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
-        OutlinedTextField(
-            value = selectedFilter.displayName,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Filter By") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor()
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option.displayName) },
-                    onClick = {
-                        onFilterSelected(option)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ViewModeSelector(
-    selectedMode: com.mimiral.app.data.local.settings.ViewMode,
-    onModeSelected: (com.mimiral.app.data.local.settings.ViewMode) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        com.mimiral.app.data.local.settings.ViewMode.entries.forEach { mode ->
-            val isSelected = mode == selectedMode
-            val label = when (mode) {
-                com.mimiral.app.data.local.settings.ViewMode.GRID -> "Grid"
-                com.mimiral.app.data.local.settings.ViewMode.LIST -> "List"
-            }
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onModeSelected(mode) },
-                shape = MaterialTheme.shapes.small,
-                color = if (isSelected) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surface
-                },
-                border = ButtonDefaults.outlinedButtonBorder
-            ) {
-                Box(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
-                    )
-                }
             }
         }
     }

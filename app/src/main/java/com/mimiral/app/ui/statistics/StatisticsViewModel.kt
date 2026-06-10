@@ -33,6 +33,7 @@ data class StatisticsUiState(
     val longestStreak: Int = 0,
     val todayPages: Int = 0,
     val todayMinutes: Long = 0,
+    val todaySessionCount: Int = 0,
     val weekPages: Int = 0,
     val weekMinutes: Long = 0,
     val monthPages: Int = 0,
@@ -114,6 +115,7 @@ class StatisticsViewModel @Inject constructor(
                         totalReadingTimeSeconds = totalMs,
                         todayPages = todayPages,
                         todayMinutes = todayMs / 60000,
+                        todaySessionCount = todaySessions.size,
                         weekPages = weekPages,
                         weekMinutes = weekMs / 60000,
                         monthPages = monthPages,
@@ -181,5 +183,15 @@ class StatisticsViewModel @Inject constructor(
 
     fun clearExportSuccess() {
         _uiState.value = _uiState.value.copy(exportSuccess = false)
+    }
+
+    fun formatDuration(seconds: Long): String {
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        return when {
+            hours > 0 -> "${hours}h ${minutes}m"
+            minutes > 0 -> "${minutes}m"
+            else -> "${seconds}s"
+        }
     }
 }

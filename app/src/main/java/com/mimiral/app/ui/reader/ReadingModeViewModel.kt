@@ -21,6 +21,7 @@ import com.tom_roush.pdfbox.text.PDFTextStripper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -437,7 +438,7 @@ class ReadingModeViewModel @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 val parser = EpubParser(appContext)
-                val state = parser.openFile(File(filePath))
+                val state = parser.openFile(filePath)
                 if (state !is EpubState.Loaded) {
                     Log.w("ReadingModeVM", "loadEpubChapters: openFile failed: $state")
                     parser.close()
@@ -523,11 +524,26 @@ class ReadingModeViewModel @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 val file = File(filePath)
-                if (!file.exists()) return@withContext emptyList<ReadingChapter>()
+                // On Android 10+ with scoped storage, copy to cache if direct access fails
+                val effectiveFile = if (file.exists()) file else {
+                    try {
+                        val uri = android.net.Uri.parse("file://$filePath")
+                        val inputStream = appContext.contentResolver.openInputStream(uri) ?: return@withContext emptyList()
+                        val cacheFile = File(appContext.cacheDir, "pdf_reading_${filePath.hashCode().toString(16)}.pdf")
+                        FileOutputStream(cacheFile).use { out: java.io.OutputStream ->
+                            inputStream.copyTo(out)
+                        }
+                        inputStream.close()
+                        cacheFile
+                    } catch (e: Exception) {
+                        return@withContext emptyList()
+                    }
+                }
+                if (!effectiveFile.exists()) return@withContext emptyList()
 
                 val chapters = mutableListOf<ReadingChapter>()
                 val structuredExtractor = com.mimiral.app.data.reader.PdfStructuredExtractor()
-                val document = PDDocument.load(file)
+                val document = PDDocument.load(effectiveFile)
 
                 try {
                     val totalPages = document.numberOfPages
@@ -544,7 +560,7 @@ class ReadingModeViewModel @Inject constructor(
 
                         // Use structured extractor for richer content
                         val blocks = structuredExtractor.extractPages(
-                            file,
+                            effectiveFile,
                             pageStart,
                             pageEnd - 1
                         )
@@ -610,7 +626,23 @@ class ReadingModeViewModel @Inject constructor(
     private suspend fun loadTxtChapters(filePath: String): List<ReadingChapter> =
         withContext(Dispatchers.IO) {
             try {
-                val file = File(filePath)
+                val directFile = File(filePath)
+                val file = if (directFile.exists()) directFile else {
+                    // Scoped storage: copy to cache via ContentResolver
+                    try {
+                        val uri = android.net.Uri.parse("file://$filePath")
+                        val inputStream = appContext.contentResolver.openInputStream(uri)
+                            ?: return@withContext emptyList()
+                        val cacheFile = File(appContext.cacheDir, "txt_cache_${filePath.hashCode().toString(16)}.txt")
+                        FileOutputStream(cacheFile).use { out ->
+                            inputStream.copyTo(out)
+                        }
+                        inputStream.close()
+                        cacheFile
+                    } catch (e: Exception) {
+                        return@withContext emptyList()
+                    }
+                }
                 if (!file.exists()) return@withContext emptyList<ReadingChapter>()
 
                 val parser = TxtParser()

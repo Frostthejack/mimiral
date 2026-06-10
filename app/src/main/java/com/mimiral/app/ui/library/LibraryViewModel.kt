@@ -72,6 +72,7 @@ class LibraryViewModel @Inject constructor(
     private val _viewMode = MutableStateFlow(ViewMode.GRID)
     private val _isRefreshing = MutableStateFlow(false)
     private val _scanState = MutableStateFlow<ScanState>(ScanState.Idle)
+    private val _scanDirectories = mutableSetOf<String>()
 
     init {
         viewModelScope.launch {
@@ -79,6 +80,8 @@ class LibraryViewModel @Inject constructor(
                 _sortOption.value = settings.sortOption
                 _filterOption.value = settings.filterOption
                 _viewMode.value = settings.viewMode
+                _scanDirectories.clear()
+                _scanDirectories.addAll(settings.scanDirectories)
             }
         }
         viewModelScope.launch {
@@ -204,7 +207,16 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun refreshLibrary() {
-        libraryRepository.refreshLibrary()
+        // Build additional roots from user-configured scan directories
+        val additionalRoots = _scanDirectories.mapNotNull { path ->
+            try {
+                val file = java.io.File(path)
+                if (file.exists() && file.isDirectory) file else null
+            } catch (_: Exception) {
+                null
+            }
+        }
+        libraryRepository.refreshLibrary(additionalRoots)
     }
 
     fun deleteBook(book: BookEntity) {

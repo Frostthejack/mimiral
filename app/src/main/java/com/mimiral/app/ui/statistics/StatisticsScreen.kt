@@ -17,6 +17,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CalendarViewWeek
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Menu
@@ -45,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -181,6 +185,20 @@ private fun StatisticsContent(
                     value = uiState.todayMinutes.toString(),
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Session count (from ReadingStatsScreen)
+            if (uiState.todaySessionCount > 0) {
+                Spacer(modifier = Modifier.height(12.dp))
+                val sessionLabel = "${uiState.todaySessionCount} reading session" +
+                    "${if (uiState.todaySessionCount != 1) "s" else ""}"
+                StatCard(
+                    icon = Icons.Default.Timer,
+                    label = "Sessions",
+                    value = sessionLabel,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

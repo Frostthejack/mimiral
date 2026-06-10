@@ -113,19 +113,53 @@ class EpubParser(private val context: Context) {
         val properties: List<String> = emptyList()
     )
 
-    suspend fun openFile(file: File): EpubState = mutex.withLock {
+    suspend fun openFile(filePath: String): EpubState = mutex.withLock {
         withContext(Dispatchers.IO) {
             try {
+                val directFile = File(filePath)
+                val file = if (directFile.exists()) directFile else {
+                    // Scoped storage: copy to cache via ContentResolver
+                    try {
+                        val uri = android.net.Uri.parse("file://$filePath")
+                        val inputStream = context.contentResolver.openInputStream(uri)
+                            ?: return@withContext EpubState.Error("Cannot open file: $filePath").also { state = it }
+                        val cacheFile = java.io.File(context.cacheDir, "epub_cache_${filePath.hashCode().toString(16)}.epub")
+                        java.io.FileOutputStream(cacheFile).use { out: java.io.OutputStream ->
+                            inputStream.copyTo(out)
+                        }
+                        inputStream.close()
+                        cacheFile
+                    } catch (e: Exception) {
+                        return@withContext EpubState.Error("Failed to access file: ${e.message}").also { state = it }
+                    }
+                }
+                openFileInternal(file, filePath)
+            } catch (e: Exception) {
+                val error = EpubState.Error("Failed to open EPUB: ${e.message}")
+                state = error
+                error
+            }
+        }
+    }
+
+    suspend fun openFile(file: File): EpubState = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            openFileInternal(file, file.absolutePath)
+        }
+    }
+
+    private fun openFileInternal(file: File, originalPath: String): EpubState {
+        return try {
                 if (!file.exists()) {
                     val error = EpubState.Error("File not found: ${file.absolutePath}")
                     state = error
-                    return@withContext error
+                    return error
                 }
 
                 if (!file.canRead()) {
                     val error = EpubState.Error("Cannot read file: ${file.absolutePath}")
                     state = error
-                    return@withContext error
+                    return error
                 }
 
                 closeInternal()
@@ -134,13 +168,13 @@ class EpubParser(private val context: Context) {
                 ZipFile(file).use { zip ->
                     // Step 1: Read META-INF/container.xml to find OPF path
                     val opfPath = findOpfPath(zip)
-                        ?: return@withContext EpubState.Error(
+                        ?: return EpubState.Error(
                             "Could not find OPUB package document (OPF)"
                         ).also { state = it }
 
                     // Step 2: Parse OPF for metadata, manifest, and spine
                     val opfEntry = zip.getEntry(opfPath)
-                        ?: return@withContext EpubState.Error(
+                        ?: return EpubState.Error(
                             "OPF file not found in EPUB: $opfPath"
                         ).also { state = it }
 
@@ -188,9 +222,8 @@ class EpubParser(private val context: Context) {
                 error
             }
         }
-    }
 
-    suspend fun getChapters(): List<EpubChapter> = mutex.withLock {
+        suspend fun getChapters(): List<EpubChapter> = mutex.withLock {
         return@withLock chapters
     }
 

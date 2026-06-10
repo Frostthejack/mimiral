@@ -52,8 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
-import com.mimiral.app.data.opds.OpdsEntry
-import com.mimiral.app.data.opds.OpdsRel
+import com.mimiral.app.data.remote.opds.OpdsEntry
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,11 +147,10 @@ fun OpdsCatalogScreen(
                         entries = uiState.currentFeed!!.entries,
                         isDownloading = uiState.isDownloading,
                         onBookClick = { entry ->
-                            // Navigate to sub-feed if entry has navigation links
-                            val navLink = entry.navigationLinks.firstOrNull {
-                                it.type.contains("atom", ignoreCase = true)
-                            }
-                            if (navLink != null) {
+                            // Navigate to sub-feed if entry is a navigation entry
+                            val navLink = entry.navigationLink
+                                ?: entry.links.firstOrNull { it.isNavigation }
+                            if (navLink != null && entry.isNavigationEntry) {
                                 viewModel.navigateToFeed(navLink.href)
                             }
                         },
@@ -340,7 +338,7 @@ private fun OpdsBookCard(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                val coverUrl = entry.coverLink?.href ?: entry.thumbnailLink?.href
+                val coverUrl = entry.coverImageUrl ?: entry.thumbnailUrl
                 if (coverUrl != null) {
                     AsyncImage(
                         model = coverUrl,
@@ -375,7 +373,7 @@ private fun OpdsBookCard(
                 if (entry.authors.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = entry.authors.joinToString(", "),
+                        text = entry.authors.joinToString(", ") { it.name },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -386,9 +384,7 @@ private fun OpdsBookCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Download button
-                val hasDownload = entry.acquisitionLinks.any {
-                    OpdsRel.isAcquisition(it.rel)
-                }
+                val hasDownload = entry.acquisitionLinks.isNotEmpty()
                 if (hasDownload) {
                     OutlinedButton(
                         onClick = onDownloadClick,

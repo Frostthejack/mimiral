@@ -9,6 +9,7 @@ import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -31,6 +32,8 @@ class PdfRenderer : AutoCloseable {
     private var pdfRenderer: AndroidPdfRenderer? = null
     private var fileDescriptor: ParcelFileDescriptor? = null
     private var openedFilePath: String? = null
+    private var cachedFile: File? = null
+    private var context: Context? = null
 
     /** Total number of pages in the opened document. */
     val pageCount: Int
@@ -49,7 +52,8 @@ class PdfRenderer : AutoCloseable {
      * Constructor for use with open(filePath) pattern.
      */
     constructor(context: Context) {
-        // Context available for future use (e.g., content resolver)
+        // Context available for content resolver and cache access
+        this.context = context.applicationContext
     }
 
     /**
@@ -73,11 +77,14 @@ class PdfRenderer : AutoCloseable {
 
     /**
      * Open a PDF file from a file path.
+     * On Android 10+ with scoped storage, direct File access may fail for shared
+     * storage paths. This method falls back to copying the file to app-private
+     * cache via ContentResolver when direct access is denied.
      */
     fun open(filePath: String): Result<Unit> {
         return try {
             close()
-            val file = File(filePath)
+            val file = resolveFile(filePath)
             if (!file.exists()) {
                 return Result.failure(FileNotFoundException("PDF file not found: $filePath"))
             }
@@ -96,6 +103,32 @@ class PdfRenderer : AutoCloseable {
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Resolve a file path to a usable File object.
+     * If the path is directly accessible (app-private storage), returns it as-is.
+     * If not (shared storage on Android 10+), copies to app-private cache first.
+     */
+    private fun resolveFile(filePath: String): File {
+        val directFile = File(filePath)
+        if (directFile.exists()) return directFile
+
+        // Direct access failed — try copying from shared storage via ContentResolver
+        val ctx = context ?: return directFile
+        try {
+            val uri = android.net.Uri.parse("file://$filePath")
+            val inputStream = ctx.contentResolver.openInputStream(uri) ?: return directFile
+            val cacheFile = File(ctx.cacheDir, "pdf_cache_${filePath.hashCode().toString(16)}.pdf")
+            FileOutputStream(cacheFile).use { out ->
+                inputStream.copyTo(out)
+            }
+            inputStream.close()
+            cachedFile = cacheFile
+            return cacheFile
+        } catch (e: Exception) {
+            return directFile
         }
     }
 
@@ -187,8 +220,8 @@ class PdfRenderer : AutoCloseable {
             val pageHeight = page.height
             page.close()
 
-            // Use PDFBox for text extraction
-            val file = File(filePath)
+            // Use PDFBox for text extraction — resolve file for scoped storage
+            val file = resolveFile(filePath)
             if (!file.exists()) {
                 PageText("", false, pageIndex, pageWidth, pageHeight)
             } else {
@@ -239,7 +272,7 @@ class PdfRenderer : AutoCloseable {
             if (pageIndex < 0 || pageIndex >= renderer.pageCount) return@withContext emptyList()
 
             val filePath = openedFilePath ?: return@withContext emptyList()
-            val file = File(filePath)
+            val file = resolveFile(filePath)
             if (!file.exists()) return@withContext emptyList()
 
             structuredExtractor.extractPage(file, pageIndex)

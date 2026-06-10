@@ -16,12 +16,6 @@ object OpdsModule {
 
     @Provides
     @Singleton
-    fun provideOpdsClient(): com.mimiral.app.data.opds.OpdsClient {
-        return com.mimiral.app.data.opds.OpdsClient()
-    }
-
-    @Provides
-    @Singleton
     fun provideRemoteOpdsClient(): com.mimiral.app.data.remote.opds.OpdsClient {
         return com.mimiral.app.data.remote.opds.OpdsClient()
     }

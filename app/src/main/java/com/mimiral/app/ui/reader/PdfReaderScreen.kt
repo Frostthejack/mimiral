@@ -148,7 +148,9 @@ fun PdfReaderScreen(
     val pdfRenderer = remember(uiState.filePath) {
         if (uiState.filePath.isNotEmpty()) {
             try {
-                PdfRenderer(java.io.File(uiState.filePath))
+                val renderer = PdfRenderer(context)
+                renderer.open(uiState.filePath).getOrThrow()
+                renderer
             } catch (e: Exception) {
                 null
             }

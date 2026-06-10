@@ -1,7 +1,6 @@
 package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
-import com.mimiral.app.data.local.dao.ServerDao
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,25 +20,10 @@ import javax.inject.Singleton
  */
 @Singleton
 class KavitaStatsRepository @Inject constructor(
-    private val serverDao: ServerDao
+    private val kavitaApi: KavitaApi
 ) {
     companion object {
         private const val TAG = "KavitaStatsRepository"
-        private const val NO_SERVER_MSG =
-            "No Kavita server configured. Please add a Kavita server in Settings."
-    }
-
-    /**
-     * Resolve the active server and create a KavitaClient.
-     * Returns null if no server is configured.
-     */
-    private suspend fun createClientFromDb(): KavitaClient? {
-        val activeServer = serverDao.getActiveServerByType("KAVITA") ?: return null
-        if (activeServer.url.isBlank()) return null
-        return KavitaClient.create(
-            baseUrl = activeServer.url,
-            apiKey = activeServer.apiKey
-        )
     }
 
     /**
@@ -47,10 +31,13 @@ class KavitaStatsRepository @Inject constructor(
      * GET /api/Stats/reading-activity
      */
     suspend fun getReadingActivity(): KavitaResult<List<KavitaReadingActivity>> {
-        val client = createClientFromDb()
-            ?: return KavitaResult.Error(message = NO_SERVER_MSG)
         return try {
-            client.getReadingActivity()
+            val response = kavitaApi.getReadingActivity()
+            if (response.isSuccessful) {
+                KavitaResult.Success(response.body() ?: emptyList())
+            } else {
+                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching reading activity: ${e.message}", e)
             KavitaResult.Error(message = "Failed to fetch reading activity: ${e.message}")
@@ -62,10 +49,13 @@ class KavitaStatsRepository @Inject constructor(
      * GET /api/Stats/genre-breakdown
      */
     suspend fun getGenreBreakdown(): KavitaResult<List<KavitaGenreBreakdown>> {
-        val client = createClientFromDb()
-            ?: return KavitaResult.Error(message = NO_SERVER_MSG)
         return try {
-            client.getGenreBreakdown()
+            val response = kavitaApi.getGenreBreakdown()
+            if (response.isSuccessful) {
+                KavitaResult.Success(response.body() ?: emptyList())
+            } else {
+                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching genre breakdown: ${e.message}", e)
             KavitaResult.Error(message = "Failed to fetch genre breakdown: ${e.message}")
@@ -77,10 +67,13 @@ class KavitaStatsRepository @Inject constructor(
      * GET /api/Stats/pages-per-year
      */
     suspend fun getPagesPerYear(): KavitaResult<List<KavitaPagesPerYear>> {
-        val client = createClientFromDb()
-            ?: return KavitaResult.Error(message = NO_SERVER_MSG)
         return try {
-            client.getPagesPerYear()
+            val response = kavitaApi.getPagesPerYear()
+            if (response.isSuccessful) {
+                KavitaResult.Success(response.body() ?: emptyList())
+            } else {
+                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching pages per year: ${e.message}", e)
             KavitaResult.Error(message = "Failed to fetch pages per year: ${e.message}")
@@ -92,10 +85,13 @@ class KavitaStatsRepository @Inject constructor(
      * GET /api/Stats/reading-pace
      */
     suspend fun getReadingPace(): KavitaResult<List<KavitaReadingPace>> {
-        val client = createClientFromDb()
-            ?: return KavitaResult.Error(message = NO_SERVER_MSG)
         return try {
-            client.getReadingPace()
+            val response = kavitaApi.getReadingPace()
+            if (response.isSuccessful) {
+                KavitaResult.Success(response.body() ?: emptyList())
+            } else {
+                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching reading pace: ${e.message}", e)
             KavitaResult.Error(message = "Failed to fetch reading pace: ${e.message}")
@@ -107,10 +103,13 @@ class KavitaStatsRepository @Inject constructor(
      * GET /api/Stats/favorite-authors
      */
     suspend fun getFavoriteAuthors(): KavitaResult<List<KavitaFavoriteAuthor>> {
-        val client = createClientFromDb()
-            ?: return KavitaResult.Error(message = NO_SERVER_MSG)
         return try {
-            client.getFavoriteAuthors()
+            val response = kavitaApi.getFavoriteAuthors()
+            if (response.isSuccessful) {
+                KavitaResult.Success(response.body() ?: emptyList())
+            } else {
+                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching favorite authors: ${e.message}", e)
             KavitaResult.Error(message = "Failed to fetch favorite authors: ${e.message}")
@@ -124,15 +123,16 @@ class KavitaStatsRepository @Inject constructor(
     suspend fun getSeriesReadingHistory(
         seriesId: Int
     ): KavitaResult<KavitaSeriesReadingHistory> {
-        val client = createClientFromDb()
-            ?: return KavitaResult.Error(message = NO_SERVER_MSG)
         return try {
-            client.getSeriesReadingHistory(seriesId)
+            val response = kavitaApi.getSeriesReadingHistory(seriesId)
+            if (response.isSuccessful) {
+                KavitaResult.Success(response.body() ?: KavitaSeriesReadingHistory(seriesId = seriesId, totalPagesRead = 0))
+            } else {
+                KavitaResult.Error(message = "HTTP ${response.code()}: ${response.message()}", code = response.code())
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching series reading history: ${e.message}", e)
-            KavitaResult.Error(
-                message = "Failed to fetch series reading history: ${e.message}"
-            )
+            KavitaResult.Error(message = "Failed to fetch series reading history: ${e.message}")
         }
     }
 }

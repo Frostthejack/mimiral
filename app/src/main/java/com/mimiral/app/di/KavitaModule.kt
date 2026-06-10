@@ -66,13 +66,13 @@ object KavitaModule {
     @Singleton
     fun provideKavitaRepository(
         @ApplicationContext context: Context,
-        kavitaClient: KavitaClient,
+        kavitaApi: com.mimiral.app.data.remote.kavita.KavitaApi,
         serverDao: ServerDao,
         bookRepository: BookRepository
     ): KavitaRepository {
         return KavitaRepository(
             context = context,
-            kavitaClient = kavitaClient,
+            kavitaApi = kavitaApi,
             serverDao = serverDao,
             bookRepository = bookRepository
         )
@@ -81,8 +81,8 @@ object KavitaModule {
     @Provides
     @Singleton
     fun provideKavitaStatsRepository(
-        serverDao: ServerDao
+        kavitaApi: com.mimiral.app.data.remote.kavita.KavitaApi
     ): KavitaStatsRepository {
-        return KavitaStatsRepository(serverDao = serverDao)
+        return KavitaStatsRepository(kavitaApi = kavitaApi)
     }
 }

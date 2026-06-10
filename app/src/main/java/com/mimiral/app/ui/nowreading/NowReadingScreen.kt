@@ -58,7 +58,7 @@ fun NowReadingScreen(
     onBookClick: (bookId: Int, format: String) -> Unit = { _, _ -> },
     onNavigateToLibrary: () -> Unit = {},
     onNavigateToKavitaSeries: (seriesId: Int) -> Unit = {},
-    onContinueReading: () -> Unit = {},
+    onContinueReading: (seriesId: Int) -> Unit = {},
     onOpenDrawer: () -> Unit = {},
     viewModel: NowReadingViewModel = hiltViewModel()
 ) {
@@ -145,7 +145,7 @@ fun NowReadingScreen(
 @Composable
 private fun ContinueReadingCard(
     continuePoint: KavitaContinuePointDto,
-    onContinueReading: () -> Unit
+    onContinueReading: (seriesId: Int) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -193,7 +193,7 @@ private fun ContinueReadingCard(
                     )
                 }
             }
-            FilledTonalButton(onClick = onContinueReading) {
+            FilledTonalButton(onClick = { onContinueReading(continuePoint.seriesId) }) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = null,
