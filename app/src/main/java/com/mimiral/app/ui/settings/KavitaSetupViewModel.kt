@@ -56,6 +56,17 @@ class KavitaSetupViewModel @Inject constructor(
         private const val TAG = "KavitaSetupVM"
     }
 
+    // Single OkHttpClient instance reused across all testConnection() calls
+    // to avoid leaking sockets and threads on each invocation.
+    private val testClient: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(10, TimeUnit.SECONDS)
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BASIC
+        })
+        .build()
+
     private val _uiState = MutableStateFlow(KavitaSetupUiState())
     val uiState: StateFlow<KavitaSetupUiState> = _uiState.asStateFlow()
 
@@ -157,8 +168,7 @@ class KavitaSetupViewModel @Inject constructor(
             )
 
             try {
-                val client = createTestClient(normalizedUrl, state)
-                val result = testServerConnection(client, normalizedUrl, state)
+                val result = testServerConnection(testClient, normalizedUrl, state)
 
                 when {
                     result.isSuccess -> {
@@ -297,47 +307,6 @@ class KavitaSetupViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
-    }
-
-    /**
-     * Create an OkHttp client for testing the connection.
-     */
-    private fun createTestClient(baseUrl: String, state: KavitaSetupUiState): OkHttpClient {
-        val builder = OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .writeTimeout(10, TimeUnit.SECONDS)
-
-        // Add logging
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
-        }
-        builder.addInterceptor(logging)
-
-        // Add auth interceptor
-        builder.addInterceptor { chain ->
-            val requestBuilder = chain.request().newBuilder()
-                .header("User-Agent", "Mimiral/0.1.0")
-                .header("Accept", "*/*")
-
-            when (state.authMethod) {
-                AuthMethod.USERNAME_PASSWORD -> {
-                    // For username/password, we try to login first via /api/Auth/login
-                    // The login test is handled separately in testServerConnection
-                }
-                AuthMethod.API_KEY -> {
-                    // API key is passed in the URL path (/api/opds/<key>), not as header
-                    // But also support header-based auth for other endpoints
-                    if (state.apiKey.isNotBlank()) {
-                        requestBuilder.header("X-Api-Key", state.apiKey.trim())
-                    }
-                }
-            }
-
-            chain.proceed(requestBuilder.build())
-        }
-
-        return builder.build()
     }
 
     /**
