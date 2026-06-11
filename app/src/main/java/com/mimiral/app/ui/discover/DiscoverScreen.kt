@@ -65,7 +65,7 @@ import com.mimiral.app.data.remote.kavita.KavitaLibrary
 @Composable
 fun DiscoverScreen(
     viewModel: DiscoverViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit = {},
+    onNavigateBackToDrawer: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
     onNavigateToKavitaSeries: (Int) -> Unit = {}
 ) {
@@ -81,7 +81,7 @@ fun DiscoverScreen(
                     if (uiState.navigationStack.size > 1) {
                         viewModel.navigateBack()
                     } else {
-                        onNavigateBack()
+                        onNavigateBackToDrawer()
                     }
                 },
                 onOpenDrawer = onOpenDrawer

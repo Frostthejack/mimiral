@@ -65,6 +65,7 @@ import coil.compose.AsyncImage
 import com.mimiral.app.data.remote.ChapterDto
 import com.mimiral.app.data.remote.VolumeDto
 import com.mimiral.app.data.remote.kavita.KavitaReview
+import com.mimiral.app.ui.kavita.RatingReviewViewModel
 import com.mimiral.app.ui.wanttoread.WantToReadToggleChip
 import kotlinx.coroutines.launch
 

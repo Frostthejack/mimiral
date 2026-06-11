@@ -130,14 +130,14 @@ fun AccessibilitySettingsScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = "Font Size",
+                                text = "App Font Scale",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Adjust text size across the app for better readability",
+                            text = "Scales all text across the app for better readability",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

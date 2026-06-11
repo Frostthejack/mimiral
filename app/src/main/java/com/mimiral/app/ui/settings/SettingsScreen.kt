@@ -108,11 +108,9 @@ fun SettingsScreen(
     backupRestoreViewModel: BackupRestoreViewModel = viewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val settingsRepository = remember { ReaderSettingsRepository(context) }
-    val syncSettingsRepository = remember { SyncSettingsRepository(context) }
     val scope = rememberCoroutineScope()
 
-    // Repositories
+    // Repositories (single instances — reuse throughout)
     val readerSettingsRepo = remember { ReaderSettingsRepository(context) }
     val librarySettingsRepo = remember { LibrarySettingsRepository(context) }
     val syncSettingsRepo = remember { SyncSettingsRepository(context) }
@@ -125,7 +123,7 @@ fun SettingsScreen(
     val librarySettings by librarySettingsRepo.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.LibrarySettings()
     )
-    val syncSettings by syncSettingsRepository.settings.collectAsState(
+    val syncSettings by syncSettingsRepo.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.SyncSettings()
     )
     val readingModeSettings by readingModeSettingsRepo.settings.collectAsState(
@@ -287,14 +285,6 @@ fun SettingsScreen(
                 }
             }
 
-// ── Reading Section ───────────────────────────────
-            Text(
-                text = "Reading",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
             // ═══════════════════════════════════════════════════
             // SECTION: Reading Mode
             // ═══════════════════════════════════════════════════
@@ -400,7 +390,7 @@ fun SettingsScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    text = "Font Size",
+                                    text = "Reader Font Size",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -412,6 +402,12 @@ fun SettingsScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Adjusts the base font size for book text",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Slider(
                             value = readingModeSettings.fontSize.toFloat(),
                             onValueChange = { size ->
@@ -1055,7 +1051,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Sync,
                         checked = syncSettings.autoSyncEnabled,
                         onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepository.setAutoSyncEnabled(enabled) }
+                            scope.launch { syncSettingsRepo.setAutoSyncEnabled(enabled) }
                         }
                     )
 
@@ -1083,7 +1079,7 @@ fun SettingsScreen(
                         SyncIntervalSelector(
                             selectedInterval = syncSettings.syncInterval,
                             onIntervalSelected = { interval ->
-                                scope.launch { syncSettingsRepository.setSyncInterval(interval) }
+                                scope.launch { syncSettingsRepo.setSyncInterval(interval) }
                             }
                         )
                     }
@@ -1097,7 +1093,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Wifi,
                         checked = syncSettings.syncOnWifiOnly,
                         onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepository.setSyncOnWifiOnly(enabled) }
+                            scope.launch { syncSettingsRepo.setSyncOnWifiOnly(enabled) }
                         }
                     )
 
@@ -1136,7 +1132,7 @@ fun SettingsScreen(
                             options = ProgressSyncMode.entries,
                             selected = syncSettings.progressSyncMode,
                             onSelect = { mode ->
-                                scope.launch { syncSettingsRepository.setProgressSyncMode(mode) }
+                                scope.launch { syncSettingsRepo.setProgressSyncMode(mode) }
                             },
                             labelFor = { it.displayName }
                         )
@@ -1188,7 +1184,7 @@ fun SettingsScreen(
                                         OutlinedButton(
                                             onClick = {
                                                 scope.launch {
-                                                    syncSettingsRepository
+                                                    syncSettingsRepo
                                                         .setKoreaderDeviceId(deviceIdText)
                                                 }
                                             }
@@ -1217,7 +1213,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Sync,
                         checked = syncSettings.syncReadingProgress,
                         onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepository.setSyncReadingProgress(enabled) }
+                            scope.launch { syncSettingsRepo.setSyncReadingProgress(enabled) }
                         }
                     )
 
@@ -1229,7 +1225,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Book,
                         checked = syncSettings.syncBookmarks,
                         onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepository.setSyncBookmarks(enabled) }
+                            scope.launch { syncSettingsRepo.setSyncBookmarks(enabled) }
                         }
                     )
 
@@ -1241,7 +1237,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Highlight,
                         checked = syncSettings.syncHighlights,
                         onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepository.setSyncHighlights(enabled) }
+                            scope.launch { syncSettingsRepo.setSyncHighlights(enabled) }
                         }
                     )
                 }

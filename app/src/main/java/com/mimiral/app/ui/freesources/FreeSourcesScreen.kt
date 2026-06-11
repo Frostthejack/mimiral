@@ -243,7 +243,7 @@ private fun SourceSelectionView(
                         )
                         Text(
                             text = "Add custom OPDS catalogs from Calibre, Komga, " +
-                                "or any OPDS-compatible server in a future update.",
+                                "or any OPDS-compatible server.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
                         )

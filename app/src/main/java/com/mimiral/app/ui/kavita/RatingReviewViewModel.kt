@@ -1,4 +1,4 @@
-package com.mimiral.app.ui.discover
+package com.mimiral.app.ui.kavita
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
