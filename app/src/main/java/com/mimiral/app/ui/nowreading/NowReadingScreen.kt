@@ -266,10 +266,9 @@ private fun OnDeckCard(
                 } else {
                     Icon(
                         imageVector = Icons.Default.Book,
-                        contentDescription = null,
+                        contentDescription = "Book cover placeholder",
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
             // Title + progress
@@ -327,7 +326,7 @@ private fun EmptyNowReadingState(
             Button(onClick = onNavigateToLibrary) {
                 Icon(
                     imageVector = Icons.Default.LibraryBooks,
-                    contentDescription = null,
+                    contentDescription = "Library",
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))

@@ -395,20 +395,20 @@ private fun SeriesGridCard(
                 ) {
                     Icon(
                         Icons.Filled.MenuBook,
-                        contentDescription = null,
+                        contentDescription = "Book cover placeholder",
                         modifier = Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+        }
 
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text(
-                    text = series.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = series.name,
                 )
                 if (series.pages > 0) {
                     Text(
@@ -486,7 +486,7 @@ private fun SeriesHeader(series: SeriesDetail) {
             ) {
                 Icon(
                     Icons.Filled.MenuBook,
-                    contentDescription = null,
+                    contentDescription = "Book cover placeholder",
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -556,7 +556,7 @@ private fun VolumeCard(volume: VolumeItem) {
                 ) {
                     Icon(
                         Icons.Filled.Book,
-                        contentDescription = null,
+                        contentDescription = "Book cover placeholder",
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )

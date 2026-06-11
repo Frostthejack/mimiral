@@ -421,7 +421,7 @@ private fun ChapterBookmarkGroup(
                 Icon(
                     imageVector = Icons.Default.Bookmark,
                     contentDescription = "Bookmark",
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))

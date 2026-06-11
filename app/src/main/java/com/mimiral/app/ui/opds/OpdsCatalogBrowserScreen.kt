@@ -205,7 +205,7 @@ private fun CatalogListView(
         ) {
             Icon(
                 imageVector = Icons.Default.Cloud,
-                contentDescription = null,
+                contentDescription = "No catalogs",
                 modifier = Modifier.size(80.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
             )
@@ -227,7 +227,7 @@ private fun CatalogListView(
             Button(onClick = { /* FAB handles this */ }) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = null,
+                    contentDescription = "Add catalog",
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -287,7 +287,7 @@ private fun CatalogListItem(
         ) {
             Icon(
                 imageVector = Icons.Default.Cloud,
-                contentDescription = null,
+                contentDescription = "Catalog icon",
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -313,7 +313,7 @@ private fun CatalogListItem(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Person,
-                            contentDescription = null,
+                            contentDescription = "Username",
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -335,7 +335,7 @@ private fun CatalogListItem(
             }
             Icon(
                 imageVector = Icons.Default.KeyboardArrowRight,
-                contentDescription = null,
+                contentDescription = "Open catalog",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -459,7 +459,7 @@ private fun FeedView(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ArrowForward,
-                                contentDescription = null,
+                                contentDescription = "Load more",
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -481,7 +481,7 @@ private fun FeedView(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = null,
+                        contentDescription = "No items",
                         modifier = Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
@@ -511,7 +511,7 @@ private fun NavigationEntryItem(
     ) {
         Icon(
             imageVector = Icons.Default.ArrowForward,
-            contentDescription = null,
+            contentDescription = "Navigate",
             modifier = Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.primary
         )
@@ -534,7 +534,7 @@ private fun NavigationEntryItem(
         }
         Icon(
             imageVector = Icons.Default.KeyboardArrowRight,
-            contentDescription = null,
+            contentDescription = "Open entry",
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -571,7 +571,7 @@ private fun BookEntryItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.LibraryBooks,
-                    contentDescription = null,
+                    contentDescription = "Book cover placeholder",
                     modifier = Modifier.size(32.dp),
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                 )
@@ -622,7 +622,7 @@ private fun BookEntryItem(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Download,
-                                    contentDescription = null,
+                                    contentDescription = "Download $formatLabel",
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))

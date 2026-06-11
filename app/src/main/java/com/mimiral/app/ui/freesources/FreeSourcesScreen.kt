@@ -340,7 +340,7 @@ private fun SourceCard(
                             FreeSource.OPEN_LIBRARY -> Icons.Default.LibraryBooks
                         },
                         contentDescription = "${source.displayName} icon",
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
@@ -817,7 +817,7 @@ private fun BookEntryCard(
                     isDownloading -> {
                         FilledTonalButton(onClick = {}, enabled = false) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(48.dp),
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -829,7 +829,7 @@ private fun BookEntryCard(
                             Icon(
                                 Icons.Default.CheckCircle,
                                 contentDescription = "Downloaded",
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(48.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -845,7 +845,7 @@ private fun BookEntryCard(
                             Icon(
                                 Icons.Default.Download,
                                 contentDescription = "Download",
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(48.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Download")
