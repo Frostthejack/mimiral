@@ -501,6 +501,7 @@ class TTSManager(
         }
         if (result != TextToSpeech.SUCCESS) {
             Log.e(TAG, "speak() failed for utterance " + item.utteranceId)
+            onUtteranceDone.forEach { cb -> cb(item.utteranceId, false) }
             speakNext()
         }
     }
