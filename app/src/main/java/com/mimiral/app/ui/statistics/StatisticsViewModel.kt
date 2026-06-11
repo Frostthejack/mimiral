@@ -102,7 +102,7 @@ class StatisticsViewModel @Inject constructor(
                         val daySessions = allSessions.filter { it.sessionDate == date.toEpochDay() }
                         DailyStat(
                             date = date.format(dateFormatter),
-                            totalSeconds = daySessions.sumOf { it.durationMs },
+                            totalSeconds = daySessions.sumOf { it.durationMs / 1000 },
                             totalPages = daySessions.sumOf { it.pagesRead },
                             sessionCount = daySessions.size
                         )
@@ -112,7 +112,7 @@ class StatisticsViewModel @Inject constructor(
                         isLoading = false,
                         totalBooksRead = booksCompleted,
                         totalPagesRead = totalPages,
-                        totalReadingTimeSeconds = totalMs,
+                        totalReadingTimeSeconds = totalMs / 1000,
                         todayPages = todayPages,
                         todayMinutes = todayMs / 60000,
                         todaySessionCount = todaySessions.size,
