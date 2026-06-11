@@ -51,13 +51,21 @@ interface CollectionDao {
     @Query("SELECT COUNT(*) FROM collections")
     suspend fun getCollectionCount(): Int
 
-    @Query("SELECT books.* FROM books INNER JOIN book_collections ON books.id = book_collections.book_id WHERE book_collections.collection_id = :collectionId")
+    @Query(
+        "SELECT books.* FROM books " +
+            "INNER JOIN book_collections ON books.id = book_collections.book_id " +
+            "WHERE book_collections.collection_id = :collectionId"
+    )
     fun getBooksInCollection(collectionId: Int): Flow<List<BookEntity>>
 
     @Query("SELECT COUNT(*) FROM book_collections WHERE collection_id = :collectionId")
     suspend fun getBookCountInCollection(collectionId: Int): Int
 
-    @Query("SELECT collections.* FROM collections INNER JOIN book_collections ON collections.id = book_collections.collection_id WHERE book_collections.book_id = :bookId ORDER BY collections.sort_order")
+    @Query(
+        "SELECT collections.* FROM collections " +
+            "INNER JOIN book_collections ON collections.id = book_collections.collection_id " +
+            "WHERE book_collections.book_id = :bookId ORDER BY collections.sort_order"
+    )
     fun getCollectionsForBook(bookId: Int): Flow<List<CollectionEntity>>
 
     @Query("SELECT collection_id FROM book_collections WHERE book_id = :bookId")
@@ -70,6 +78,15 @@ interface CollectionDao {
      * Single-query batch fetch: returns all collections with their book counts
      * using a LEFT JOIN + GROUP BY, avoiding the N+1 query problem.
      */
-    @Query("SELECT collections.id AS id, collections.name AS name, collections.description AS description, collections.created_time AS createdTime, collections.sort_order AS sortOrder, COUNT(book_collections.book_id) AS bookCount FROM collections LEFT JOIN book_collections ON collections.id = book_collections.collection_id GROUP BY collections.id ORDER BY collections.sort_order")
+    @Query(
+        "SELECT collections.id AS id, collections.name AS name, " +
+            "collections.description AS description, " +
+            "collections.created_time AS createdTime, " +
+            "collections.sort_order AS sortOrder, " +
+            "COUNT(book_collections.book_id) AS bookCount " +
+            "FROM collections " +
+            "LEFT JOIN book_collections ON collections.id = book_collections.collection_id " +
+            "GROUP BY collections.id ORDER BY collections.sort_order"
+    )
     fun getAllCollectionsWithBookCount(): Flow<List<CollectionWithBookCount>>
 }
