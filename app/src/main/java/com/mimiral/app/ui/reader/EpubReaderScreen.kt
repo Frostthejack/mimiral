@@ -106,7 +106,7 @@ fun EpubReaderScreen(
     val focusRequester = remember { FocusRequester() }
 
     // Pagination engine
-    val paginationEngine = remember { PaginationEngine(context) }
+    val paginationEngine = remember(context) { PaginationEngine(context) }
 
     // Screen dimensions for pagination
     val configuration = LocalConfiguration.current
