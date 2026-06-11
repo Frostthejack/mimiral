@@ -33,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -65,47 +66,51 @@ fun DiscoverHubScreen(
     onNavigateToKavitaCollections: () -> Unit = {},
     onNavigateToFreeSources: () -> Unit = {}
 ) {
-    val kavitaItems = listOf(
-        HubItem(
-            title = "Kavita",
-            subtitle = "Browse your Kavita libraries",
-            icon = Icons.Filled.Explore,
-            onClick = onNavigateToDiscover
-        ),
-        HubItem(
-            title = "Kavita Feeds",
-            subtitle = "Collections, reading lists, on deck",
-            icon = Icons.Filled.AutoStories,
-            onClick = onNavigateToKavitaFeeds
-        ),
-        HubItem(
-            title = "Bookmarks",
-            subtitle = "Your Kavita bookmarks",
-            icon = Icons.Filled.Bookmarks,
-            onClick = onNavigateToKavitaBookmarks
-        ),
-        HubItem(
-            title = "Want To Read",
-            subtitle = "Your reading list",
-            icon = Icons.Outlined.BookmarkAdd,
-            onClick = onNavigateToWantToRead
-        ),
-        HubItem(
-            title = "Kavita Collections",
-            subtitle = "Browse Kavita collections",
-            icon = Icons.Filled.CollectionsBookmark,
-            onClick = onNavigateToKavitaCollections
+    val kavitaItems = remember {
+        listOf(
+            HubItem(
+                title = "Kavita",
+                subtitle = "Browse your Kavita libraries",
+                icon = Icons.Filled.Explore,
+                onClick = onNavigateToDiscover
+            ),
+            HubItem(
+                title = "Kavita Feeds",
+                subtitle = "Collections, reading lists, on deck",
+                icon = Icons.Filled.AutoStories,
+                onClick = onNavigateToKavitaFeeds
+            ),
+            HubItem(
+                title = "Bookmarks",
+                subtitle = "Your Kavita bookmarks",
+                icon = Icons.Filled.Bookmarks,
+                onClick = onNavigateToKavitaBookmarks
+            ),
+            HubItem(
+                title = "Want To Read",
+                subtitle = "Your reading list",
+                icon = Icons.Outlined.BookmarkAdd,
+                onClick = onNavigateToWantToRead
+            ),
+            HubItem(
+                title = "Kavita Collections",
+                subtitle = "Browse Kavita collections",
+                icon = Icons.Filled.CollectionsBookmark,
+                onClick = onNavigateToKavitaCollections
+            )
         )
-    )
+    }
 
-    val otherItems = listOf(
-        HubItem(
-            title = "Free Sources",
-            subtitle = "Open source book repositories",
-            icon = Icons.Filled.Public,
-            onClick = onNavigateToFreeSources
+    val otherItems = remember {
+        listOf(
+            HubItem(
+                title = "Free Sources",
+                subtitle = "Open source book repositories",
+                icon = Icons.Filled.Public,
+                onClick = onNavigateToFreeSources
+            )
         )
-    )
+    }
 
     Scaffold(
         topBar = {
