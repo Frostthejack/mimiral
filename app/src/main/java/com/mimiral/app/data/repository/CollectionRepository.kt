@@ -2,7 +2,7 @@ package com.mimiral.app.data.repository
 
 import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.CollectionDao
-import com.mimiral.app.data.local.dao.CollectionWithBookCount
+import com.mimiral.app.data.local.entity.CollectionWithBookCount
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.CollectionEntity

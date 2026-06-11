@@ -2,7 +2,7 @@ package com.mimiral.app.ui.collections
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mimiral.app.data.local.dao.CollectionWithBookCount
+import com.mimiral.app.data.local.entity.CollectionWithBookCount
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.CollectionEntity
 import com.mimiral.app.data.repository.CollectionRepository
