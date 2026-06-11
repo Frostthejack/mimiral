@@ -242,8 +242,22 @@ class WantToReadViewModel @Inject constructor(
      * Refresh the current page.
      */
     fun refresh() {
-        _uiState.update { it.copy(isRefreshing = true) }
-        loadPage(_uiState.value.currentPage)
-        _uiState.update { it.copy(isRefreshing = false) }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            val page = _uiState.value.currentPage
+            val state = _uiState.value
+            val filter = KavitaWantToReadFilter(
+                searchQuery = state.searchQuery.ifBlank { null },
+                libraryId = state.selectedLibraryId,
+                sortBy = state.sortBy,
+                sortDirection = state.sortDirection
+            )
+            repository.loadWantToRead(
+                pageNumber = page,
+                pageSize = state.pageSize,
+                filter = filter
+            )
+            _uiState.update { it.copy(isRefreshing = false) }
+        }
     }
 }
