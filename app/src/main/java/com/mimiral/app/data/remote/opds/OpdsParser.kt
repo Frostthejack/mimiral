@@ -22,7 +22,15 @@ class OpdsParser {
     companion object {
         private const val TAG = "OpdsParser"
 
-        private val factory: DocumentBuilderFactory = DocumentBuilderFactory.newInstance()
+        private val factory: DocumentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
+            // XXE protection: disable external entities and DTDs
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            setFeature("http://xml.org/sax/features/external-general-entities", false)
+            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+            setXIncludeAware(false)
+            setExpandEntityReferences(false)
+        }
     }
 
     /**

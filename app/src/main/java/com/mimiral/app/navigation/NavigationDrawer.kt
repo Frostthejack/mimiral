@@ -111,8 +111,15 @@ val drawerSections = listOf(
 /** Flat list of all drawer items (for convenience). */
 val allDrawerItems: List<DrawerNavItem> = drawerSections.flatMap { it.items }
 
-/** Set of routes that should show the drawer (top-level destinations). */
-val drawerRoutes: Set<String> = allDrawerItems.map { it.screen.route }.toSet()
+/**
+ * Set of routes that should show the drawer (top-level destinations).
+ * Filtered to non-parameterized routes only — parameterized routes like
+ * pdf_reader/{bookId} can never match a resolved route (e.g. pdf_reader/42).
+ */
+val drawerRoutes: Set<String> = allDrawerItems
+    .map { it.screen.route }
+    .filterNot { it.contains("{") }
+    .toSet()
 
 /**
  * The content inside the drawer sheet — extracted so it can be used

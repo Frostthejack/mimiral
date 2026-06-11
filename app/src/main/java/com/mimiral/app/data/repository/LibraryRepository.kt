@@ -118,10 +118,12 @@ class LibraryRepository @Inject constructor(
         chapterDao.getChapter(bookId, chapterIndex)
 
     suspend fun insertChapter(chapter: ChapterEntity): Long =
-        chapterDao.insertChapter(chapter)
+        if (chapter.content.isBlank()) 0L else chapterDao.insertChapter(chapter)
 
-    suspend fun insertChapters(chapters: List<ChapterEntity>) =
-        chapterDao.insertChapters(chapters)
+    suspend fun insertChapters(chapters: List<ChapterEntity>) {
+        val nonEmpty = chapters.filter { it.content.isNotBlank() }
+        if (nonEmpty.isNotEmpty()) chapterDao.insertChapters(nonEmpty)
+    }
 
     suspend fun deleteChaptersForBook(bookId: Int) =
         chapterDao.deleteChaptersForBook(bookId)

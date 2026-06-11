@@ -170,7 +170,7 @@ data class ChapterEntity(
     @ColumnInfo(name = "book_id") val bookId: Int,
     @ColumnInfo(name = "chapter_index") val chapterIndex: Int,
     val title: String? = null,
-    val content: String = ""
+    val content: String
 )
 
 /**
@@ -184,7 +184,7 @@ data class ChapterFtsEntity(
     @ColumnInfo(name = "book_id") val bookId: Int,
     @ColumnInfo(name = "chapter_index") val chapterIndex: Int,
     val title: String? = null,
-    val content: String = ""
+    val content: String
 )
 
 /**
