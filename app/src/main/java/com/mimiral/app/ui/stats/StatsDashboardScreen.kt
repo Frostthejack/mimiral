@@ -28,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -117,6 +118,12 @@ fun StatsDashboardScreen(
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center)
                 )
+            } else if (uiState.error != null) {
+                ErrorRetryCard(
+                    message = uiState.error!!,
+                    onRetry = { viewModel.retry() },
+                    modifier = Modifier.align(Alignment.Center)
+                )
             } else if (!uiState.hasKavitaServer) {
                 NoKavitaServerState(
                     onNavigateToSetup = onNavigateToSetup,
@@ -127,6 +134,44 @@ fun StatsDashboardScreen(
                     uiState = uiState,
                     modifier = Modifier.fillMaxSize()
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErrorRetryCard(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.padding(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.BarChart,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                textAlign = TextAlign.Center
+            )
+            Button(onClick = onRetry) {
+                Text("Retry")
             }
         }
     }

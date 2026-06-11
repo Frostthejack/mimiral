@@ -289,7 +289,7 @@ private fun CollectionCard(
                         Icon(
                             imageVector = Icons.Default.PushPin,
                             contentDescription = "Promoted",
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }

@@ -32,6 +32,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -128,11 +129,55 @@ fun StatisticsScreen(
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center)
                 )
+            } else if (uiState.error != null) {
+                ErrorRetryCard(
+                    message = uiState.error!!,
+                    onRetry = { viewModel.retry() },
+                    modifier = Modifier.align(Alignment.Center)
+                )
             } else {
                 StatisticsContent(
                     uiState = uiState,
                     modifier = Modifier.fillMaxSize()
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErrorRetryCard(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.padding(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.TrendingUp,
+                contentDescription = "Error",
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                textAlign = TextAlign.Center
+            )
+            Button(onClick = onRetry) {
+                Text("Retry")
             }
         }
     }
@@ -354,7 +399,7 @@ private fun StreakBanner(currentStreak: Int) {
         ) {
             Icon(
                 imageVector = Icons.Default.LocalFireDepartment,
-                contentDescription = null,
+                contentDescription = "Reading streak",
                 modifier = Modifier.size(40.dp),
                 tint = if (currentStreak > 0) {
                     MaterialTheme.colorScheme.primary
@@ -414,7 +459,7 @@ private fun StatCard(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = label,
                 modifier = Modifier.size(28.dp),
                 tint = color
             )
@@ -530,7 +575,7 @@ private fun EmptyStatsState() {
     ) {
         Icon(
             imageVector = Icons.Default.Star,
-            contentDescription = null,
+            contentDescription = "No reading data",
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
         )

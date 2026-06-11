@@ -329,7 +329,7 @@ private fun LibraryCard(
         ) {
             Icon(
                 Icons.Filled.LibraryBooks,
-                contentDescription = null,
+                contentDescription = "Library",
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -348,7 +348,7 @@ private fun LibraryCard(
             }
             Icon(
                 Icons.Filled.CollectionsBookmark,
-                contentDescription = null,
+                contentDescription = "Library type",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -628,7 +628,7 @@ private fun ErrorContent(
     ) {
         Icon(
             Icons.Filled.Warning,
-            contentDescription = null,
+            contentDescription = "Error",
             modifier = Modifier.size(48.dp),
             tint = MaterialTheme.colorScheme.error
         )
@@ -662,7 +662,7 @@ private fun EmptyContent(
     ) {
         Icon(
             Icons.Filled.LibraryBooks,
-            contentDescription = null,
+            contentDescription = "No libraries found",
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )

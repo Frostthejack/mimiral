@@ -269,7 +269,8 @@ class KavitaSetupViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
                     isSaved = true,
-                    hasExistingConfig = true
+                    hasExistingConfig = true,
+                    password = ""
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(

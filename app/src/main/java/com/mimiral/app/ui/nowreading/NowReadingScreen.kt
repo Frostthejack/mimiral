@@ -164,7 +164,7 @@ private fun ContinueReadingCard(
         ) {
             Icon(
                 imageVector = Icons.Default.MenuBook,
-                contentDescription = null,
+                contentDescription = "Continue reading",
                 modifier = Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.onSecondaryContainer
             )
@@ -196,7 +196,7 @@ private fun ContinueReadingCard(
             FilledTonalButton(onClick = { onContinueReading(continuePoint.seriesId) }) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
+                    contentDescription = "Resume reading",
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -307,7 +307,7 @@ private fun EmptyNowReadingState(
         ) {
             Icon(
                 imageVector = Icons.Default.LibraryBooks,
-                contentDescription = null,
+                contentDescription = "No books being read",
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
@@ -384,7 +384,7 @@ private fun NowReadingBookCard(
                     }
                     Icon(
                         imageVector = formatIcon,
-                        contentDescription = null,
+                        contentDescription = "Reading format: ${nowReadingBook.book.format}",
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )

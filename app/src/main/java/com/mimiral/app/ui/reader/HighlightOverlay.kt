@@ -54,11 +54,7 @@ fun HighlightableText(
 
             // User-created saved highlights
             highlights.forEach { highlight ->
-                val color = try {
-                    Color(android.graphics.Color.parseColor(highlight.color))
-                } catch (_: Exception) {
-                    Color(0xFFFFEB3B)
-                }
+                val color = parseHighlightColor(highlight.color)
                 val start = highlight.startOffset.coerceIn(0, text.length)
                 val end = highlight.endOffset.coerceIn(0, text.length)
                 if (start < end) {

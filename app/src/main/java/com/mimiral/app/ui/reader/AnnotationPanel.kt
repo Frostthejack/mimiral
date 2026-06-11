@@ -48,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -262,11 +261,7 @@ private fun AnnotationPanelItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val highlightColor = try {
-        Color(android.graphics.Color.parseColor(annotation.color ?: "#FFFFEB3B"))
-    } catch (_: Exception) {
-        Color(0xFFFFEB3B)
-    }
+    val highlightColor = parseHighlightColor(annotation.color ?: "#FFFFEB3B")
 
     Surface(
         modifier = Modifier

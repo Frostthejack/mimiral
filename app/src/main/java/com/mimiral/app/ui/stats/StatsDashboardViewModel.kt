@@ -149,4 +149,9 @@ class StatsDashboardViewModel @Inject constructor(
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
+
+    fun retry() {
+        _uiState.update { it.copy(error = null) }
+        loadAllStats()
+    }
 }

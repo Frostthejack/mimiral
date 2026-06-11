@@ -126,22 +126,21 @@ class HighlightsViewModel @Inject constructor(
 /**
  * Parses a highlight color string (hex or name) into a [Color].
  * Falls back to yellow for unrecognized values.
+ * Uses the canonical color values from [highlightColors].
  */
 fun parseHighlightColor(colorString: String): Color {
     return try {
         when {
             colorString.startsWith("#") -> Color(android.graphics.Color.parseColor(colorString))
-            colorString.equals("yellow", ignoreCase = true) -> Color(0xFFFFEB3B)
-            colorString.equals("green", ignoreCase = true) -> Color(0xFF4CAF50)
-            colorString.equals("blue", ignoreCase = true) -> Color(0xFF2196F3)
-            colorString.equals("red", ignoreCase = true) -> Color(0xFFF44336)
-            colorString.equals("pink", ignoreCase = true) -> Color(0xFFE91E63)
-            colorString.equals("orange", ignoreCase = true) -> Color(0xFFFF9800)
-            colorString.equals("purple", ignoreCase = true) -> Color(0xFF9C27B0)
-            else -> Color(0xFFFFEB3B)
+            else -> {
+                val match = highlightColors.firstOrNull {
+                    it.name.equals(colorString, ignoreCase = true)
+                }
+                match?.color ?: highlightColors.first().color
+            }
         }
     } catch (_: Exception) {
-        Color(0xFFFFEB3B)
+        highlightColors.first().color
     }
 }
 

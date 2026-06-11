@@ -300,4 +300,8 @@ class ScrobblingViewModel @Inject constructor(
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
+
+    fun clearTokenSuccess() {
+        _uiState.value = _uiState.value.copy(tokenUpdateSuccess = false)
+    }
 }

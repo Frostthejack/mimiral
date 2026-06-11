@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -38,6 +40,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -52,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -164,7 +168,7 @@ fun KavitaBookmarksScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     placeholder = { Text("Filter by series, volume, or chapter...") },
                     leadingIcon = {
-                        Icon(Icons.Default.FilterList, contentDescription = null)
+                        Icon(Icons.Default.FilterList, contentDescription = "Filter bookmarks")
                     },
                     singleLine = true
                 )
@@ -178,6 +182,16 @@ fun KavitaBookmarksScreen(
                 ) {
                     CircularProgressIndicator()
                 }
+            } else if (uiState.errorMessage != null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ErrorRetryCard(
+                        message = uiState.errorMessage!!,
+                        onRetry = { viewModel.loadAllBookmarks() }
+                    )
+                }
             } else if (uiState.groupedBookmarks.isEmpty()) {
                 // Empty state
                 Box(
@@ -187,7 +201,7 @@ fun KavitaBookmarksScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = Icons.Default.Bookmark,
-                            contentDescription = null,
+                            contentDescription = "No bookmarks",
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                         )
@@ -275,7 +289,7 @@ private fun SeriesBookmarkGroup(
             ) {
                 Icon(
                     imageVector = Icons.Default.Bookmark,
-                    contentDescription = null,
+                    contentDescription = "Series bookmark",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -406,7 +420,7 @@ private fun ChapterBookmarkGroup(
             ) {
                 Icon(
                     imageVector = Icons.Default.Bookmark,
-                    contentDescription = null,
+                    contentDescription = "Bookmark",
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -461,5 +475,43 @@ private fun ChapterBookmarkGroup(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun ErrorRetryCard(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.padding(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Bookmark,
+                contentDescription = "Error loading bookmarks",
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                textAlign = TextAlign.Center
+            )
+            Button(onClick = onRetry) {
+                Text("Retry")
+            }
+        }
     }
 }

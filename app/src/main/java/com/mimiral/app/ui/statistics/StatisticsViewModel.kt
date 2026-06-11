@@ -145,6 +145,11 @@ class StatisticsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
+    fun retry() {
+        _uiState.value = _uiState.value.copy(error = null)
+        loadStatistics()
+    }
+
     fun exportStatistics() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isExporting = true, exportSuccess = false)

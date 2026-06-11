@@ -141,6 +141,13 @@ fun FreeSourcesScreen(
                 .padding(paddingValues)
         ) {
             when {
+                uiState.errorMessage != null -> {
+                    ErrorRetryCard(
+                        message = uiState.errorMessage!!,
+                        onRetry = { viewModel.clearError() },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
                 uiState.isLoadingFeed -> {
                     LoadingView()
                 }
@@ -182,6 +189,44 @@ fun FreeSourcesScreen(
                         onDownloadClick = { viewModel.downloadEntry(it) }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErrorRetryCard(
+    message: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.padding(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Cloud,
+                contentDescription = "Error loading feed",
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                textAlign = TextAlign.Center
+            )
+            Button(onClick = onRetry) {
+                Text("Retry")
             }
         }
     }
@@ -235,7 +280,7 @@ private fun SourceSelectionView(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Explore,
-                        contentDescription = null,
+                        contentDescription = "Explore sources",
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onTertiaryContainer
                     )
@@ -294,7 +339,7 @@ private fun SourceCard(
                             FreeSource.STANDARD_EBOOKS -> Icons.Default.AutoStories
                             FreeSource.OPEN_LIBRARY -> Icons.Default.LibraryBooks
                         },
-                        contentDescription = null,
+                        contentDescription = "${source.displayName} icon",
                         modifier = Modifier.size(28.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -491,7 +536,7 @@ private fun FeedBrowseView(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = null,
+                        contentDescription = "No results found",
                         modifier = Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
@@ -783,7 +828,7 @@ private fun BookEntryCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.CheckCircle,
-                                contentDescription = null,
+                                contentDescription = "Downloaded",
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -799,7 +844,7 @@ private fun BookEntryCard(
                         FilledTonalButton(onClick = onDownload) {
                             Icon(
                                 Icons.Default.Download,
-                                contentDescription = null,
+                                contentDescription = "Download",
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -821,7 +866,7 @@ private fun LoadingView(message: String = "Loading...") {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
                 imageVector = Icons.Default.Cloud,
-                contentDescription = null,
+                contentDescription = "Loading",
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )

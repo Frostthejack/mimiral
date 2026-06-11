@@ -192,7 +192,7 @@ fun WantToReadScreen(
                             Icon(
                                 Icons.Default.Clear,
                                 contentDescription = "Clear sort",
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         },
                         modifier = Modifier.minimumInteractiveComponentSize(),
