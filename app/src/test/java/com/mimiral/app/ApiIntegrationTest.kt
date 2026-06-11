@@ -135,7 +135,7 @@ class ApiIntegrationTest {
         assertEquals("jwt-token-abc", (result as KavitaResult.Success).data)
 
         val request = mockServer.takeRequest()
-        assertEquals("/api/account/login", request.path)
+        assertEquals("/api/Account/login", request.path)
         assertEquals("POST", request.method)
     }
 
