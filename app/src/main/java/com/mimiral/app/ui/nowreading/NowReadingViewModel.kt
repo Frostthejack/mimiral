@@ -83,6 +83,7 @@ class NowReadingViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 continueReadingRepository.fetchOnDeck()
+                _isLoading.value = false
             } catch (e: Exception) {
                 _isLoading.value = false
             }
