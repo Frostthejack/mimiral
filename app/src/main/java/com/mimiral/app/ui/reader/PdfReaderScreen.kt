@@ -279,8 +279,9 @@ fun PdfReaderScreen(
         }
     }
 
-    // Cleanup resources
-    DisposableEffect(Unit) {
+    // Cleanup resources — keyed on pdfRenderer so config changes (rotation)
+    // properly dispose old bitmaps before the composition is recreated.
+    DisposableEffect(pdfRenderer) {
         onDispose {
             pdfRenderer?.close()
             pageBitmaps.values.forEach { it.recycle() }

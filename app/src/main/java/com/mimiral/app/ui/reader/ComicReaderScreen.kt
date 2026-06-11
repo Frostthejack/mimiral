@@ -157,8 +157,9 @@ fun ComicReaderScreen(
         gesturePanY = 0f
     }
 
-    // Cleanup on dispose
-    DisposableEffect(Unit) {
+    // Cleanup on dispose — keyed on archive so config changes (rotation)
+    // properly dispose old bitmaps before the composition is recreated.
+    DisposableEffect(archive) {
         onDispose {
             comicParser.close()
             pageBitmaps.values.forEach { it.recycle() }
