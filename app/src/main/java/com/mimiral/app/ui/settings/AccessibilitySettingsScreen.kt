@@ -44,7 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mimiral.app.data.local.settings.AccessibilitySettings
 import com.mimiral.app.data.local.settings.AccessibilitySettingsRepository
-import com.mimiral.app.ui.theme.MimiralThemeSwitcher
 import com.mimiral.app.ui.theme.MimiralThemeType
 import kotlinx.coroutines.launch
 
@@ -228,14 +227,6 @@ fun AccessibilitySettingsScreen(
                             MimiralThemeType.DAY
                         }
                     }
-                    MimiralThemeSwitcher(
-                        currentTheme = currentTheme,
-                        onThemeSelected = { theme ->
-                            scope.launch {
-                                readerSettingsRepo.setTheme(theme.name)
-                            }
-                        }
-                    )
                 }
             }
 
