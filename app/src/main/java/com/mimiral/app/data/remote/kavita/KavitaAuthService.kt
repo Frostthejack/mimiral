@@ -4,11 +4,12 @@ import android.util.Log
 import com.google.gson.Gson
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.ServerEntity
+import com.mimiral.app.di.ApplicationScope
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -40,7 +41,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 @Singleton
 class KavitaAuthService @Inject constructor(
     private val credentialStore: KavitaCredentialStore,
-    private val serverDao: ServerDao
+    private val serverDao: ServerDao,
+    @ApplicationScope private val scope: CoroutineScope
 ) {
     companion object {
         private const val TAG = "KavitaAuthService"
@@ -473,8 +475,7 @@ class KavitaAuthService @Inject constructor(
      * Failures are logged but don't block the auth flow.
      */
     fun launchOpdsUrlDerivation(baseUrl: String, jwtToken: String) {
-        // Use a coroutine instead of raw Thread for proper lifecycle management
-        GlobalScope.launch(Dispatchers.IO) {
+        scope.launch {
             try {
                 val request = Request.Builder()
                     .url("$baseUrl/api/Account/opds-url")
@@ -484,14 +485,16 @@ class KavitaAuthService @Inject constructor(
                     .build()
 
                 val response = authClient.newCall(request).execute()
-                if (response.isSuccessful) {
-                    val opdsUrl = response.body?.string()
-                    if (!opdsUrl.isNullOrBlank()) {
-                        _authState = _authState.copy(opdsUrl = opdsUrl)
-                        Log.d(TAG, "OPDS URL derived: $opdsUrl")
+                response.use {
+                    if (it.isSuccessful) {
+                        val opdsUrl = it.body?.string()
+                        if (!opdsUrl.isNullOrBlank()) {
+                            _authState = _authState.copy(opdsUrl = opdsUrl)
+                            Log.d(TAG, "OPDS URL derived: $opdsUrl")
+                        }
+                    } else {
+                        Log.w(TAG, "OPDS URL fetch failed: HTTP ${it.code}")
                     }
-                } else {
-                    Log.w(TAG, "OPDS URL fetch failed: HTTP ${response.code}")
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "OPDS URL derivation failed: ${e.message}")

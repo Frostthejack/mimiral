@@ -12,7 +12,9 @@ import dagger.hilt.components.SingletonComponent
 import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
@@ -24,6 +26,10 @@ import retrofit2.converter.gson.GsonConverterFactory
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class KavitaApiClient
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ApplicationScope
 
 /**
  * Dagger Hilt module providing the Kavita Retrofit API client and auth services.
@@ -125,6 +131,13 @@ object KavitaApiModule {
             authService = authService,
             onAuthFailed = onAuthFailed
         )
+    }
+
+    @Provides
+    @Singleton
+    @ApplicationScope
+    fun provideApplicationScope(): CoroutineScope {
+        return CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 }
 
