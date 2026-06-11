@@ -367,9 +367,9 @@ private fun SeriesGridCard(
                 ) {
                     Icon(
                         imageVector = if (isInList) {
-                            Icons.Default.BookmarkBorder
-                        } else {
                             Icons.Default.Bookmark
+                        } else {
+                            Icons.Default.BookmarkBorder
                         },
                         contentDescription = if (isInList) "Remove from WTR" else "Add to WTR",
                         tint = if (isInList) {
