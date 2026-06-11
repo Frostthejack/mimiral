@@ -75,6 +75,10 @@ fun CollectionsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Hoisted delete/remove confirmation state — only one dialog at a time
+    var pendingDeleteCollection by remember { mutableStateOf<CollectionEntity?>(null) }
+    var pendingRemoveBook by remember { mutableStateOf<BookEntity?>(null) }
+
     // Show error in snackbar
     LaunchedEffect(uiState.error) {
         uiState.error?.let { message ->
@@ -131,7 +135,11 @@ fun CollectionsScreen(
                     onBookClick = onBookClick,
                     onRemoveBook = { bookId, collectionId ->
                         viewModel.removeBookFromCollection(bookId, collectionId)
-                    }
+                    },
+                    pendingDeleteCollection = pendingDeleteCollection,
+                    onPendingDeleteCollectionChange = { pendingDeleteCollection = it },
+                    pendingRemoveBook = pendingRemoveBook,
+                    onPendingRemoveBookChange = { pendingRemoveBook = it }
                 )
             }
         }
@@ -195,7 +203,11 @@ private fun CollectionsList(
     onEdit: (CollectionEntity) -> Unit,
     onDelete: (CollectionEntity) -> Unit,
     onBookClick: (Int, String) -> Unit,
-    onRemoveBook: (Int, Int) -> Unit
+    onRemoveBook: (Int, Int) -> Unit,
+    pendingDeleteCollection: CollectionEntity?,
+    onPendingDeleteCollectionChange: (CollectionEntity?) -> Unit,
+    pendingRemoveBook: BookEntity?,
+    onPendingRemoveBookChange: (BookEntity?) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -219,7 +231,12 @@ private fun CollectionsList(
                 onBookClick = onBookClick,
                 onRemoveBook = { bookId ->
                     onRemoveBook(bookId, collectionWithCount.collection.id)
-                }
+                },
+                showDeleteConfirm = pendingDeleteCollection == collectionWithCount.collection,
+                onShowDeleteConfirm = { onPendingDeleteCollectionChange(collectionWithCount.collection) },
+                onDismissDeleteConfirm = { onPendingDeleteCollectionChange(null) },
+                pendingRemoveBook = pendingRemoveBook,
+                onPendingRemoveBookChange = onPendingRemoveBookChange
             )
         }
     }
@@ -235,10 +252,14 @@ private fun CollectionCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onBookClick: (Int, String) -> Unit,
-    onRemoveBook: (Int) -> Unit
+    onRemoveBook: (Int) -> Unit,
+    showDeleteConfirm: Boolean,
+    onShowDeleteConfirm: () -> Unit,
+    onDismissDeleteConfirm: () -> Unit,
+    pendingRemoveBook: BookEntity?,
+    onPendingRemoveBookChange: (BookEntity?) -> Unit
 ) {
     val collection = collectionWithCount.collection
-    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -301,7 +322,7 @@ private fun CollectionCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                IconButton(onClick = { showDeleteConfirm = true }) {
+                IconButton(onClick = onShowDeleteConfirm) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete",
@@ -349,7 +370,10 @@ private fun CollectionCard(
                             BookRow(
                                 book = book,
                                 onClick = { onBookClick(book.id, book.format) },
-                                onRemove = { onRemoveBook(book.id) }
+                                onRemove = { onRemoveBook(book.id) },
+                                showRemoveConfirm = pendingRemoveBook == book,
+                                onShowRemoveConfirm = { onPendingRemoveBookChange(book) },
+                                onDismissRemoveConfirm = { onPendingRemoveBookChange(null) }
                             )
                         }
                     }
@@ -361,7 +385,7 @@ private fun CollectionCard(
     // Delete confirmation dialog
     if (showDeleteConfirm) {
         AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
+            onDismissRequest = onDismissDeleteConfirm,
             title = { Text("Delete Collection") },
             text = {
                 Text(
@@ -372,7 +396,7 @@ private fun CollectionCard(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showDeleteConfirm = false
+                        onDismissDeleteConfirm()
                         onDelete()
                     }
                 ) {
@@ -380,7 +404,7 @@ private fun CollectionCard(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
+                TextButton(onClick = onDismissDeleteConfirm) {
                     Text("Cancel")
                 }
             }
@@ -393,16 +417,18 @@ private fun CollectionCard(
 private fun BookRow(
     book: BookEntity,
     onClick: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    showRemoveConfirm: Boolean,
+    onShowRemoveConfirm: () -> Unit,
+    onDismissRemoveConfirm: () -> Unit
 ) {
-    var showRemoveConfirm by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = { showRemoveConfirm = true }
+                onLongClick = onShowRemoveConfirm
             )
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -431,7 +457,7 @@ private fun BookRow(
                 )
             }
         }
-        IconButton(onClick = { showRemoveConfirm = true }) {
+        IconButton(onClick = onShowRemoveConfirm) {
             Icon(
                 imageVector = Icons.Default.Remove,
                 contentDescription = "Remove from collection",
@@ -443,13 +469,13 @@ private fun BookRow(
 
     if (showRemoveConfirm) {
         AlertDialog(
-            onDismissRequest = { showRemoveConfirm = false },
+            onDismissRequest = onDismissRemoveConfirm,
             title = { Text("Remove Book") },
             text = { Text("Remove \"${book.title}\" from this collection?") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showRemoveConfirm = false
+                        onDismissRemoveConfirm()
                         onRemove()
                     }
                 ) {
@@ -457,7 +483,7 @@ private fun BookRow(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRemoveConfirm = false }) {
+                TextButton(onClick = onDismissRemoveConfirm) {
                     Text("Cancel")
                 }
             }
