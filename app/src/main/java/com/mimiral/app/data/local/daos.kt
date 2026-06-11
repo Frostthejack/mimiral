@@ -532,6 +532,15 @@ interface ChapterDao {
     fun searchChaptersInBook(bookId: Int, query: String): Flow<List<ChapterEntity>>
 }
 
+data class ReadingListWithBookCount(
+    val id: Int,
+    val name: String,
+    val listType: String,
+    val createdTime: Long,
+    val sortOrder: Int,
+    val bookCount: Int
+)
+
 @Dao
 interface ReadingListDao {
     @Query("SELECT * FROM reading_lists ORDER BY sort_order")
@@ -577,4 +586,19 @@ interface ReadingListDao {
             "ORDER BY book_reading_lists.added_time DESC"
     )
     fun getBooksInReadingList(listId: Int): Flow<List<BookEntity>>
+
+    /**
+     * Single-query batch fetch: returns all reading lists with their book counts
+     * using a LEFT JOIN + GROUP BY, avoiding the N+1 query problem.
+     */
+    @Query(
+        "SELECT reading_lists.id AS id, reading_lists.name AS name, " +
+            "reading_lists.list_type AS listType, reading_lists.created_time AS createdTime, " +
+            "reading_lists.sort_order AS sortOrder, " +
+            "COUNT(book_reading_lists.book_id) AS bookCount " +
+            "FROM reading_lists " +
+            "LEFT JOIN book_reading_lists ON reading_lists.id = book_reading_lists.reading_list_id " +
+            "GROUP BY reading_lists.id ORDER BY reading_lists.sort_order"
+    )
+    fun getAllReadingListsWithBookCount(): Flow<List<ReadingListWithBookCount>>
 }

@@ -2,6 +2,7 @@ package com.mimiral.app.data.repository
 
 import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.ReadingListDao
+import com.mimiral.app.data.local.dao.ReadingListWithBookCount
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.BookReadingListCrossRef
 import com.mimiral.app.data.local.entity.ReadingListEntity
@@ -50,6 +51,9 @@ class ReadingListRepository @Inject constructor(
 
     fun getBooksInReadingList(listId: Int): Flow<List<BookEntity>> =
         readingListDao.getBooksInReadingList(listId)
+
+    fun getAllReadingListsWithBookCount(): Flow<List<ReadingListWithBookCount>> =
+        readingListDao.getAllReadingListsWithBookCount()
 
     suspend fun getBookCountInReadingList(listId: Int): Int =
         readingListDao.getBookCountInReadingList(listId)
