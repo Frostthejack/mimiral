@@ -5,6 +5,7 @@ import com.mimiral.app.data.remote.KavitaSyncApi
 import com.mimiral.app.data.remote.kavita.KavitaApi
 import com.mimiral.app.data.remote.kavita.KavitaAuthInterceptor
 import com.mimiral.app.data.remote.kavita.KavitaAuthService
+import com.mimiral.app.data.remote.kavita.KavitaAuthenticator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,7 +31,7 @@ annotation class KavitaApiClient
  *
  * Uses a dynamic base URL interceptor that resolves the active Kavita server
  * from the database on each request, plus [KavitaAuthInterceptor] for token
- * injection and 401 refresh retry.
+ * injection and [KavitaAuthenticator] for 401 refresh handling.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -48,7 +49,8 @@ object KavitaApiModule {
     @KavitaApiClient
     fun provideOkHttpClient(
         serverDao: ServerDao,
-        authInterceptor: KavitaAuthInterceptor
+        authInterceptor: KavitaAuthInterceptor,
+        kavitaAuthenticator: KavitaAuthenticator
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -58,6 +60,7 @@ object KavitaApiModule {
             .addInterceptor(KavitaBaseUrlInterceptor(serverDao))
             .addInterceptor(authInterceptor)
             .addInterceptor(logging)
+            .authenticator(kavitaAuthenticator)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
@@ -118,10 +121,20 @@ object KavitaApiModule {
     @Provides
     @Singleton
     fun provideKavitaAuthInterceptor(
-        authService: KavitaAuthService,
-        onAuthFailed: () -> Unit
+        authService: KavitaAuthService
     ): KavitaAuthInterceptor {
         return KavitaAuthInterceptor(
+            authService = authService
+        )
+    }
+
+    @Provides
+    @Singleton
+    fun provideKavitaAuthenticator(
+        authService: KavitaAuthService,
+        onAuthFailed: () -> Unit
+    ): KavitaAuthenticator {
+        return KavitaAuthenticator(
             authService = authService,
             onAuthFailed = onAuthFailed
         )

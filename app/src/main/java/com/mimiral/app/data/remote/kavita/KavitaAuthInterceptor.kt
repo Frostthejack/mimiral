@@ -1,8 +1,6 @@
 package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
@@ -10,24 +8,17 @@ import okhttp3.Response
 /**
  * OkHttp interceptor that handles Kavita authentication:
  *
- * 1. **Token injection** — Adds `Authorization: Bearer ***` or `X-Api-Key` header
+ * 1. **Token injection** — Adds `Authorization: Bearer *** or `X-Api-Key` header
  *    to every outgoing request, based on the current [KavitaAuthState].
  *
- * 2. **401 retry with token refresh** — When a request returns HTTP 401:
- *    - If we have a refresh token, calls POST /api/Account/refresh-token
- *    - On success, stores the new JWT + refresh token and retries the original request
- *    - On failure (or no refresh token), calls [onAuthFailed] to signal logout
+ * 401 handling is done by [KavitaAuthenticator], which implements OkHttp's
+ * [okhttp3.Authenticator] interface. Unlike an interceptor, the Authenticator
+ * runs on OkHttp's internal thread pool and does not block the interceptor chain.
  *
- * Thread safety: The interceptor runs on OkHttp's background threads.
- * [KavitaAuthService] uses synchronized access for token state, so
- * concurrent refresh attempts are serialized via [KavitaAuthService.refreshToken].
- *
- * @param authService  The auth service that holds current token state and performs refresh
- * @param onAuthFailed Callback invoked when refresh fails — typically clears auth state
+ * @param authService  The auth service that holds current token state
  */
 class KavitaAuthInterceptor(
-    private val authService: KavitaAuthService,
-    private val onAuthFailed: () -> Unit
+    private val authService: KavitaAuthService
 ) : Interceptor {
 
     companion object {
@@ -40,39 +31,9 @@ class KavitaAuthInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
-        // Skip auth for login/authenticate/refresh endpoints themselves
-        if (isAuthEndpoint(originalRequest)) {
-            return chain.proceed(originalRequest)
-        }
-
         // Inject auth headers into the request
         val authedRequest = injectAuthHeaders(originalRequest)
-        val response = chain.proceed(authedRequest)
-
-        // If 401 and we can try to refresh, do so
-        if (response.code == 401 && authService.canRefresh()) {
-            response.close() // Must close before retry
-
-            val refreshed = try {
-                runBlocking(Dispatchers.IO) {
-                    authService.refreshToken()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Token refresh failed: ${e.message}", e)
-                false
-            }
-
-            if (refreshed) {
-                // Retry the original request with new token
-                val retryRequest = injectAuthHeaders(originalRequest)
-                return chain.proceed(retryRequest)
-            } else {
-                Log.w(TAG, "Auth refresh failed — signaling logout")
-                onAuthFailed()
-            }
-        }
-
-        return response
+        return chain.proceed(authedRequest)
     }
 
     /**
@@ -107,18 +68,5 @@ class KavitaAuthInterceptor(
         }
 
         return builder.build()
-    }
-
-    /**
-     * Check if this request targets an auth endpoint that should NOT
-     * have auth headers injected (to avoid infinite loops).
-     */
-    private fun isAuthEndpoint(request: Request): Boolean {
-        val path = request.url.encodedPath
-        return path.contains("/api/Account/login") ||
-            path.contains("/api/Auth/login") ||
-            path.contains("/api/Plugin/authenticate") ||
-            path.contains("/api/Account/refresh-token") ||
-            path.contains("/api/Auth/refresh-token")
     }
 }
