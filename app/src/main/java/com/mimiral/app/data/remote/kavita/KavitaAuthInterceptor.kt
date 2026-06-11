@@ -2,6 +2,7 @@ package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Request
@@ -63,9 +64,35 @@ class KavitaAuthInterceptor(
             }
 
             if (refreshed) {
+                // Backoff before retry to avoid hammering the server
+                runBlocking { delay(500L) }
+
                 // Retry the original request with new token
-                val retryRequest = injectAuthHeaders(originalRequest)
-                return chain.proceed(retryRequest)
+                try {
+                    val retryRequest = injectAuthHeaders(originalRequest)
+                    val retryResponse = chain.proceed(retryRequest)
+
+                    // If retry also got 401, refresh token was also expired
+                    if (retryResponse.code == 401) {
+                        Log.w(TAG, "Retry after refresh also got 401 — signaling logout")
+                        retryResponse.close()
+                        onAuthFailed()
+                        // Return a synthetic 401 since we consumed the response
+                        return response.newBuilder()
+                            .code(401)
+                            .message("Unauthorized (refresh token expired)")
+                            .build()
+                    }
+
+                    return retryResponse
+                } catch (e: Exception) {
+                    Log.e(TAG, "Retry request failed: ${e.message}", e)
+                    onAuthFailed()
+                    return response.newBuilder()
+                        .code(401)
+                        .message("Unauthorized (retry failed: ${e.javaClass.simpleName})")
+                        .build()
+                }
             } else {
                 Log.w(TAG, "Auth refresh failed — signaling logout")
                 onAuthFailed()
