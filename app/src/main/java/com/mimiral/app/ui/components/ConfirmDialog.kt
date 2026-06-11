@@ -54,7 +54,7 @@ fun ConfirmDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             dismissOnBackPress = true,
-            dismissOnClickOutside = true
+            dismissOnClickOutside = !isDestructive
         )
     ) {
         Card(
