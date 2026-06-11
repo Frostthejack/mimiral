@@ -2,7 +2,8 @@ package com.mimiral.app.data.remote.opds
 
 import android.util.Log
 import java.io.IOException
-import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Credentials
@@ -28,25 +29,17 @@ sealed class OpdsResult<out T> {
  * - HTTP GET requests with proper headers
  * - HTTP Basic authentication
  * - URL-based token authentication
- * - Timeout configuration
  * - Error handling and status code reporting
+ *
+ * Uses a shared OkHttpClient provided by [OpdsModule] with consistent
+ * 30s timeouts for connect, read, and write.
  */
-class OpdsClient(
-    private val client: OkHttpClient = defaultClient()
+@Singleton
+class OpdsClient @Inject constructor(
+    private val client: OkHttpClient
 ) {
     companion object {
         private const val TAG = "OpdsClient"
-        private const val DEFAULT_TIMEOUT_SECONDS = 30L
-
-        fun defaultClient(): OkHttpClient {
-            return OkHttpClient.Builder()
-                .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                .followRedirects(true)
-                .followSslRedirects(true)
-                .build()
-        }
     }
 
     /**

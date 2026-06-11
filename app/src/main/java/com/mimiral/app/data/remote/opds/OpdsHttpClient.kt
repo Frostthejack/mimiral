@@ -1,7 +1,6 @@
 package com.mimiral.app.data.remote.opds
 
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -13,18 +12,14 @@ import okhttp3.Request
 /**
  * HTTP client for fetching OPDS feeds and OpenSearch documents.
  *
- * Uses OkHttp (already in the dependency tree via Retrofit).
+ * Uses a shared OkHttpClient (provided by [OpdsModule]) with consistent
+ * 30s timeouts for all OPDS operations.
  * Handles Basic Auth for catalogs that require authentication.
  */
 @Singleton
-class OpdsHttpClient @Inject constructor() {
-
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .followSslRedirects(true)
-        .build()
+class OpdsHttpClient @Inject constructor(
+    private val client: OkHttpClient
+) {
 
     /**
      * Fetches an OPDS feed (Atom XML) from the given URL.
