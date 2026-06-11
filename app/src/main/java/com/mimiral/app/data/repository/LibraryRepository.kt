@@ -8,6 +8,7 @@ import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.scanner.FileScanner
 import com.mimiral.app.data.local.scanner.ScanState
 import java.io.File
+import androidx.room.Transaction
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -33,11 +34,8 @@ class LibraryRepository @Inject constructor(
 
     suspend fun insertBook(book: BookEntity): Long = bookDao.insertBook(book)
 
-    suspend fun insertBooks(books: List<BookEntity>): List<Long> = books.map {
-        bookDao.insertBook(
-            it
-        )
-    }
+    @Transaction
+    suspend fun insertBooks(books: List<BookEntity>): List<Long> = bookDao.insertBooks(books)
 
     suspend fun updateBook(book: BookEntity) = bookDao.updateBook(book)
 
