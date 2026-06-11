@@ -1,5 +1,6 @@
 package com.mimiral.app.data.remote.opds
 
+import android.net.Uri
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -95,7 +96,7 @@ class OpdsSearchRepository @Inject constructor(
      * Expands an OpenSearch 1.1 URL template.
      *
      * Replaces the following parameters:
-     * - {searchTerms} -> URL-encoded query
+     * - {searchTerms} -> URI-encoded query (via Uri.encode)
      * - {startPage} -> page number
      * - {startIndex} -> startIndex
      * - {count} -> page size
@@ -111,7 +112,7 @@ class OpdsSearchRepository @Inject constructor(
     ): String {
         val startIndex = (page - 1) * pageSize + 1
         return template
-            .replace("{searchTerms}", java.net.URLEncoder.encode(query, "UTF-8"))
+            .replace("{searchTerms}", Uri.encode(query))
             .replace("{startPage}", page.toString())
             .replace("{startIndex}", startIndex.toString())
             .replace("{count}", pageSize.toString())
