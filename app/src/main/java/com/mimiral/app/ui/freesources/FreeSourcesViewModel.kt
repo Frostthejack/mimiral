@@ -245,7 +245,7 @@ class FreeSourcesViewModel @Inject constructor(
                 return
             }
 
-        val extension = downloadLink.fileExtension ?: "epub"
+        val extension = downloadLink.fileExtension ?: ".epub"
         val fileName = entry.title.replace(Regex("[^a-zA-Z0-9._-]"), "_") + extension
         val destPath = "${android.os.Environment.DIRECTORY_DOWNLOADS}/$fileName"
 

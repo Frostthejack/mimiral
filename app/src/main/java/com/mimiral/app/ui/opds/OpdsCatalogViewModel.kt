@@ -143,8 +143,8 @@ class OpdsCatalogViewModel @Inject constructor(
                 downloadProgress = "Downloading: ${entry.title}",
                 error = null
             )
-            val extension = downloadLink.fileExtension ?: "epub"
-            val fileName = entry.title.replace(Regex("[^a-zA-Z0-9._-]"), "_") + ".$extension"
+            val extension = downloadLink.fileExtension ?: ".epub"
+            val fileName = entry.title.replace(Regex("[^a-zA-Z0-9._-]"), "_") + extension
             val destPath = "${Environment.DIRECTORY_DOWNLOADS}/$fileName"
             val result = opdsRepository.downloadBook(
                 downloadUrl = downloadLink.href,
@@ -202,14 +202,3 @@ class OpdsCatalogViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 }
-
-private val OpdsLink.fileExtension: String?
-    get() {
-        val cleanType = type ?: return null
-        return when {
-            cleanType.contains("epub") -> "epub"
-            cleanType.contains("pdf") -> "pdf"
-            cleanType.contains("mobi") -> "mobi"
-            else -> null
-        }
-    }
