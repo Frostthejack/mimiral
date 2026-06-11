@@ -42,9 +42,13 @@ class KavitaCredentialStore @Inject constructor(
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create EncryptedSharedPreferences: ${e.message}", e)
+            Log.wtf(TAG, "SECURITY: Failed to create EncryptedSharedPreferences — " +
+                "falling back to UNENCRYPTED SharedPreferences! " +
+                "Passwords and API keys will be stored in plaintext. " +
+                "Error: ${e.message}", e)
             // Fallback to regular SharedPreferences if encryption is not available
-            // This is less secure but allows the app to function
+            // WARNING: This stores sensitive data (passwords, API keys, tokens)
+            // in plaintext on device. Investigate and fix the root cause.
             context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
         }
     }
