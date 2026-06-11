@@ -9,6 +9,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import android.util.Log
 import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -172,11 +173,19 @@ class KavitaBaseUrlInterceptor(
         // Normalize the server URL — ensure it ends with /
         val normalizedUrl = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
 
+        // Parse and validate the server URL
+        val httpUrl = normalizedUrl.toHttpUrlOrNull()
+        if (httpUrl == null) {
+            val errorMsg = "Invalid Kavita server URL: \"$serverUrl\" — must be a valid HTTP/HTTPS URL (e.g. https://kavita.example.com)"
+            Log.e(TAG, errorMsg)
+            throw IllegalArgumentException(errorMsg)
+        }
+
         // Build the new request with the resolved server URL
         val newUrl = originalRequest.url.newBuilder()
-            .scheme(normalizedUrl.toHttpUrlOrNull()?.scheme ?: "https")
-            .host(normalizedUrl.toHttpUrlOrNull()?.host ?: "")
-            .port(normalizedUrl.toHttpUrlOrNull()?.port ?: 443)
+            .scheme(httpUrl.scheme)
+            .host(httpUrl.host)
+            .port(httpUrl.port)
             .build()
 
         val requestBuilder = originalRequest.newBuilder()
