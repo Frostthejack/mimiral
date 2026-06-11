@@ -206,14 +206,14 @@ class KavitaRepository @Inject constructor(
             serverDao.getActiveServerByType("KAVITA")
         } ?: return null
         val base = server.url.trimEnd('/')
-        val apiKey = server.apiKey ?: return null
         // coverImage is a filename like "v1567_c1724.png" — extract the volumeId and chapterId
         // Format: v{volumeId}_c{chapterId}.png
         val regex = Regex("v(\\d+)_c(\\d+)")
         val match = regex.find(coverImage)
         return if (match != null) {
             val volumeId = match.groupValues[1]
-            "$base/api/Image/volume-cover?volumeId=$volumeId&apiKey=$apiKey"
+            // API key injected via X-Api-Key header by KavitaImageLoaderFactory — do NOT embed in URL
+            "$base/api/Image/volume-cover?volumeId=$volumeId"
         } else {
             null
         }
