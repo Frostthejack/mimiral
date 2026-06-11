@@ -92,6 +92,7 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
     ) {
         _uiState.value = _uiState.value.copy(
             isLoadingFeed = true,
+            isLoadingNextPage = false,
             errorMessage = null
         )
 
@@ -268,6 +269,8 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
             selectedCatalog = null,
             breadcrumbs = emptyList(),
             errorMessage = null,
+            isLoadingFeed = false,
+            isLoadingNextPage = false,
             hasNextPage = false,
             nextPageUrl = null
         )
