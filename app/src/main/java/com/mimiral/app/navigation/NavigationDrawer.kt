@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LibraryBooks
@@ -71,8 +72,10 @@ val drawerSections = listOf(
         title = "Discover",
         items = listOf(
             DrawerNavItem(Screen.Discover, "Discover", Icons.Filled.Explore),
+            DrawerNavItem(Screen.KavitaCollections, "Kavita Collections", Icons.Filled.LibraryBooks),
             DrawerNavItem(Screen.KavitaBookmarks, "Bookmarks", Icons.Filled.Bookmarks),
             DrawerNavItem(Screen.KavitaOpdsFeeds, "Kavita Feeds", Icons.Filled.AutoStories),
+            DrawerNavItem(Screen.FreeSources, "Free Sources", Icons.Filled.Cloud),
             DrawerNavItem(Screen.WantToRead, "Want To Read", Icons.Outlined.BookmarkAdd)
         )
     ),

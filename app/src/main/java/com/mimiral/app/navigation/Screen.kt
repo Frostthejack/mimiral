@@ -96,11 +96,8 @@ sealed class Screen(val route: String) {
         }
     }
 
-    // OPDS catalog management
+    // OPDS catalog browser
     object OpdsCatalog : Screen("opds_catalog")
-
-    // OPDS catalog browser (browse a specific catalog's entries)
-    object OpdsCatalogBrowser : Screen("opds_catalog_browser")
 
     // Free sources browser
     object FreeSources : Screen("free_sources")
