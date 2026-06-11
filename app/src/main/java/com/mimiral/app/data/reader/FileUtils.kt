@@ -43,7 +43,10 @@ fun resolveFileToCache(
             val fileUri = Uri.parse("file://$filePath")
             val inputStream = context.contentResolver.openInputStream(fileUri)
                 ?: return null
-            val cacheFile = File(context.cacheDir, "${cachePrefix}_${filePath.hashCode().toString(16)}")
+            val cacheFile = File(
+                context.cacheDir,
+                "${cachePrefix}_${filePath.hashCode().toString(16)}"
+            )
             FileOutputStream(cacheFile).use { out -> inputStream.copyTo(out) }
             inputStream.close()
             return cacheFile
@@ -57,7 +60,10 @@ fun resolveFileToCache(
         }
 
         if (inputStream != null) {
-            val cacheFile = File(context.cacheDir, "${cachePrefix}_${filePath.hashCode().toString(16)}")
+            val cacheFile = File(
+                context.cacheDir,
+                "${cachePrefix}_${filePath.hashCode().toString(16)}"
+            )
             FileOutputStream(cacheFile).use { out -> inputStream.copyTo(out) }
             inputStream.close()
             return cacheFile
@@ -70,7 +76,10 @@ fun resolveFileToCache(
             if (docFile != null && docFile.exists() && docFile.isFile) {
                 val fallbackStream = context.contentResolver.openInputStream(docFile.uri)
                 if (fallbackStream != null) {
-                    val cacheFile = File(context.cacheDir, "${cachePrefix}_${filePath.hashCode().toString(16)}")
+                    val cacheFile = File(
+                        context.cacheDir,
+                        "${cachePrefix}_${filePath.hashCode().toString(16)}"
+                    )
                     FileOutputStream(cacheFile).use { out -> fallbackStream.copyTo(out) }
                     fallbackStream.close()
                     return cacheFile

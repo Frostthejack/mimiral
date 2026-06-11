@@ -82,7 +82,9 @@ class MobiReaderViewModel @Inject constructor(
 
                 val result = withContext(Dispatchers.IO) {
                     val file = resolveFileToCache(appContext, book.filePath, "mobi")
-                        ?: return@withContext MobiState.Error("Cannot access file: ${book.filePath}")
+                        ?: return@withContext MobiState.Error(
+                            "Cannot access file: ${book.filePath}"
+                        )
                     mobiParser.openFile(file)
                 }
 

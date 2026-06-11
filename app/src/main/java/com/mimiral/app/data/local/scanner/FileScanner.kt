@@ -519,7 +519,10 @@ class FileScanner @Inject constructor(
             val cacheDir = File(context.filesDir, "books")
             if (!cacheDir.exists()) cacheDir.mkdirs()
             val safeName = doc.name?.replace(Regex("[^a-zA-Z0-9._-]"), "_") ?: "book"
-            val cacheFile = File(cacheDir, "${safeName}_${doc.uri.hashCode().toString(16)}.$extension")
+            val cacheFile = File(
+                cacheDir,
+                "${safeName}_${doc.uri.hashCode().toString(16)}.$extension"
+            )
             if (cacheFile.exists()) return cacheFile.absolutePath
             context.contentResolver.openInputStream(doc.uri)?.use { input ->
                 FileOutputStream(cacheFile).use { output ->

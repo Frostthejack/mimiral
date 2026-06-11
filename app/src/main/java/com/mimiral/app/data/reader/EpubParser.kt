@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import androidx.documentfile.provider.DocumentFile
 import java.io.File
 import java.io.IOException
 import java.io.StringReader
@@ -130,32 +131,53 @@ class EpubParser(private val context: Context) {
                             null
                         }
                         val resolvedStream = inputStream ?: run {
-                            // Fallback for SAF content URIs: use DocumentsContract to resolve via tree
+                            // Fallback for SAF content URIs: resolve via DocumentsContract tree
                             if (uri.scheme?.lowercase() == "content") {
                                 try {
-                                    val treeDocId = android.provider.DocumentsContract.getTreeDocumentId(uri)
-                                    val treeUri = android.provider.DocumentsContract.buildTreeDocumentUri(uri.authority, treeDocId)
-                                    val treeDoc = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                                    val treeDocId = android.provider.DocumentsContract
+                                        .getTreeDocumentId(uri)
+                                    val treeUri = android.provider.DocumentsContract
+                                        .buildTreeDocumentUri(
+                                            uri.authority,
+                                            treeDocId
+                                        )
+                                    val treeDoc = androidx.documentfile.provider
+                                        .DocumentFile.fromTreeUri(
+                                            context,
+                                            treeUri
+                                        )
                                     if (treeDoc != null && treeDoc.exists()) {
-                                        // Find the file by navigating the tree
-                                        val docId = android.provider.DocumentsContract.getDocumentId(uri)
-                                        // docId format: "primary:Calibre/The Hundred Years' War...epub"
-                                        // Navigate through path segments
-                                        var current: androidx.documentfile.provider.DocumentFile? = treeDoc
-                                        val segments = docId.split(":").lastOrNull()?.split("/")?.filter { it.isNotBlank() } ?: emptyList()
+                                        val docId = android.provider.DocumentsContract
+                                            .getDocumentId(uri)
+                                        var current: DocumentFile? = treeDoc
+                                        val pathStr = docId.split(":")
+                                            .lastOrNull() ?: ""
+                                        val segments = pathStr.split("/")
+                                            .filter { it.isNotBlank() }
                                         for (segment in segments) {
-                                            val decoded = try { android.net.Uri.decode(segment) } catch (_: Exception) { segment }
-                                            current = current?.listFiles()?.find { file ->
-                                                file.name == decoded || file.uri.lastPathSegment?.let { try { android.net.Uri.decode(it) } catch (_: Exception) { it } } == decoded
-                                            }
+                                            val decoded = try {
+                                                android.net.Uri.decode(segment)
+                                            } catch (_: Exception) { segment }
+                                            current = current?.listFiles()
+                                                ?.find { file ->
+                                                    file.name == decoded ||
+                                                        decodedName(file) == decoded
+                                                }
                                             if (current == null) break
                                         }
-                                        current?.takeIf { it.exists() && it.isFile }?.let { found ->
-                                            context.contentResolver.openInputStream(found.uri)
+                                        current?.takeIf {
+                                            it.exists() && it.isFile
+                                        }?.let { found ->
+                                            context.contentResolver
+                                                .openInputStream(found.uri)
                                         }
-                                    } else null
+                                    } else {
+                                        null
+                                    }
                                 } catch (_: Exception) { null }
-                            } else null
+                            } else {
+                                null
+                            }
                         }
                         resolvedStream ?: return@withContext EpubState.Error(
                             "Cannot open file: $filePath"
@@ -442,6 +464,12 @@ class EpubParser(private val context: Context) {
             ?: zip.getEntry(opfBasePath + resolvedHref)
             ?: return null
         return zip.getInputStream(entry).readBytes()
+    }
+
+    private fun decodedName(file: DocumentFile): String {
+        return file.uri.lastPathSegment?.let { seg ->
+            try { android.net.Uri.decode(seg) } catch (_: Exception) { seg }
+        } ?: ""
     }
 
     private fun resolveHref(href: String): String {

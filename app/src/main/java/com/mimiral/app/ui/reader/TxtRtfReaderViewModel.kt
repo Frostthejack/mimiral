@@ -14,7 +14,6 @@ import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.ReadingTimeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -105,7 +104,12 @@ class TxtRtfReaderViewModel @Inject constructor(
 
                 val file = resolveFileToCache(appContext, book.filePath, "txt")
                     ?: run {
-                        _uiState.update { it.copy(isLoading = false, error = "Cannot access file: ${book.filePath}") }
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "Cannot access file: ${book.filePath}"
+                            )
+                        }
                         return@launch
                     }
                 val format = book.format.uppercase()

@@ -64,6 +64,8 @@ data class DrawerSection(
  * - Reading: reading progress and statistics
  * - Settings: app configuration
  */
+private val collectionsIcon = Icons.Filled.CollectionsBookmark
+
 val drawerSections = listOf(
     DrawerSection(
         title = "Discover",
@@ -78,7 +80,7 @@ val drawerSections = listOf(
             DrawerNavItem(Screen.KavitaOpdsFeeds, "Feeds", Icons.Filled.AutoStories),
             DrawerNavItem(Screen.KavitaBookmarks, "Bookmarks", Icons.Filled.Bookmarks),
             DrawerNavItem(Screen.WantToRead, "Want To Read", Icons.Outlined.BookmarkAdd),
-            DrawerNavItem(Screen.KavitaCollections, "Collections", Icons.Filled.CollectionsBookmark),
+            DrawerNavItem(Screen.KavitaCollections, "Collections", collectionsIcon),
             DrawerNavItem(Screen.KavitaStats, "Kavita Stats", Icons.Filled.BarChart)
         )
     ),
