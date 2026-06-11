@@ -20,6 +20,11 @@ android {
     namespace = "com.mimiral.app"
     compileSdk = 35
 
+    // Room schema export location for migration testing
+    room {
+        schemaLocation("$projectDir/schemas")
+    }
+
     defaultConfig {
         applicationId = "com.mimiral.app"
         minSdk = 31

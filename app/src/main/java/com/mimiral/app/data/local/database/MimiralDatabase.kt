@@ -62,7 +62,7 @@ import com.mimiral.app.data.local.entity.TagEntity
         PendingOperationEntity::class
     ],
     version = 12,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class MimiralDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
