@@ -25,6 +25,7 @@ import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.navigation.MimiralNavGraph
 import com.mimiral.app.navigation.routeForBookFormat
 import com.mimiral.app.ui.theme.MimiralTheme
+import com.mimiral.app.ui.theme.MimiralThemeProvider
 import com.mimiral.app.ui.theme.rememberMimiralThemeState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -192,45 +193,47 @@ fun MainContent(onComposeReady: () -> Unit = {}) {
     // Initialize theme from DataStore
     rememberMimiralThemeState()
 
-    // Signal that Compose content is ready — this dismisses the splash screen
-    LaunchedEffect(Unit) {
-        onComposeReady()
-    }
+    MimiralThemeProvider {
+        // Signal that Compose content is ready — this dismisses the splash screen
+        LaunchedEffect(Unit) {
+            onComposeReady()
+        }
 
-    // Register volume key callback with Activity
-    LaunchedEffect(settings.volumeKeyNavigationEnabled) {
-        if (settings.volumeKeyNavigationEnabled) {
-            activity.setVolumeKeyEventCallback { keyCode ->
-                // The Activity-level interception prevents system volume change
-                true
+        // Register volume key callback with Activity
+        LaunchedEffect(settings.volumeKeyNavigationEnabled) {
+            if (settings.volumeKeyNavigationEnabled) {
+                activity.setVolumeKeyEventCallback { keyCode ->
+                    // The Activity-level interception prevents system volume change
+                    true
+                }
+            } else {
+                activity.setVolumeKeyEventCallback(null)
             }
-        } else {
-            activity.setVolumeKeyEventCallback(null)
         }
-    }
 
-    // Handle external book from ACTION_VIEW intent
-    val pendingBook by activity.pendingExternalBook.collectAsState()
-    val resolvedBook by activity.resolvedExternalBook.collectAsState()
+        // Handle external book from ACTION_VIEW intent
+        val pendingBook by activity.pendingExternalBook.collectAsState()
+        val resolvedBook by activity.resolvedExternalBook.collectAsState()
 
-    // Process pending external book (import into library)
-    LaunchedEffect(pendingBook) {
-        val pending = pendingBook
-        if (pending != null) {
-            activity.processExternalBook(pending)
-            activity.clearPendingExternalBook()
+        // Process pending external book (import into library)
+        LaunchedEffect(pendingBook) {
+            val pending = pendingBook
+            if (pending != null) {
+                activity.processExternalBook(pending)
+                activity.clearPendingExternalBook()
+            }
         }
-    }
 
-    // Navigate to reader when book is resolved
-    LaunchedEffect(resolvedBook) {
-        val resolved = resolvedBook
-        if (resolved != null) {
-            val route = routeForBookFormat(resolved.bookId, resolved.format)
-            navController.navigate(route)
-            activity.clearResolvedExternalBook()
+        // Navigate to reader when book is resolved
+        LaunchedEffect(resolvedBook) {
+            val resolved = resolvedBook
+            if (resolved != null) {
+                val route = routeForBookFormat(resolved.bookId, resolved.format)
+                navController.navigate(route)
+                activity.clearResolvedExternalBook()
+            }
         }
-    }
 
-    MimiralNavGraph(navController = navController)
+        MimiralNavGraph(navController = navController)
+    }
 }

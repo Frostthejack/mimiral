@@ -16,9 +16,11 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -110,33 +112,59 @@ private val HighContrastDarkColorScheme = darkColorScheme(
 
 // ── Theme State ────────────────────────────────────────────
 
-object ThemeState {
+/**
+ * Holds the current theme selection as Compose mutable state.
+ * Scoped to the composition tree via [LocalMimiralThemeState].
+ */
+class MimiralThemeState {
     var currentTheme by mutableStateOf(MimiralThemeType.DAY)
 }
 
 /**
+ * CompositionLocal providing the current [MimiralThemeState].
+ * Must be provided at the root of the composition tree via [MimiralThemeProvider].
+ */
+val LocalMimiralThemeState = compositionLocalOf<MimiralThemeState> {
+    error("LocalMimiralThemeState not provided — wrap your composition in MimiralThemeProvider")
+}
+
+/**
+ * Provides [LocalMimiralThemeState] to the composition tree.
+ * Call at the root of your UI (e.g. in [MainContent]).
+ */
+@Composable
+fun MimiralThemeProvider(content: @Composable () -> Unit) {
+    val themeState = remember { MimiralThemeState() }
+    CompositionLocalProvider(LocalMimiralThemeState provides themeState) {
+        content()
+    }
+}
+
+/**
  * Remembers and initializes theme state from DataStore.
- * Must be called at the top of the composition tree (e.g. in MainContent).
+ * Must be called at the top of the composition tree (e.g. in MainContent),
+ * after [MimiralThemeProvider] has been set up.
  */
 @Composable
 fun rememberMimiralThemeState(): MimiralThemeType {
+    val themeState = LocalMimiralThemeState.current
     val context = LocalContext.current
     val settingsRepository = remember { ReaderSettingsRepository(context) }
     val settings by settingsRepository.settings.collectAsState(
         initial = com.mimiral.app.data.local.settings.ReaderSettings()
     )
 
-    // Sync DataStore value into ThemeState on first composition and when it changes
+    // Sync DataStore value into theme state on first composition and when it changes
     LaunchedEffect(settings.themeName) {
         val theme = try {
             MimiralThemeType.valueOf(settings.themeName)
         } catch (_: IllegalArgumentException) {
             MimiralThemeType.DAY
         }
-        ThemeState.currentTheme = theme
+        themeState.currentTheme = theme
     }
 
-    return ThemeState.currentTheme
+    return themeState.currentTheme
 }
 
 // ── Theme Switcher Composable ──────────────────────────────
@@ -144,9 +172,10 @@ fun rememberMimiralThemeState(): MimiralThemeType {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MimiralThemeSwitcher(
-    currentTheme: MimiralThemeType = ThemeState.currentTheme,
+    currentTheme: MimiralThemeType = LocalMimiralThemeState.current.currentTheme,
     onThemeSelected: (MimiralThemeType) -> Unit
 ) {
+    val themeState = LocalMimiralThemeState.current
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
@@ -169,7 +198,7 @@ fun MimiralThemeSwitcher(
                 DropdownMenuItem(
                     text = { Text(theme.label) },
                     onClick = {
-                        ThemeState.currentTheme = theme
+                        themeState.currentTheme = theme
                         onThemeSelected(theme)
                         expanded = false
                     }
@@ -183,7 +212,7 @@ fun MimiralThemeSwitcher(
 
 @Composable
 fun MimiralTheme(
-    themeType: MimiralThemeType = ThemeState.currentTheme,
+    themeType: MimiralThemeType = LocalMimiralThemeState.current.currentTheme,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
