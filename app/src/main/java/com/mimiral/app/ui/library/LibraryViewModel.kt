@@ -72,6 +72,7 @@ class LibraryViewModel @Inject constructor(
     private val _viewMode = MutableStateFlow(ViewMode.GRID)
     private val _isRefreshing = MutableStateFlow(false)
     private val _scanState = MutableStateFlow<ScanState>(ScanState.Idle)
+    private val _recentBooks = MutableStateFlow<List<BookWithProgress>>(emptyList())
     private val _scanDirectories = mutableSetOf<String>()
 
     init {
@@ -131,9 +132,12 @@ class LibraryViewModel @Inject constructor(
     }.combine(_filterOption) { (books, sort, groups), filter ->
         Triple(books, sort, groups)
     }.combine(_viewMode) { (books, sort, groups), viewMode ->
+        Pair(books, groups) to viewMode
+    }.combine(_recentBooks) { (booksAndGroups, viewMode), recent ->
+        val (books, groups) = booksAndGroups
         LibraryUiState(
             books = books,
-            recentBooks = emptyList(),
+            recentBooks = recent,
             seriesGroups = groups,
             isLoading = false,
             isRefreshing = _isRefreshing.value,
@@ -178,9 +182,6 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
-
-    private val _recentBooks = MutableStateFlow<List<BookWithProgress>>(emptyList())
-    val recentBooks: StateFlow<List<BookWithProgress>> = _recentBooks.asStateFlow()
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query

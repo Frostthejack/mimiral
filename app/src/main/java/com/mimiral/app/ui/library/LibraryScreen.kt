@@ -89,12 +89,11 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val recentBooks by viewModel.recentBooks.collectAsState()
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
     // True when library is genuinely empty (not just filtered to nothing)
     val isLibraryEmpty = uiState.books.isEmpty() &&
-        recentBooks.isEmpty() &&
+        uiState.recentBooks.isEmpty() &&
         uiState.searchQuery.isBlank() &&
         uiState.filterOption == FilterOption.ALL &&
         uiState.error == null &&
@@ -295,7 +294,7 @@ fun LibraryScreen(
                         )
                     }
                 } else {
-                    val showRecent = recentBooks.isNotEmpty() &&
+                    val showRecent = uiState.recentBooks.isNotEmpty() &&
                         uiState.searchQuery.isBlank() &&
                         uiState.filterOption == FilterOption.ALL &&
                         uiState.sortOption != SortOption.SERIES
@@ -387,7 +386,7 @@ fun LibraryScreen(
                         if (uiState.viewMode == ViewMode.GRID) {
                             GridLibraryContent(
                                 books = uiState.books,
-                                recentBooks = if (showRecent) recentBooks else emptyList(),
+                                recentBooks = if (showRecent) uiState.recentBooks else emptyList(),
                                 onBookClick = onBookClick,
                                 onBookLongPress = { /* handled per-item */ },
                                 onEditBookMetadata = onEditBookMetadata,
@@ -396,7 +395,7 @@ fun LibraryScreen(
                         } else {
                             ListLibraryContent(
                                 books = uiState.books,
-                                recentBooks = if (showRecent) recentBooks else emptyList(),
+                                recentBooks = if (showRecent) uiState.recentBooks else emptyList(),
                                 onBookClick = onBookClick,
                                 onBookLongPress = { /* handled per-item */ },
                                 onEditBookMetadata = onEditBookMetadata,
