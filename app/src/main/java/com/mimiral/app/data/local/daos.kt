@@ -13,6 +13,7 @@ import com.mimiral.app.data.local.entity.BookTagCrossRef
 import com.mimiral.app.data.local.entity.BookmarkEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.entity.CollectionEntity
+import com.mimiral.app.data.local.entity.CollectionWithBookCount
 import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.local.entity.PdfSettingsEntity
@@ -388,6 +389,22 @@ interface CollectionDao {
 
     @Query("SELECT * FROM book_collections")
     suspend fun getAllBookCollections(): List<BookCollectionCrossRef>
+
+    /**
+     * Single-query batch fetch: returns all collections with their book counts
+     * using a LEFT JOIN + GROUP BY, avoiding the N+1 query problem.
+     */
+    @Query(
+        "SELECT collections.id AS id, collections.name AS name, " +
+            "collections.description AS description, " +
+            "collections.created_time AS createdTime, " +
+            "collections.sort_order AS sortOrder, " +
+            "COUNT(book_collections.book_id) AS bookCount " +
+            "FROM collections " +
+            "LEFT JOIN book_collections ON collections.id = book_collections.collection_id " +
+            "GROUP BY collections.id ORDER BY collections.sort_order"
+    )
+    fun getAllCollectionsWithBookCount(): Flow<List<CollectionWithBookCount>>
 }
 
 @Dao

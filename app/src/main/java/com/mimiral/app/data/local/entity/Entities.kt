@@ -84,6 +84,19 @@ data class CollectionEntity(
     @ColumnInfo(name = "sort_order") val sortOrder: Int = 0
 )
 
+/**
+ * Projection for CollectionEntity with book count, used by the N+1 fix
+ * in CollectionDao.getAllCollectionsWithBookCount().
+ */
+data class CollectionWithBookCount(
+    val id: Int,
+    val name: String,
+    val description: String?,
+    val createdTime: Long,
+    val sortOrder: Int,
+    val bookCount: Int
+)
+
 @Entity(
     tableName = "book_collections",
     primaryKeys = ["book_id", "collection_id"]
