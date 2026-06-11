@@ -336,8 +336,26 @@ class BookRepository @Inject constructor(
      * Combined book + chapter search: searches books by title/author
      * AND chapters by content, returning matching books.
      */
-    fun searchBooksAndChapters(query: String): Flow<List<BookEntity>> =
-        bookDao.searchBooks(query)
+    suspend fun searchBooksAndChapters(query: String): List<BookEntity> {
+        // Search books by title/author
+        val bookResults = bookDao.searchBooks(query).first()
+        // Search chapters by content, get distinct book IDs
+        val chapterBookIds = chapterDao.searchChapterBookIds(query)
+        val chapterResults = if (chapterBookIds.isNotEmpty()) {
+            bookDao.getBooksByIds(chapterBookIds)
+        } else {
+            emptyList()
+        }
+        // Deduplicate by book ID, preserving order (book matches first)
+        val seen = mutableSetOf<Int>()
+        val combined = mutableListOf<BookEntity>()
+        for (book in bookResults + chapterResults) {
+            if (seen.add(book.id)) {
+                combined.add(book)
+            }
+        }
+        return combined
+    }
 
     // ---- Series grouping ----
 
