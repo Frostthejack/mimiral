@@ -1,6 +1,5 @@
 package com.mimiral.app.data.repository
 
-import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
@@ -14,8 +13,7 @@ import kotlinx.coroutines.flow.first
 @Singleton
 class ReadingStatsRepository @Inject constructor(
     private val readingSessionDao: ReadingSessionDao,
-    private val readingProgressDao: ReadingProgressDao,
-    private val bookDao: BookDao
+    private val readingProgressDao: ReadingProgressDao
 ) {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
@@ -73,13 +71,7 @@ class ReadingStatsRepository @Inject constructor(
         readingSessionDao.getAllSessions()
 
     suspend fun getTotalBooksCompleted(): Int =
-        readingProgressDao.getAllProgress().let { flow ->
-            var count = 0
-            flow.collect { list ->
-                count = list.count { it.progressPercent >= 99f }
-            }
-            count
-        }
+        readingProgressDao.getCompletedCount()
 
     /**
      * Calculate the current reading streak (consecutive days with reading activity).
