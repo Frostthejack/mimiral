@@ -31,15 +31,6 @@ interface KavitaApi {
     suspend fun login(@Body request: KavitaLoginRequest): Response<KavitaLoginResponse>
 
     /**
-     * Authenticate with username/password (alias for login).
-     * POST /api/Account/login — some code paths call login() with (username, password).
-     */
-    @POST("api/Account/login")
-    suspend fun loginWithCredentials(
-        @Body request: KavitaLoginRequest
-    ): Response<KavitaLoginResponse>
-
-    /**
      * Test connection to the Kavita server using the base URL.
      * GET /api/Server/info — lightweight connectivity check.
      */
