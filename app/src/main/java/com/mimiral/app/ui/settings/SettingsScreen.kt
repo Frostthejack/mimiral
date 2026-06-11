@@ -106,13 +106,13 @@ fun SettingsScreen(
     backupRestoreViewModel: BackupRestoreViewModel = viewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val syncSettingsRepository = remember { SyncSettingsRepository(context) }
+    val syncSettingsRepository = remember(context) { SyncSettingsRepository(context) }
     val scope = rememberCoroutineScope()
 
-    // Repositories
-    val readerSettingsRepo = remember { ReaderSettingsRepository(context) }
-    val librarySettingsRepo = remember { LibrarySettingsRepository(context) }
-    val readingModeSettingsRepo = remember { ReadingModeSettingsRepository(context) }
+    // Repositories — remember keys ensure stable instances across recomposition
+    val readerSettingsRepo = remember(context) { ReaderSettingsRepository(context) }
+    val librarySettingsRepo = remember(context) { LibrarySettingsRepository(context) }
+    val readingModeSettingsRepo = remember(context) { ReadingModeSettingsRepository(context) }
 
     // State flows
     val readerSettings by readerSettingsRepo.settings.collectAsState(
