@@ -199,8 +199,14 @@ fun MimiralNavGraph(navController: NavHostController) {
             composable(Screen.Discover.route) {
                 DiscoverScreen(
                     onOpenDrawer = openDrawer,
-                    onNavigateToKavitaSeries = { seriesId ->
-                        navController.navigate("kavita_series/$seriesId")
+                    onNavigateToKavitaFeeds = {
+                        navController.navigate(Screen.KavitaOpdsFeeds.route)
+                    },
+                    onNavigateToOpdsCatalogBrowser = {
+                        navController.navigate(Screen.OpdsCatalogBrowser.route)
+                    },
+                    onNavigateToFreeSources = {
+                        navController.navigate(Screen.FreeSources.route)
                     }
                 )
             }

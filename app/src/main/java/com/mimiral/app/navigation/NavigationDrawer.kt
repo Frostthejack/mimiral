@@ -8,6 +8,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LibraryBooks
@@ -55,8 +57,6 @@ data class DrawerSection(
 
 /**
  * All drawer items, grouped into sections.
- * Stats and Statistics are merged into a single "Statistics" item
- * since they serve the same purpose (reading statistics).
  */
 val drawerSections = listOf(
     DrawerSection(
@@ -70,10 +70,18 @@ val drawerSections = listOf(
     DrawerSection(
         title = "Discover",
         items = listOf(
-            DrawerNavItem(Screen.Discover, "Discover", Icons.Filled.Explore),
+            DrawerNavItem(Screen.Discover, "Discover", Icons.Filled.Explore)
+        )
+    ),
+    DrawerSection(
+        title = "Kavita",
+        items = listOf(
+            DrawerNavItem(Screen.KavitaOpdsFeeds, "Library", Icons.Filled.AutoStories),
             DrawerNavItem(Screen.KavitaBookmarks, "Bookmarks", Icons.Filled.Bookmarks),
-            DrawerNavItem(Screen.KavitaOpdsFeeds, "Kavita Feeds", Icons.Filled.AutoStories),
-            DrawerNavItem(Screen.WantToRead, "Want To Read", Icons.Outlined.BookmarkAdd)
+            DrawerNavItem(Screen.KavitaCollections, "Collections", Icons.Filled.CollectionsBookmark),
+            DrawerNavItem(Screen.KavitaReadingList, "Reading Lists", Icons.Filled.LibraryBooks),
+            DrawerNavItem(Screen.WantToRead, "Want To Read", Icons.Outlined.BookmarkAdd),
+            DrawerNavItem(Screen.KavitaStats, "Stats", Icons.Filled.BarChart)
         )
     ),
     DrawerSection(
@@ -81,7 +89,6 @@ val drawerSections = listOf(
         items = listOf(
             DrawerNavItem(Screen.NowReading, "Now Reading", Icons.Filled.PlayArrow),
             DrawerNavItem(Screen.Statistics, "Statistics", Icons.Filled.BarChart),
-            DrawerNavItem(Screen.KavitaStats, "Kavita Stats", Icons.Filled.AutoStories),
             DrawerNavItem(Screen.ReadingGoals, "Goals", Icons.Filled.EmojiEvents)
         )
     ),

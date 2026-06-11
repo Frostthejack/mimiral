@@ -19,23 +19,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,8 +55,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
-import com.mimiral.app.data.remote.opds.OpdsEntry
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -143,7 +137,7 @@ fun OpdsCatalogBrowserScreen(
         ) {
             when {
                 uiState.isLoadingCatalogs -> {
-                    LoadingView()
+                    OpdsLoadingView()
                 }
                 uiState.showCatalogList -> {
                     CatalogListView(
@@ -153,10 +147,10 @@ fun OpdsCatalogBrowserScreen(
                     )
                 }
                 uiState.isLoadingFeed -> {
-                    LoadingView()
+                    OpdsLoadingView()
                 }
                 uiState.currentFeed != null -> {
-                    FeedView(
+                    OpdsFeedBrowseView(
                         feed = uiState.currentFeed!!,
                         isDownloading = uiState.isDownloading,
                         isLoadingNextPage = uiState.isLoadingNextPage,
@@ -182,29 +176,6 @@ fun OpdsCatalogBrowserScreen(
 }
 
 @Composable
-private fun LoadingView() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.Cloud,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Loading...",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
 private fun CatalogListView(
     catalogs: List<OpdsCatalogEntity>,
     onCatalogClick: (OpdsCatalogEntity) -> Unit,
@@ -217,7 +188,7 @@ private fun CatalogListView(
                 .fillMaxSize()
                 .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Cloud,
@@ -225,13 +196,11 @@ private fun CatalogListView(
                 modifier = Modifier.size(80.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
             )
-            Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "No OPDS Catalogs",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Add an OPDS catalog to browse and download books " +
                     "from online libraries.",
@@ -239,7 +208,6 @@ private fun CatalogListView(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(24.dp))
             Button(onClick = { /* FAB handles this */ }) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -249,7 +217,6 @@ private fun CatalogListView(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Add Your First Catalog")
             }
-            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Try: Standard Ebooks, Project Gutenberg, " +
                     "or your own Calibre library",
@@ -378,307 +345,6 @@ private fun CatalogListItem(
                 }
             }
         )
-    }
-}
-
-@Composable
-private fun FeedView(
-    feed: com.mimiral.app.data.remote.opds.OpdsFeed,
-    isDownloading: Boolean,
-    isLoadingNextPage: Boolean,
-    hasNextPage: Boolean,
-    onEntryClick: (OpdsEntry) -> Unit,
-    onDownloadClick: (OpdsEntry) -> Unit,
-    onLoadNextPage: () -> Unit
-) {
-    val navEntries = feed.entries.filter { !it.isAcquisition }
-    val bookEntries = feed.entries.filter { it.isAcquisition }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 8.dp)
-    ) {
-        // Feed title/subtitle
-        if (feed.subtitle != null) {
-            item {
-                Text(
-                    text = feed.subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-        }
-
-        // Navigation entries (sub-categories)
-        if (navEntries.isNotEmpty()) {
-            if (bookEntries.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Categories",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
-            }
-            items(navEntries) { entry ->
-                NavigationEntryItem(
-                    entry = entry,
-                    onClick = { onEntryClick(entry) }
-                )
-            }
-        }
-
-        // Book entries
-        if (bookEntries.isNotEmpty()) {
-            if (navEntries.isNotEmpty()) {
-                item {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                    Text(
-                        text = "Books",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-            }
-            items(bookEntries) { entry ->
-                BookEntryItem(
-                    entry = entry,
-                    isDownloading = isDownloading,
-                    onClick = { onEntryClick(entry) },
-                    onDownload = { onDownloadClick(entry) }
-                )
-            }
-        }
-
-        // Load more button (pagination)
-        if (hasNextPage) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isLoadingNextPage) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        OutlinedButton(
-                            onClick = onLoadNextPage
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Load More")
-                        }
-                    }
-                }
-            }
-        }
-
-        // Empty feed
-        if (feed.entries.isEmpty()) {
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "No items in this feed",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun NavigationEntryItem(
-    entry: OpdsEntry,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.ArrowForward,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = entry.title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            if (!entry.summary.isNullOrBlank()) {
-                Text(
-                    text = entry.summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-        Icon(
-            imageVector = Icons.Default.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun BookEntryItem(
-    entry: OpdsEntry,
-    isDownloading: Boolean,
-    onClick: () -> Unit,
-    onDownload: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            // Book icon / cover placeholder
-            Box(
-                modifier = Modifier
-                    .size(56.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.LibraryBooks,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = entry.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                if (entry.authors.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = entry.authors.joinToString { it.name },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                if (!entry.summary.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = entry.summary,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                // Download buttons
-                if (entry.acquisitionLinks.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        entry.acquisitionLinks.take(3).forEach { link ->
-                            val formatLabel = link.formatName ?: link.type ?: "Download"
-                            TextButton(
-                                onClick = onDownload,
-                                enabled = !isDownloading
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = formatLabel,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Gutenberg metadata: language and subjects
-                if (entry.dcLanguage != null || entry.dcSubjects.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (entry.dcLanguage != null) {
-                            Text(
-                                text = entry.dcLanguage.uppercase(),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        if (entry.dcSubjects.isNotEmpty()) {
-                            Text(
-                                text = entry.dcSubjects.take(3)
-                                    .joinToString(", "),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

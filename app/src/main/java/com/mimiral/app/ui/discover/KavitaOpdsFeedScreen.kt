@@ -50,8 +50,10 @@ import com.mimiral.app.data.remote.kavita.KavitaOpdsFeedCategory
 
 /**
  * Screen showing all Kavita OPDS feed categories as a grid.
- * Tapping a category navigates to the OPDS catalog browser
- * at the appropriate feed URL.
+ * Tapping a category navigates to the appropriate screen:
+ * - Collections -> Screen.KavitaCollections
+ * - Reading Lists -> Screen.KavitaReadingList
+ * - Other categories -> OPDS browse at the feed URL
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,14 +61,16 @@ fun KavitaOpdsFeedScreen(
     viewModel: KavitaOpdsFeedViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
-    onNavigateToOpdsBrowse: (feedUrl: String, feedTitle: String) -> Unit = { _, _ -> }
+    onNavigateToOpdsBrowse: (feedUrl: String, feedTitle: String) -> Unit = { _, _ -> },
+    onNavigateToKavitaCollections: () -> Unit = {},
+    onNavigateToKavitaReadingList: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Kavita Feeds") },
+                title = { Text("Kavita Library") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
                         Icon(
@@ -101,9 +105,15 @@ fun KavitaOpdsFeedScreen(
                 else -> {
                     FeedCategoryGrid(
                         onCategoryClick = { category ->
-                            val feedUrl = viewModel.buildFeedUrl(category)
-                            if (feedUrl != null) {
-                                onNavigateToOpdsBrowse(feedUrl, category.label)
+                            when (category) {
+                                KavitaOpdsFeedCategory.COLLECTIONS -> onNavigateToKavitaCollections()
+                                KavitaOpdsFeedCategory.READING_LISTS -> onNavigateToKavitaReadingList()
+                                else -> {
+                                    val feedUrl = viewModel.buildFeedUrl(category)
+                                    if (feedUrl != null) {
+                                        onNavigateToOpdsBrowse(feedUrl, category.label)
+                                    }
+                                }
                             }
                         }
                     )
