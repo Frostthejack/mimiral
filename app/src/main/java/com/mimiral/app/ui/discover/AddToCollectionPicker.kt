@@ -24,6 +24,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -31,6 +33,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,10 +65,37 @@ fun AddToCollectionPicker(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val sheetState = rememberModalBottomSheetState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Track which collection was tapped so we can call onAdded only on confirmed success
+    var pendingCollectionId by remember { mutableStateOf<Int?>(null) }
+    var pendingCollectionTitle by remember { mutableStateOf<String?>(null) }
 
     // Load collections when sheet opens
     LaunchedEffect(Unit) {
         viewModel.loadCollections()
+    }
+
+    // Show error snackbar on add-series failure
+    LaunchedEffect(uiState.addSeriesError) {
+        uiState.addSeriesError?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearAddSeriesError()
+            // Clear pending so onAdded is NOT called
+            pendingCollectionId = null
+            pendingCollectionTitle = null
+        }
+    }
+
+    // When loading finishes (true -> false) with no error and a pending collection, call onAdded
+    LaunchedEffect(uiState.addSeriesLoading) {
+        if (!uiState.addSeriesLoading && pendingCollectionId != null && uiState.addSeriesError == null) {
+            val id = pendingCollectionId ?: return@LaunchedEffect
+            val title = pendingCollectionTitle ?: return@LaunchedEffect
+            onAdded(id, title)
+            pendingCollectionId = null
+            pendingCollectionTitle = null
+        }
     }
 
     ModalBottomSheet(
@@ -150,13 +181,15 @@ fun AddToCollectionPicker(
                             CollectionPickerItem(
                                 collection = collection,
                                 alreadyContains = alreadyContains,
+                                isAdding = uiState.addSeriesLoading,
                                 onClick = {
                                     if (!alreadyContains) {
+                                        pendingCollectionId = collection.id
+                                        pendingCollectionTitle = collection.title
                                         viewModel.addSeriesToCollection(
                                             collectionId = collection.id,
                                             seriesIds = listOf(seriesId)
                                         )
-                                        onAdded(collection.id, collection.title)
                                     }
                                 }
                             )
@@ -164,6 +197,12 @@ fun AddToCollectionPicker(
                     }
                 }
             }
+
+            // Inline snackbar host for error display inside the bottom sheet
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -174,13 +213,14 @@ fun AddToCollectionPicker(
 private fun CollectionPickerItem(
     collection: KavitaCollection,
     alreadyContains: Boolean,
+    isAdding: Boolean = false,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .clickable(enabled = !alreadyContains, onClick = onClick)
+            .clickable(enabled = !alreadyContains && !isAdding, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -216,7 +256,13 @@ private fun CollectionPickerItem(
             )
         }
 
-        if (!alreadyContains) {
+        if (isAdding) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else if (!alreadyContains) {
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = "Add to collection",
