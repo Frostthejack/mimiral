@@ -129,6 +129,15 @@ fun StatsDashboardScreen(
                     onNavigateToSetup = onNavigateToSetup,
                     modifier = Modifier.align(Alignment.Center)
                 )
+            } else if (uiState.readingActivity.isEmpty() &&
+                uiState.genreBreakdown.isEmpty() &&
+                uiState.pagesPerYear.isEmpty() &&
+                uiState.readingPace.isEmpty() &&
+                uiState.favoriteAuthors.isEmpty()
+            ) {
+                EmptyStatsDashboard(
+                    modifier = Modifier.fillMaxSize()
+                )
             } else {
                 StatsDashboardContent(
                     uiState = uiState,
@@ -218,17 +227,6 @@ private fun StatsDashboardContent(
     uiState: StatsDashboardUiState,
     modifier: Modifier = Modifier
 ) {
-    val hasData = uiState.readingActivity.isNotEmpty() ||
-        uiState.genreBreakdown.isNotEmpty() ||
-        uiState.pagesPerYear.isNotEmpty() ||
-        uiState.readingPace.isNotEmpty() ||
-        uiState.favoriteAuthors.isNotEmpty()
-
-    if (!hasData) {
-        EmptyStatsDashboard(modifier = modifier)
-        return
-    }
-
     LazyColumn(
         modifier = modifier,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
