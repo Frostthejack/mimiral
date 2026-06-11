@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network security configuration for Mimiral.
+
+    The app connects to user-configured servers (Kavita, OPDS) whose URLs are
+    entered at runtime, so usesCleartextTraffic="true" remains in the manifest.
+    This config restricts cleartext HTTP to private/local network ranges only,
+    blocking unencrypted traffic to arbitrary internet domains.
+
+    Without this restriction, all HTTP traffic (including JWT / API keys sent to
+    user-configured endpoints) travels unencrypted across the network.
+
+    Android reverses IP address parts for domain matching:
+      192.168.1.100  ->  100.1.168.192
+    So <domain includeSubdomains="true">1.168.192</domain> matches all
+    192.168.x.x addresses.
+-->
+<network-security-config>
+    <!-- Default: block cleartext for all internet traffic -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Allow cleartext only on private/local networks (user-configured servers) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Loopback -->
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <!-- Link-local: 169.254.0.0/16 -->
+        <domain includeSubdomains="true">254.169</domain>
+        <!-- Private Class A: 10.0.0.0/8 -->
+        <domain includeSubdomains="true">10</domain>
+        <!-- Private Class B: 172.16.0.0/12 -->
+        <domain includeSubdomains="true">16.172</domain>
+        <domain includeSubdomains="true">17.172</domain>
+        <domain includeSubdomains="true">18.172</domain>
+        <domain includeSubdomains="true">19.172</domain>
+        <domain includeSubdomains="true">20.172</domain>
+        <domain includeSubdomains="true">21.172</domain>
+        <domain includeSubdomains="true">22.172</domain>
+        <domain includeSubdomains="true">23.172</domain>
+        <domain includeSubdomains="true">24.172</domain>
+        <domain includeSubdomains="true">25.172</domain>
+        <domain includeSubdomains="true">26.172</domain>
+        <domain includeSubdomains="true">27.172</domain>
+        <domain includeSubdomains="true">28.172</domain>
+        <domain includeSubdomains="true">29.172</domain>
+        <domain includeSubdomains="true">30.172</domain>
+        <domain includeSubdomains="true">31.172</domain>
+        <!-- Private Class C: 192.168.0.0/16 -->
+        <domain includeSubdomains="true">168.192</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>
