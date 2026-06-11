@@ -14,6 +14,10 @@ import kotlinx.coroutines.flow.Flow
  * - Fetching and parsing OPDS feeds from remote catalogs
  * - Managing saved OPDS catalogs (CRUD)
  * - Browsing catalog entries and downloading books
+ *
+ * This is the single canonical OPDS repository. It uses OkHttp via OpdsClient
+ * for all HTTP operations. The legacy data.repository.OpdsRepository (which used
+ * raw HttpURLConnection) has been consolidated into this class.
  */
 @Singleton
 class OpdsRepository @Inject constructor(
@@ -30,6 +34,13 @@ class OpdsRepository @Inject constructor(
      */
     fun getSavedCatalogs(): Flow<List<OpdsCatalogEntity>> =
         catalogDao.getActiveCatalogs()
+
+    /**
+     * Get all active OPDS catalogs as a Flow.
+     * Alias for getSavedCatalogs() — used by legacy callers.
+     */
+    fun getActiveCatalogs(): Flow<List<OpdsCatalogEntity>> =
+        getSavedCatalogs()
 
     /**
      * Add a new OPDS catalog.
@@ -57,10 +68,80 @@ class OpdsRepository @Inject constructor(
     }
 
     /**
+     * Insert a catalog entity directly.
+     * Legacy bridge — used by callers that construct the entity themselves.
+     */
+    suspend fun insertCatalog(catalog: OpdsCatalogEntity): Long =
+        catalogDao.insertCatalog(catalog)
+
+    /**
      * Remove an OPDS catalog.
      */
     suspend fun removeCatalog(catalog: OpdsCatalogEntity) {
         catalogDao.deleteCatalog(catalog)
+    }
+
+    /**
+     * Delete a catalog entity directly.
+     * Legacy bridge — delegates to removeCatalog().
+     */
+    suspend fun deleteCatalog(catalog: OpdsCatalogEntity) {
+        removeCatalog(catalog)
+    }
+
+    /**
+     * Fetch and parse an OPDS feed from a URL.
+     * Legacy bridge returning Result<OpdsFeed> for backward compatibility.
+     *
+     * @param feedUrl The OPDS feed URL
+     * @param username Optional username for HTTP Basic auth
+     * @param password Optional password for HTTP Basic auth
+     * @return Result containing the parsed OpdsFeed
+     */
+    suspend fun fetchFeed(
+        feedUrl: String,
+        username: String? = null,
+        password: String? = null
+    ): Result<OpdsFeed> {
+        return when (val result = browseFeed(feedUrl, username, password)) {
+            is OpdsResult.Success -> Result.success(result.data)
+            is OpdsResult.Error -> Result.failure(
+                Exception(result.message, result.cause)
+            )
+        }
+    }
+
+    /**
+     * Download a book file from an OPDS acquisition link.
+     * Legacy bridge returning Result<String> (destination path) for backward compatibility.
+     *
+     * @param downloadUrl The download URL
+     * @param destinationPath The local file path to save to
+     * @param username Optional username for HTTP Basic auth
+     * @param password Optional password for HTTP Basic auth
+     * @return Result containing the destination path on success
+     */
+    suspend fun downloadBook(
+        downloadUrl: String,
+        destinationPath: String,
+        username: String? = null,
+        password: String? = null
+    ): Result<String> {
+        return when (val result = client.downloadBook(downloadUrl, username, password)) {
+            is OpdsResult.Success -> {
+                try {
+                    val destFile = java.io.File(destinationPath)
+                    destFile.parentFile?.mkdirs()
+                    destFile.writeBytes(result.data)
+                    Result.success(destinationPath)
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            }
+            is OpdsResult.Error -> Result.failure(
+                Exception(result.message, result.cause)
+            )
+        }
     }
 
     /**

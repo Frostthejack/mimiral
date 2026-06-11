@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.remote.opds.FreeSource
 import com.mimiral.app.data.remote.opds.OpdsEntry
 import com.mimiral.app.data.remote.opds.OpdsFeed
-import com.mimiral.app.data.repository.OpdsRepository
+import com.mimiral.app.data.remote.opds.OpdsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
