@@ -224,10 +224,20 @@ fun EpubReaderScreen(
         }
     }
 
-    // TTS sentence broadcast receiver — updates ViewModel when TTS service
-    // broadcasts sentence-level progress for synchronized highlighting.
+    val isBookmarked = uiState.isCurrentPageBookmarked
+    val currentChapterTitle = uiState.chapters.getOrNull(uiState.currentChapter)?.title ?: "Reader"
+
+    // --- TTS state tracking ---
+    val ttsSettingsRepository = remember { TTSSettingsRepository(context) }
+    val ttsSettings by ttsSettingsRepository.settings.collectAsState(
+        initial = com.mimiral.app.data.local.settings.TTSSettings()
+    )
+
+    // Register all three TTS broadcast receivers in a single DisposableEffect
+    // to reduce lifecycle overhead and keep related setup/teardown together.
     DisposableEffect(context) {
-        val receiver = object : BroadcastReceiver() {
+        // Sentence receiver — synchronized highlighting
+        val sentenceReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (intent?.action == TTSService.ACTION_TTS_SENTENCE) {
                     val isActive = intent.getBooleanExtra(TTSService.EXTRA_SENTENCE_ACTIVE, false)
@@ -244,26 +254,9 @@ fun EpubReaderScreen(
                 }
             }
         }
-        val filter = IntentFilter(TTSService.ACTION_TTS_SENTENCE)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(
-                receiver,
-                filter,
-                android.content.Context.RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            context.registerReceiver(receiver, filter)
-        }
 
-        onDispose {
-            context.unregisterReceiver(receiver)
-        }
-    }
-
-    // TTS word broadcast receiver — updates ViewModel with word-level offsets
-    // for karaoke-style highlighting during TTS playback.
-    DisposableEffect(context) {
-        val receiver = object : BroadcastReceiver() {
+        // Word receiver — karaoke-style highlighting
+        val wordReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (intent?.action == TTSService.ACTION_TTS_WORD) {
                     val isActive = intent.getBooleanExtra(TTSService.EXTRA_WORD_ACTIVE, false)
@@ -277,34 +270,9 @@ fun EpubReaderScreen(
                 }
             }
         }
-        val filter = IntentFilter(TTSService.ACTION_TTS_WORD)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(
-                receiver,
-                filter,
-                android.content.Context.RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            context.registerReceiver(receiver, filter)
-        }
 
-        onDispose {
-            context.unregisterReceiver(receiver)
-        }
-    }
-
-    val isBookmarked = uiState.isCurrentPageBookmarked
-    val currentChapterTitle = uiState.chapters.getOrNull(uiState.currentChapter)?.title ?: "Reader"
-
-    // --- TTS state tracking ---
-    val ttsSettingsRepository = remember { TTSSettingsRepository(context) }
-    val ttsSettings by ttsSettingsRepository.settings.collectAsState(
-        initial = com.mimiral.app.data.local.settings.TTSSettings()
-    )
-
-    // TTS state broadcast receiver — tracks TTS engine state changes
-    DisposableEffect(context) {
-        val receiver = object : BroadcastReceiver() {
+        // State receiver — TTS engine lifecycle tracking
+        val stateReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (intent?.action == TTSService.ACTION_TTS_STATE) {
                     val stateName = intent.getStringExtra(TTSService.EXTRA_TTS_STATE) ?: "IDLE"
@@ -312,19 +280,25 @@ fun EpubReaderScreen(
                 }
             }
         }
-        val filter = IntentFilter(TTSService.ACTION_TTS_STATE)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(
-                receiver,
-                filter,
-                android.content.Context.RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            context.registerReceiver(receiver, filter)
+
+        // Helper to handle API 33+ RECEIVER_NOT_EXPORTED flag
+        fun registerTtsReceiver(receiver: BroadcastReceiver, action: String) {
+            val filter = IntentFilter(action)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(receiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                context.registerReceiver(receiver, filter)
+            }
         }
 
+        registerTtsReceiver(sentenceReceiver, TTSService.ACTION_TTS_SENTENCE)
+        registerTtsReceiver(wordReceiver, TTSService.ACTION_TTS_WORD)
+        registerTtsReceiver(stateReceiver, TTSService.ACTION_TTS_STATE)
+
         onDispose {
-            context.unregisterReceiver(receiver)
+            context.unregisterReceiver(sentenceReceiver)
+            context.unregisterReceiver(wordReceiver)
+            context.unregisterReceiver(stateReceiver)
         }
     }
 
