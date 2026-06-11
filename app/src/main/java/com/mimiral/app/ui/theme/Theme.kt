@@ -219,8 +219,8 @@ fun MimiralTheme(
     }
 
     val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
+    LaunchedEffect(colorScheme) {
+        if (!view.isInEditMode) {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDark
