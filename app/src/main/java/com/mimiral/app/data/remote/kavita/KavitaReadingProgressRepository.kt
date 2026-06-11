@@ -10,10 +10,10 @@ import com.mimiral.app.data.remote.SyncStatus
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -61,12 +61,9 @@ class KavitaReadingProgressRepository @Inject constructor(
         const val MAX_RETRY_ATTEMPTS = 5
     }
 
-    private val dateFormat = SimpleDateFormat(
-        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-        Locale.US
-    ).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
+    private val dateFormat = DateTimeFormatter
+        .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+        .withZone(ZoneOffset.UTC)
 
     // ── Debounce state ──
 
@@ -223,7 +220,7 @@ class KavitaReadingProgressRepository @Inject constructor(
             seriesId = seriesId,
             libraryId = libraryId,
             bookScrollId = bookScrollId,
-            lastModifiedUtc = dateFormat.format(Date(now))
+            lastModifiedUtc = dateFormat.format(Instant.ofEpochMilli(now))
         )
 
         val shouldPush = pagesSinceLastPush >= DEBOUNCE_PAGE_INTERVAL ||
@@ -292,7 +289,7 @@ class KavitaReadingProgressRepository @Inject constructor(
             seriesId = seriesId,
             libraryId = libraryId,
             bookScrollId = bookScrollId,
-            lastModifiedUtc = dateFormat.format(Date())
+            lastModifiedUtc = dateFormat.format(Instant.now())
         )
         pushProgress(dto, bookId)
     }
@@ -485,7 +482,7 @@ class KavitaReadingProgressRepository @Inject constructor(
                         seriesId = op.seriesId,
                         libraryId = op.libraryId,
                         bookScrollId = op.bookScrollId,
-                        lastModifiedUtc = dateFormat.format(Date())
+                        lastModifiedUtc = dateFormat.format(Instant.now())
                     )
                     val response = kavitaApi.pushProgressDto(dto)
                     response.isSuccessful && response.body()?.success == true
@@ -501,7 +498,7 @@ class KavitaReadingProgressRepository @Inject constructor(
                         seriesId = op.seriesId,
                         libraryId = op.libraryId,
                         bookScrollId = op.bookScrollId,
-                        lastModifiedUtc = dateFormat.format(Date())
+                        lastModifiedUtc = dateFormat.format(Instant.now())
                     )
                     val pushResponse = kavitaApi.pushProgressDto(dto)
                     pushResponse.isSuccessful && pushResponse.body()?.success == true
@@ -538,7 +535,7 @@ class KavitaReadingProgressRepository @Inject constructor(
             seriesId = seriesId,
             libraryId = libraryId,
             bookScrollId = bookScrollId,
-            lastModifiedUtc = dateFormat.format(Date())
+            lastModifiedUtc = dateFormat.format(Instant.now())
         )
         pushProgress(dto, bookId)
 
