@@ -322,8 +322,10 @@ class FileScanner @Inject constructor(
                     )
                 }
             }
-        } catch (e: Exception) {
-            // MediaStore query can fail on some devices; fall through to SAF
+        } catch (e: SecurityException) {
+            // Permission denied on some devices; fall through to SAF
+        } catch (e: IllegalArgumentException) {
+            // Invalid URI or column on some devices; fall through to SAF
         }
 
         return results
