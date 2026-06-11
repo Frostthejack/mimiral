@@ -11,6 +11,7 @@ import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.entity.BookEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -487,9 +488,11 @@ class FileScanner @Inject constructor(
                         val name = child.name ?: return@forEach
                         val extension = name.substringAfterLast('.', "").lowercase()
                         if (extension in SUPPORTED_EXTENSIONS) {
+                            // Copy SAF content to app-private cache so we always have access
+                            val cachedPath = copySafToCache(child, extension)
                             results.add(
                                 PendingBook(
-                                    filePath = child.uri.toString(),
+                                    filePath = cachedPath ?: child.uri.toString(),
                                     fileName = name,
                                     format = extension.uppercase(),
                                     fileSize = child.length(),
@@ -504,6 +507,28 @@ class FileScanner @Inject constructor(
             // Permission denied for this subtree; skip silently
         } catch (_: Exception) {
             // Other errors; skip this directory
+        }
+    }
+
+    /**
+     * Copy a SAF document to app-private cache for reliable access.
+     * Returns the cache file path, or null if copy failed.
+     */
+    private fun copySafToCache(doc: DocumentFile, extension: String): String? {
+        return try {
+            val cacheDir = File(context.filesDir, "books")
+            if (!cacheDir.exists()) cacheDir.mkdirs()
+            val safeName = doc.name?.replace(Regex("[^a-zA-Z0-9._-]"), "_") ?: "book"
+            val cacheFile = File(cacheDir, "${safeName}_${doc.uri.hashCode().toString(16)}.$extension")
+            if (cacheFile.exists()) return cacheFile.absolutePath
+            context.contentResolver.openInputStream(doc.uri)?.use { input ->
+                FileOutputStream(cacheFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            cacheFile.absolutePath
+        } catch (_: Exception) {
+            null
         }
     }
 

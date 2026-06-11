@@ -4,10 +4,14 @@ sealed class Screen(val route: String) {
     object Library : Screen("library")
     object Collections : Screen("collections")
     object ReadingLists : Screen("reading_lists")
+
+    // Discover hub — entry point for all discovery features
     object Discover : Screen("discover")
+
+    // Kavita library browser (the actual series/volume browser)
+    object DiscoverKavita : Screen("discover_kavita")
     object AddBooks : Screen("add_books")
     object NowReading : Screen("now_reading")
-    object Stats : Screen("stats")
     object Settings : Screen("settings")
     object GestureSettings : Screen("gesture_settings")
     object Statistics : Screen("statistics")
@@ -96,11 +100,8 @@ sealed class Screen(val route: String) {
         }
     }
 
-    // OPDS catalog management
+    // OPDS catalog browser (browse catalogs, add/remove catalogs, and download books)
     object OpdsCatalog : Screen("opds_catalog")
-
-    // OPDS catalog browser (browse a specific catalog's entries)
-    object OpdsCatalogBrowser : Screen("opds_catalog_browser")
 
     // Free sources browser
     object FreeSources : Screen("free_sources")

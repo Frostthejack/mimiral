@@ -1,5 +1,6 @@
 package com.mimiral.app.ui.settings
 
+import com.mimiral.app.BuildConfig
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -90,8 +91,6 @@ import com.mimiral.app.data.local.settings.ReadingModeTheme
 import com.mimiral.app.data.local.settings.SyncInterval
 import com.mimiral.app.data.local.settings.SyncSettingsRepository
 import com.mimiral.app.data.local.settings.TtsHighlightColor
-import com.mimiral.app.ui.theme.MimiralThemeSwitcher
-import com.mimiral.app.ui.theme.MimiralThemeType
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -133,12 +132,6 @@ fun SettingsScreen(
     )
     val backupState by backupRestoreViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-
-    val currentTheme = try {
-        MimiralThemeType.valueOf(readerSettings.themeName)
-    } catch (_: IllegalArgumentException) {
-        MimiralThemeType.DAY
-    }
 
     // SAF file picker for restore
     val restoreLauncher = rememberLauncherForActivityResult(
@@ -193,7 +186,7 @@ fun SettingsScreen(
             // SECTION: Reading Preferences
             // ═══════════════════════════════════════════════════
             SectionHeader(
-                title = "Reading Preferences",
+                title = "Reading Navigation",
                 icon = Icons.Default.FormatSize
             )
 
@@ -228,59 +221,6 @@ fun SettingsScreen(
                         onCheckedChange = { enabled ->
                             scope.launch {
                                 readerSettingsRepo.setVolumeKeyDirectionSwapped(enabled)
-                            }
-                        }
-                    )
-                }
-            }
-
-            // ═══════════════════════════════════════════════════
-            // SECTION: Appearance
-            // ═══════════════════════════════════════════════════
-            SectionHeader(
-                title = "Appearance",
-                icon = Icons.Default.Palette
-            )
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Palette,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Reading Theme",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "Choose a theme for your reading experience. " +
-                            "Changes apply immediately.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    MimiralThemeSwitcher(
-                        currentTheme = currentTheme,
-                        onThemeSelected = { theme ->
-                            scope.launch {
-                                readerSettingsRepo.setTheme(theme.name)
                             }
                         }
                     )
@@ -342,45 +282,6 @@ fun SettingsScreen(
                             labelFor = { it.displayName }
                         )
                     }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Font family selector
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.FormatSize,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "Font Family",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ReadingModeEnumSelector(
-                            options = com.mimiral.app.ui.reader.ReaderFontFamily.entries,
-                            selected = com.mimiral.app.ui.reader.ReaderFontFamily.entries.find {
-                                it.name == readingModeSettings.fontFamily
-                            } ?: com.mimiral.app.ui.reader.ReaderFontFamily.DEFAULT,
-                            onSelect = {
-                                scope.launch {
-                                    readingModeSettingsRepo.setFontFamily(
-                                        it.name
-                                    )
-                                }
-                            },
-                            labelFor = { it.displayName }
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     // Font size slider (12–32sp)
                     Column {
@@ -718,124 +619,6 @@ fun SettingsScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                }
-            }
-
-            // ═══════════════════════════════════════════════════
-            // SECTION: Sync Preferences
-            // ═══════════════════════════════════════════════════
-            SectionHeader(
-                title = "Sync Preferences",
-                icon = Icons.Default.CloudSync
-            )
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    // Auto-sync toggle
-                    SettingsToggleRow(
-                        title = "Auto-Sync",
-                        description = "Automatically sync with connected servers",
-                        icon = Icons.Default.Sync,
-                        checked = syncSettings.autoSyncEnabled,
-                        onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepo.setAutoSyncEnabled(enabled) }
-                        }
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Sync interval
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Timer,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "Sync Interval",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        SyncIntervalDropdown(
-                            selectedMinutes = syncSettings.syncInterval.minutes,
-                            onIntervalSelected = { minutes ->
-                                scope.launch {
-                                    syncSettingsRepo.setSyncInterval(
-                                        SyncInterval.fromMinutes(minutes)
-                                    )
-                                }
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // WiFi only toggle
-                    SettingsToggleRow(
-                        title = "Sync on Wi-Fi Only",
-                        description = "Only sync when connected to Wi-Fi",
-                        icon = Icons.Default.Wifi,
-                        checked = syncSettings.syncOnWifiOnly,
-                        onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepo.setSyncOnWifiOnly(enabled) }
-                        }
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // Content sync toggles
-                    Text(
-                        text = "Sync Content",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-
-                    SettingsToggleRow(
-                        title = "Reading Progress",
-                        description = "Sync current page and chapter",
-                        icon = Icons.Default.Sync,
-                        checked = syncSettings.syncReadingProgress,
-                        onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepo.setSyncReadingProgress(enabled) }
-                        }
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                    SettingsToggleRow(
-                        title = "Bookmarks",
-                        description = "Sync bookmarks with Kavita",
-                        icon = Icons.Default.Book,
-                        checked = syncSettings.syncBookmarks,
-                        onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepo.setSyncBookmarks(enabled) }
-                        }
-                    )
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                    SettingsToggleRow(
-                        title = "Highlights & Notes",
-                        description = "Sync highlights and notes",
-                        icon = Icons.Default.Highlight,
-                        checked = syncSettings.syncHighlights,
-                        onCheckedChange = { enabled ->
-                            scope.launch { syncSettingsRepo.setSyncHighlights(enabled) }
-                        }
-                    )
                 }
             }
 
@@ -1425,7 +1208,7 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "Version 0.1.0",
+                        text = "Version ${BuildConfig.VERSION_NAME}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1665,55 +1448,6 @@ private fun SleepTimerDropdown(
                     text = { Text(labels[index]) },
                     onClick = {
                         onMinutesSelected(minutes)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SyncIntervalDropdown(
-    selectedMinutes: Int,
-    onIntervalSelected: (Int) -> Unit
-) {
-    val options = listOf(15, 30, 60, 120, 360, 720, 1440)
-    val labels = options.map { minutes ->
-        when {
-            minutes < 60 -> "$minutes minutes"
-            minutes == 60 -> "1 hour"
-            minutes < 1440 -> "${minutes / 60} hours"
-            else -> "24 hours"
-        }
-    }
-    val selectedIndex = options.indexOf(selectedMinutes).coerceAtLeast(0)
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
-        OutlinedTextField(
-            value = labels[selectedIndex],
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Sync Interval") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor()
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEachIndexed { index, minutes ->
-                DropdownMenuItem(
-                    text = { Text(labels[index]) },
-                    onClick = {
-                        onIntervalSelected(minutes)
                         expanded = false
                     }
                 )

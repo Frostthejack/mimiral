@@ -1,13 +1,15 @@
 package com.mimiral.app.ui.reader
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.reader.DocParser
 import com.mimiral.app.data.reader.DocState
+import com.mimiral.app.data.reader.resolveFileToCache
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.io.File
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,9 +19,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * UI-level chapter representation with estimated page ranges.
- */
 data class DocChapterInfo(
     val index: Int,
     val title: String,
@@ -28,9 +27,6 @@ data class DocChapterInfo(
     val text: String
 )
 
-/**
- * UI state for the DOC/DOCX reader screen.
- */
 data class DocReaderUiState(
     val bookId: Int = -1,
     val title: String = "",
@@ -48,6 +44,7 @@ data class DocReaderUiState(
 
 @HiltViewModel
 class DocReaderViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val bookRepository: BookRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -85,7 +82,9 @@ class DocReaderViewModel @Inject constructor(
                 parser = docParser
 
                 val result = withContext(Dispatchers.IO) {
-                    docParser.openFile(File(book.filePath))
+                    val file = resolveFileToCache(appContext, book.filePath, "doc")
+                        ?: return@withContext DocState.Error("Cannot access file: ${book.filePath}")
+                    docParser.openFile(file)
                 }
 
                 when (result) {

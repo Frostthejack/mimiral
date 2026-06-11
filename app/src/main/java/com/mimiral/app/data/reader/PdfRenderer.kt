@@ -118,7 +118,7 @@ class PdfRenderer : AutoCloseable {
         // Direct access failed — try copying from shared storage via ContentResolver
         val ctx = context ?: return directFile
         try {
-            val uri = android.net.Uri.parse("file://$filePath")
+            val uri = android.net.Uri.parse(filePath)
             val inputStream = ctx.contentResolver.openInputStream(uri) ?: return directFile
             val cacheFile = File(ctx.cacheDir, "pdf_cache_${filePath.hashCode().toString(16)}.pdf")
             FileOutputStream(cacheFile).use { out ->

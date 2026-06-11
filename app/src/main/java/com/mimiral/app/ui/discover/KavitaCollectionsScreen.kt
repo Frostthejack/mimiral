@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -66,7 +67,8 @@ import com.mimiral.app.data.remote.kavita.KavitaCollectionSeries
 fun KavitaCollectionsScreen(
     viewModel: KavitaCollectionsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {},
-    onNavigateToSeries: (Int) -> Unit = {}
+    onNavigateToSeries: (Int) -> Unit = {},
+    onOpenDrawer: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -94,14 +96,14 @@ fun KavitaCollectionsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        if (uiState.selectedCollection != null) {
-                            viewModel.clearSelection()
-                        } else {
-                            onNavigateBack()
+                    if (uiState.selectedCollection != null) {
+                        IconButton(onClick = { viewModel.clearSelection() }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
-                    }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    } else {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(Icons.Default.Menu, contentDescription = "Open navigation menu")
+                        }
                     }
                 },
                 actions = {

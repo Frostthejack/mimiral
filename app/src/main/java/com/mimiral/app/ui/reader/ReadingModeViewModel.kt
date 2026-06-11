@@ -529,7 +529,7 @@ class ReadingModeViewModel @Inject constructor(
                     file
                 } else {
                     try {
-                        val uri = android.net.Uri.parse("file://$filePath")
+                        val uri = android.net.Uri.parse(filePath)
                         val inputStream = appContext.contentResolver.openInputStream(uri)
                             ?: return@withContext emptyList()
                         val cacheFile = File(
@@ -638,7 +638,7 @@ class ReadingModeViewModel @Inject constructor(
                 } else {
                     // Scoped storage: copy to cache via ContentResolver
                     try {
-                        val uri = android.net.Uri.parse("file://$filePath")
+                        val uri = android.net.Uri.parse(filePath)
                         val inputStream = appContext.contentResolver.openInputStream(uri)
                             ?: return@withContext emptyList()
                         val cacheFile = File(

@@ -1,12 +1,15 @@
 package com.mimiral.app.ui.reader
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.reader.MobiParser
 import com.mimiral.app.data.reader.MobiState
+import com.mimiral.app.data.reader.resolveFileToCache
 import com.mimiral.app.data.repository.BookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +43,7 @@ data class MobiReaderUiState(
 
 @HiltViewModel
 class MobiReaderViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val bookRepository: BookRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -77,15 +81,15 @@ class MobiReaderViewModel @Inject constructor(
                 parser = mobiParser
 
                 val result = withContext(Dispatchers.IO) {
-                    mobiParser.openFile(java.io.File(book.filePath))
+                    val file = resolveFileToCache(appContext, book.filePath, "mobi")
+                        ?: return@withContext MobiState.Error("Cannot access file: ${book.filePath}")
+                    mobiParser.openFile(file)
                 }
 
                 when (result) {
                     is MobiState.Loaded -> {
                         val mobiChapters = mobiParser.getChapters()
-                        // Convert MobiChapter to MobiChapterInfo with estimated page ranges
                         val chapterInfos = mobiChapters.mapIndexed { idx, mc ->
-                            // Estimate: ~500 chars per page
                             val charCount = mc.text.length
                             val pages = (charCount / 500).coerceAtLeast(1)
                             MobiChapterInfo(

@@ -122,24 +122,56 @@ class EpubParser(private val context: Context) {
                 } else {
                     // Scoped storage: copy to cache via ContentResolver
                     try {
-                        val uri = android.net.Uri.parse(
-                            "file://$filePath"
-                        )
-                        val inputStream = context.contentResolver.openInputStream(uri)
-                            ?: return@withContext EpubState.Error(
-                                "Cannot open file: $filePath"
-                            ).also { state = it }
+                        val uri = android.net.Uri.parse(filePath)
+                        android.util.Log.d("EpubParser", "Opening URI: $uri, scheme=${uri.scheme}")
+                        val inputStream = try {
+                            context.contentResolver.openInputStream(uri)
+                        } catch (_: SecurityException) {
+                            null
+                        }
+                        val resolvedStream = inputStream ?: run {
+                            // Fallback for SAF content URIs: use DocumentsContract to resolve via tree
+                            if (uri.scheme?.lowercase() == "content") {
+                                try {
+                                    val treeDocId = android.provider.DocumentsContract.getTreeDocumentId(uri)
+                                    val treeUri = android.provider.DocumentsContract.buildTreeDocumentUri(uri.authority, treeDocId)
+                                    val treeDoc = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
+                                    if (treeDoc != null && treeDoc.exists()) {
+                                        // Find the file by navigating the tree
+                                        val docId = android.provider.DocumentsContract.getDocumentId(uri)
+                                        // docId format: "primary:Calibre/The Hundred Years' War...epub"
+                                        // Navigate through path segments
+                                        var current: androidx.documentfile.provider.DocumentFile? = treeDoc
+                                        val segments = docId.split(":").lastOrNull()?.split("/")?.filter { it.isNotBlank() } ?: emptyList()
+                                        for (segment in segments) {
+                                            val decoded = try { android.net.Uri.decode(segment) } catch (_: Exception) { segment }
+                                            current = current?.listFiles()?.find { file ->
+                                                file.name == decoded || file.uri.lastPathSegment?.let { try { android.net.Uri.decode(it) } catch (_: Exception) { it } } == decoded
+                                            }
+                                            if (current == null) break
+                                        }
+                                        current?.takeIf { it.exists() && it.isFile }?.let { found ->
+                                            context.contentResolver.openInputStream(found.uri)
+                                        }
+                                    } else null
+                                } catch (_: Exception) { null }
+                            } else null
+                        }
+                        resolvedStream ?: return@withContext EpubState.Error(
+                            "Cannot open file: $filePath"
+                        ).also { state = it }
                         val cacheFile = java.io.File(
                             context.cacheDir,
                             "epub_cache_${filePath.hashCode().toString(16)}.epub"
                         )
                         java.io.FileOutputStream(cacheFile).use {
                                 out: java.io.OutputStream ->
-                            inputStream.copyTo(out)
+                            resolvedStream.copyTo(out)
                         }
-                        inputStream.close()
+                        resolvedStream.close()
                         cacheFile
                     } catch (e: Exception) {
+                        android.util.Log.e("EpubParser", "Failed to open URI: $filePath", e)
                         return@withContext EpubState.Error(
                             "Failed to access file: ${e.message}"
                         ).also { state = it }

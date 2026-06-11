@@ -8,11 +8,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material3.DrawerState
@@ -55,10 +57,31 @@ data class DrawerSection(
 
 /**
  * All drawer items, grouped into sections.
- * Stats and Statistics are merged into a single "Statistics" item
- * since they serve the same purpose (reading statistics).
+ *
+ * - Discover: hub screen with entry points to all discovery features
+ * - Kavita: all Kavita-specific features in one place
+ * - Library: local library management
+ * - Reading: reading progress and statistics
+ * - Settings: app configuration
  */
 val drawerSections = listOf(
+    DrawerSection(
+        title = "Discover",
+        items = listOf(
+            DrawerNavItem(Screen.Discover, "Discover", Icons.Filled.Explore),
+            DrawerNavItem(Screen.FreeSources, "Free Sources", Icons.Filled.Public)
+        )
+    ),
+    DrawerSection(
+        title = "Kavita",
+        items = listOf(
+            DrawerNavItem(Screen.KavitaOpdsFeeds, "Feeds", Icons.Filled.AutoStories),
+            DrawerNavItem(Screen.KavitaBookmarks, "Bookmarks", Icons.Filled.Bookmarks),
+            DrawerNavItem(Screen.WantToRead, "Want To Read", Icons.Outlined.BookmarkAdd),
+            DrawerNavItem(Screen.KavitaCollections, "Collections", Icons.Filled.CollectionsBookmark),
+            DrawerNavItem(Screen.KavitaStats, "Kavita Stats", Icons.Filled.BarChart)
+        )
+    ),
     DrawerSection(
         title = "Library",
         items = listOf(
@@ -68,20 +91,10 @@ val drawerSections = listOf(
         )
     ),
     DrawerSection(
-        title = "Discover",
-        items = listOf(
-            DrawerNavItem(Screen.Discover, "Discover", Icons.Filled.Explore),
-            DrawerNavItem(Screen.KavitaBookmarks, "Bookmarks", Icons.Filled.Bookmarks),
-            DrawerNavItem(Screen.KavitaOpdsFeeds, "Kavita Feeds", Icons.Filled.AutoStories),
-            DrawerNavItem(Screen.WantToRead, "Want To Read", Icons.Outlined.BookmarkAdd)
-        )
-    ),
-    DrawerSection(
         title = "Reading",
         items = listOf(
             DrawerNavItem(Screen.NowReading, "Now Reading", Icons.Filled.PlayArrow),
             DrawerNavItem(Screen.Statistics, "Statistics", Icons.Filled.BarChart),
-            DrawerNavItem(Screen.KavitaStats, "Kavita Stats", Icons.Filled.AutoStories),
             DrawerNavItem(Screen.ReadingGoals, "Goals", Icons.Filled.EmojiEvents)
         )
     ),

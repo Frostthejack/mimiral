@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -67,7 +68,8 @@ import com.mimiral.app.data.remote.opds.OpdsFeed
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FreeSourcesScreen(
-    viewModel: FreeSourcesViewModel = hiltViewModel()
+    viewModel: FreeSourcesViewModel = hiltViewModel(),
+    onOpenDrawer: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -107,6 +109,10 @@ fun FreeSourcesScreen(
                     if (uiState.isBrowsing) {
                         IconButton(onClick = { viewModel.navigateBack() }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        }
+                    } else {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(Icons.Default.Menu, contentDescription = "Open navigation menu")
                         }
                     }
                 },

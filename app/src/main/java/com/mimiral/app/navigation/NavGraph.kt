@@ -18,6 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.mimiral.app.ui.collections.CollectionsScreen
+import com.mimiral.app.ui.discover.DiscoverHubScreen
 import com.mimiral.app.ui.discover.DiscoverScreen
 import com.mimiral.app.ui.discover.KavitaBookmarksScreen
 import com.mimiral.app.ui.discover.KavitaCollectionsScreen
@@ -33,7 +34,6 @@ import com.mimiral.app.ui.library.LibraryScreen
 import com.mimiral.app.ui.nowreading.NowReadingScreen
 import com.mimiral.app.ui.opds.KavitaOpdsBrowseScreen
 import com.mimiral.app.ui.opds.OpdsCatalogBrowserScreen
-import com.mimiral.app.ui.opds.OpdsCatalogScreen
 import com.mimiral.app.ui.reader.ComicReaderScreen
 import com.mimiral.app.ui.reader.DjvuReaderScreen
 import com.mimiral.app.ui.reader.DocReaderScreen
@@ -197,8 +197,37 @@ fun MimiralNavGraph(navController: NavHostController) {
                 )
             }
             composable(Screen.Discover.route) {
-                DiscoverScreen(
+                DiscoverHubScreen(
                     onOpenDrawer = openDrawer,
+                    onNavigateToDiscover = {
+                        navController.navigate(Screen.DiscoverKavita.route)
+                    },
+                    onNavigateToKavitaFeeds = {
+                        navController.navigate(Screen.KavitaOpdsFeeds.route)
+                    },
+                    onNavigateToKavitaBookmarks = {
+                        navController.navigate(Screen.KavitaBookmarks.route)
+                    },
+                    onNavigateToWantToRead = {
+                        navController.navigate(Screen.WantToRead.route)
+                    },
+                    onNavigateToKavitaCollections = {
+                        navController.navigate(Screen.KavitaCollections.route)
+                    },
+                    onNavigateToFreeSources = {
+                        navController.navigate(Screen.FreeSources.route)
+                    }
+                )
+            }
+
+            composable(Screen.DiscoverKavita.route) {
+                DiscoverScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenDrawer = {
+                        // This screen is not a drawer destination,
+                        // so navigating back to the hub is the expected action.
+                        navController.popBackStack()
+                    },
                     onNavigateToKavitaSeries = { seriesId ->
                         navController.navigate("kavita_series/$seriesId")
                     }
@@ -473,7 +502,8 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToSeries = { seriesId ->
                         navController.navigate("kavita_series/$seriesId")
-                    }
+                    },
+                    onOpenDrawer = openDrawer
                 )
             }
 
@@ -530,21 +560,16 @@ fun MimiralNavGraph(navController: NavHostController) {
                 }
             }
 
-            // OPDS catalog management
+            // OPDS catalog browser (browse catalogs, add/remove catalogs, and download books)
             composable(Screen.OpdsCatalog.route) {
-                OpdsCatalogScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            // OPDS catalog browser
-            composable(Screen.OpdsCatalogBrowser.route) {
                 OpdsCatalogBrowserScreen()
             }
 
             // Free sources browser
             composable(Screen.FreeSources.route) {
-                FreeSourcesScreen()
+                FreeSourcesScreen(
+                    onOpenDrawer = openDrawer
+                )
             }
 
             // Kavita reading list detail

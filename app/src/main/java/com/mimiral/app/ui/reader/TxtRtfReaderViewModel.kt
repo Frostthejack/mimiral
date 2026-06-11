@@ -1,5 +1,6 @@
 package com.mimiral.app.ui.reader
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,9 +9,11 @@ import com.mimiral.app.data.reader.RtfParseResult
 import com.mimiral.app.data.reader.RtfParser
 import com.mimiral.app.data.reader.TxtParseResult
 import com.mimiral.app.data.reader.TxtParser
+import com.mimiral.app.data.reader.resolveFileToCache
 import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.ReadingTimeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,6 +58,7 @@ data class TxtRtfUiState(
 
 @HiltViewModel
 class TxtRtfReaderViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val bookRepository: BookRepository,
     private val readingTimeRepository: ReadingTimeRepository,
     savedStateHandle: SavedStateHandle
@@ -99,7 +103,11 @@ class TxtRtfReaderViewModel @Inject constructor(
                     return@launch
                 }
 
-                val file = File(book.filePath)
+                val file = resolveFileToCache(appContext, book.filePath, "txt")
+                    ?: run {
+                        _uiState.update { it.copy(isLoading = false, error = "Cannot access file: ${book.filePath}") }
+                        return@launch
+                    }
                 val format = book.format.uppercase()
 
                 // Parse the file based on format
