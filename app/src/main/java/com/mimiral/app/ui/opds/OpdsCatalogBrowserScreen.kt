@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -63,11 +64,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
 import com.mimiral.app.data.remote.opds.OpdsEntry
+import com.mimiral.app.ui.components.LoadingIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OpdsCatalogBrowserScreen(
-    viewModel: OpdsCatalogBrowserViewModel = hiltViewModel()
+    viewModel: OpdsCatalogBrowserViewModel = hiltViewModel(),
+    onOpenDrawer: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -100,7 +103,11 @@ fun OpdsCatalogBrowserScreen(
                     }
                 },
                 navigationIcon = {
-                    if (!uiState.showCatalogList) {
+                    if (uiState.showCatalogList) {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(Icons.Default.Menu, contentDescription = "Open navigation menu")
+                        }
+                    } else {
                         IconButton(onClick = { viewModel.navigateBack() }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
@@ -143,7 +150,7 @@ fun OpdsCatalogBrowserScreen(
         ) {
             when {
                 uiState.isLoadingCatalogs -> {
-                    LoadingView()
+                    LoadingIndicator(visible = true)
                 }
                 uiState.showCatalogList -> {
                     CatalogListView(
@@ -153,7 +160,7 @@ fun OpdsCatalogBrowserScreen(
                     )
                 }
                 uiState.isLoadingFeed -> {
-                    LoadingView()
+                    LoadingIndicator(visible = true)
                 }
                 uiState.currentFeed != null -> {
                     FeedView(
@@ -178,29 +185,6 @@ fun OpdsCatalogBrowserScreen(
                 viewModel.addCatalog(name, url, username, password)
             }
         )
-    }
-}
-
-@Composable
-private fun LoadingView() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.Cloud,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Loading...",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 

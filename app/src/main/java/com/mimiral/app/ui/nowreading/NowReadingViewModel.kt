@@ -33,7 +33,9 @@ data class NowReadingUiState(
     /** On Deck series from Kavita (server-side reading status) */
     val onDeckSeries: List<KavitaOnDeckDto> = emptyList(),
     /** Continue-reading point across all series */
-    val continuePoint: KavitaContinuePointDto? = null
+    val continuePoint: KavitaContinuePointDto? = null,
+    /** Error message from Kavita sync operations */
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
@@ -79,8 +81,18 @@ class NowReadingViewModel @Inject constructor(
         }
         // Fetch On Deck and continue point from Kavita
         viewModelScope.launch {
-            continueReadingRepository.fetchOnDeck()
-            continueReadingRepository.fetchContinuePoint()
+            try {
+                continueReadingRepository.fetchOnDeck()
+            } catch (e: Exception) {
+                _isLoading.value = false
+            }
+        }
+        viewModelScope.launch {
+            try {
+                continueReadingRepository.fetchContinuePoint()
+            } catch (e: Exception) {
+                // Non-critical: continue point fetch failed, UI will just not show the card
+            }
         }
     }
 

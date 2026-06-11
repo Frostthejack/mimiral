@@ -1,8 +1,6 @@
 package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
@@ -27,10 +25,9 @@ import okhttp3.Response
  * @param authService  The auth service that holds current token state and performs refresh
  * @param onAuthFailed Callback invoked when refresh fails — typically clears auth state
  */
-@Singleton
-class KavitaAuthInterceptor @Inject constructor(
+class KavitaAuthInterceptor(
     private val authService: KavitaAuthService,
-    private val onAuthFailed: () -> Unit = {}
+    private val onAuthFailed: () -> Unit
 ) : Interceptor {
 
     companion object {

@@ -112,7 +112,7 @@ fun HighlightNoteDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 12.dp),
-                    color = highlightColorToMaterialColor(highlight.color)
+                    color = parseHighlightColor(highlight.color)
                         .copy(alpha = 0.15f),
                     shape = MaterialTheme.shapes.small
                 ) {
@@ -216,27 +216,4 @@ fun HighlightNoteDialog(
     }
 }
 
-/**
- * Maps the highlight color string stored in the DB to a Material color.
- * Falls back to a default yellow highlight color if unrecognized.
- */
-@Composable
-private fun highlightColorToMaterialColor(color: String): androidx.compose.ui.graphics.Color {
-    return try {
-        if (color.startsWith("#")) {
-            androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(color))
-        } else {
-            when (color.uppercase()) {
-                "YELLOW" -> androidx.compose.ui.graphics.Color(0xFFFFF176)
-                "GREEN" -> androidx.compose.ui.graphics.Color(0xFF81C784)
-                "BLUE" -> androidx.compose.ui.graphics.Color(0xFF64B5F6)
-                "PINK" -> androidx.compose.ui.graphics.Color(0xFFF06292)
-                "ORANGE" -> androidx.compose.ui.graphics.Color(0xFFFFB74D)
-                "PURPLE" -> androidx.compose.ui.graphics.Color(0xFFBA68C8)
-                else -> androidx.compose.ui.graphics.Color(0xFFFFF176)
-            }
-        }
-    } catch (_: Exception) {
-        androidx.compose.ui.graphics.Color(0xFFFFF176)
-    }
-}
+

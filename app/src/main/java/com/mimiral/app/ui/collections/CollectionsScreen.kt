@@ -395,12 +395,14 @@ private fun BookRow(
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
+    var showRemoveConfirm by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = onRemove
+                onLongClick = { showRemoveConfirm = true }
             )
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -429,7 +431,7 @@ private fun BookRow(
                 )
             }
         }
-        IconButton(onClick = onRemove) {
+        IconButton(onClick = { showRemoveConfirm = true }) {
             Icon(
                 imageVector = Icons.Default.Remove,
                 contentDescription = "Remove from collection",
@@ -437,6 +439,29 @@ private fun BookRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
+    }
+
+    if (showRemoveConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRemoveConfirm = false },
+            title = { Text("Remove Book") },
+            text = { Text("Remove \"${book.title}\" from this collection?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRemoveConfirm = false
+                        onRemove()
+                    }
+                ) {
+                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

@@ -429,7 +429,11 @@ private fun VolumesListView(
                     chapter = chapter,
                     seriesId = seriesId,
                     markReadViewModel = markReadViewModel,
-                    onClick = { /* Navigate to reader */ }
+                    onClick = {
+                        // TODO: Navigate to reader using the same pattern as VolumeDetailView chapters
+                        // (lines ~875-892): call viewModel.downloadChapter() then onNavigateToReader(route)
+                        // See VolumeDetailView ChapterRow onClick for the full implementation
+                    }
                 )
             }
         }

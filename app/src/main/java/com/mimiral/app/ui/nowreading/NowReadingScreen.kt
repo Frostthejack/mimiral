@@ -93,7 +93,6 @@ fun NowReadingScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = padding,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Continue Reading card (if available)
@@ -120,7 +119,8 @@ fun NowReadingScreen(
                 if (uiState.books.isEmpty() && uiState.onDeckSeries.isEmpty()) {
                     item {
                         EmptyNowReadingState(
-                            onNavigateToLibrary = onNavigateToLibrary
+                            onNavigateToLibrary = onNavigateToLibrary,
+                            modifier = Modifier.padding(16.dp)
                         )
                     }
                 } else {

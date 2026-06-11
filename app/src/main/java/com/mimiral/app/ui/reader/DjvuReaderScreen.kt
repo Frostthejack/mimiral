@@ -144,7 +144,7 @@ fun DjvuReaderScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A1A))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         when {
             uiState.isLoading -> {
@@ -161,11 +161,11 @@ fun DjvuReaderScreen(
                     Icon(
                         Icons.Default.Error,
                         contentDescription = null,
-                        tint = Color.Red,
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = uiState.error ?: "Error", color = Color.Red)
+                    Text(text = uiState.error ?: "Error", color = MaterialTheme.colorScheme.error)
                 }
             }
             djvuRenderer != null && djvuRenderer.isOpen -> {
@@ -281,7 +281,7 @@ private fun DjvuPageView(
     val density = LocalDensity.current
 
     BoxWithConstraints(
-        modifier = modifier.background(Color(0xFF1A1A1A))
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         if (pageBitmap != null) {
             val containerWidth = constraints.maxWidth.toFloat()

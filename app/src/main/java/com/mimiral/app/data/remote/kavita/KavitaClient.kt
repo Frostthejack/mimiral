@@ -116,7 +116,7 @@ class KavitaClient(
             val body = gson.toJson(loginRequest).toRequestBody(JSON_MEDIA_TYPE)
 
             val requestBuilder = Request.Builder()
-                .url("$normalizedBaseUrl/api/account/login")
+                .url("$normalizedBaseUrl/api/Account/login")
                 .post(body)
                 .header("User-Agent", "Mimiral/0.1.0")
 
@@ -241,7 +241,7 @@ class KavitaClient(
      */
     suspend fun getChapters(volumeId: Int): KavitaResult<List<KavitaChapter>> =
         getList(
-            "/api/Series/chapter?chapterId=$volumeId",
+            "/api/Series/chapters?volumeId=$volumeId",
             object : TypeToken<List<KavitaChapter>>() {}
         )
 

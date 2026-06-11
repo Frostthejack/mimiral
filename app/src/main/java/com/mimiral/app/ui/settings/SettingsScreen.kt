@@ -98,7 +98,6 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onNavigateToKavitaSetup: () -> Unit = {},
     onNavigateToKavitaDeviceManagement: () -> Unit = {},
-    onNavigateToReadingPreferences: () -> Unit = {},
     onNavigateToTTSSettings: () -> Unit = {},
     onNavigateToAccessibilitySettings: () -> Unit = {},
     onNavigateToLibraryPreferences: () -> Unit = {},
@@ -107,14 +106,12 @@ fun SettingsScreen(
     backupRestoreViewModel: BackupRestoreViewModel = viewModel()
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val settingsRepository = remember { ReaderSettingsRepository(context) }
     val syncSettingsRepository = remember { SyncSettingsRepository(context) }
     val scope = rememberCoroutineScope()
 
     // Repositories
     val readerSettingsRepo = remember { ReaderSettingsRepository(context) }
     val librarySettingsRepo = remember { LibrarySettingsRepository(context) }
-    val syncSettingsRepo = remember { SyncSettingsRepository(context) }
     val readingModeSettingsRepo = remember { ReadingModeSettingsRepository(context) }
 
     // State flows
@@ -183,11 +180,11 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // ═══════════════════════════════════════════════════
-            // SECTION: Reading Preferences
+            // SECTION: Reading
             // ═══════════════════════════════════════════════════
             SectionHeader(
-                title = "Reading Navigation",
-                icon = Icons.Default.FormatSize
+                title = "Reading",
+                icon = Icons.Default.MenuBook
             )
 
             Card(
@@ -227,23 +224,7 @@ fun SettingsScreen(
                 }
             }
 
-// ── Reading Section ───────────────────────────────
-            Text(
-                text = "Reading",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
 
-            // ═══════════════════════════════════════════════════
-            // SECTION: Reading Mode
-            // ═══════════════════════════════════════════════════
-            SectionHeader(
-                title = "Reading Mode",
-                icon = Icons.Default.Book
-            )
-
-            Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -622,62 +603,12 @@ fun SettingsScreen(
                 }
             }
 
-            // ═══════════════════════════════════════════════════
-            // SECTION: Reading Preferences (Navigation)
+
+            // SECTION: Library
             // ═══════════════════════════════════════════════════
             SectionHeader(
-                title = "Reading Preferences",
-                icon = Icons.Default.FormatSize
-            )
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onNavigateToReadingPreferences() }
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.FormatSize,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Reading Preferences",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "Default font, theme, and page turn animation",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // ── Library Section ───────────────────────────────
-            // ── Theme Preview Section ─────────────────────────
-            Text(
-                text = "Library",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                title = "Library",
+                icon = Icons.Default.Folder
             )
 
             Card(
@@ -1031,11 +962,12 @@ fun SettingsScreen(
             }
 
             // ── Backup & Restore Section ──────────────────────
-            Text(
-                text = "Backup & Restore",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+            // ═══════════════════════════════════════════════════
+            // SECTION: Backup & Restore
+            // ═══════════════════════════════════════════════════
+            SectionHeader(
+                title = "Backup & Restore",
+                icon = Icons.Default.SaveAlt
             )
 
             Card(

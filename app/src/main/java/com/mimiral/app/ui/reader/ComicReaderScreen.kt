@@ -170,7 +170,7 @@ fun ComicReaderScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A1A))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         when {
             uiState.isLoading -> {
@@ -187,11 +187,11 @@ fun ComicReaderScreen(
                     Icon(
                         Icons.Default.Crop,
                         contentDescription = null,
-                        tint = Color.Red,
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = uiState.error ?: "Error", color = Color.Red)
+                    Text(text = uiState.error ?: "Error", color = MaterialTheme.colorScheme.error)
                 }
             }
             archive != null -> {
@@ -646,85 +646,4 @@ fun PageIndicator(
     )
 }
 
-// ---------------------------------------------------------------------------
-// Reuse existing BottomReaderControls from PdfReaderScreen
-// Note: BottomReaderControls is already defined in PdfReaderScreen.kt
-// as a private function. We need our own copy here since it's private.
-// ---------------------------------------------------------------------------
 
-@Composable
-fun BottomReaderControls(
-    currentPage: Int,
-    totalPages: Int,
-    progressPercent: Float,
-    onPreviousPage: () -> Unit,
-    onNextPage: () -> Unit,
-    onPageSelected: (Int) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xCC000000))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Page ${currentPage + 1} of $totalPages (${progressPercent.toInt()}%)",
-            color = Color.White,
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onPreviousPage,
-                enabled = currentPage > 0
-            ) {
-                Icon(
-                    Icons.Default.Crop,
-                    contentDescription = "Previous page",
-                    tint = if (currentPage > 0) Color.White else Color.White.copy(alpha = 0.3f)
-                )
-            }
-
-            // Page progress bar
-            androidx.compose.material3.Slider(
-                value = currentPage.toFloat(),
-                onValueChange = { onPageSelected(it.toInt()) },
-                valueRange = 0f..(totalPages - 1).coerceAtLeast(0).toFloat(),
-                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                colors = androidx.compose.material3.SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                )
-            )
-
-            IconButton(
-                onClick = onNextPage,
-                enabled = currentPage < totalPages - 1
-            ) {
-                Icon(
-                    Icons.Default.Crop,
-                    contentDescription = "Next page",
-                    tint = if (currentPage < totalPages - 1) {
-                        Color.White
-                    } else {
-                        Color.White.copy(
-                            alpha = 0.3f
-                        )
-                    }
-                )
-            }
-        }
-    }
-}
-
-// Re-export placeholder for compilation - the actual BottomReaderControls
-// is defined privately in PdfReaderScreen. This is our own private copy.

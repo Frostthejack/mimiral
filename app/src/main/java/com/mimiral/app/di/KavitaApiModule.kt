@@ -114,6 +114,18 @@ object KavitaApiModule {
     ): () -> Unit {
         return { authService.clearTokens() }
     }
+
+    @Provides
+    @Singleton
+    fun provideKavitaAuthInterceptor(
+        authService: KavitaAuthService,
+        onAuthFailed: () -> Unit
+    ): KavitaAuthInterceptor {
+        return KavitaAuthInterceptor(
+            authService = authService,
+            onAuthFailed = onAuthFailed
+        )
+    }
 }
 
 /**

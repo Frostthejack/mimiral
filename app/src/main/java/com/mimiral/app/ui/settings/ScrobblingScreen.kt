@@ -84,6 +84,7 @@ fun ScrobblingScreen(
         PullToRefreshBox(
             isRefreshing = uiState.isLoading,
             onRefresh = { viewModel.refresh() },
+            enabled = uiState.isKavitaPlus,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)

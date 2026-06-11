@@ -166,8 +166,13 @@ class WantToReadViewModel @Inject constructor(
     fun toggleWantToRead(seriesId: Int) {
         viewModelScope.launch {
             _uiState.update { it.copy(isToggling = true) }
-            repository.toggleWantToRead(seriesId)
-            _uiState.update { it.copy(isToggling = false) }
+            try {
+                repository.toggleWantToRead(seriesId)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = "Failed to update Want To Read: ${e.message}") }
+            } finally {
+                _uiState.update { it.copy(isToggling = false) }
+            }
         }
     }
 
@@ -176,7 +181,11 @@ class WantToReadViewModel @Inject constructor(
      */
     fun addToWantToRead(seriesId: Int) {
         viewModelScope.launch {
-            repository.addToWantToRead(seriesId)
+            try {
+                repository.addToWantToRead(seriesId)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = "Failed to add to Want To Read: ${e.message}") }
+            }
         }
     }
 
@@ -185,7 +194,11 @@ class WantToReadViewModel @Inject constructor(
      */
     fun removeFromWantToRead(seriesId: Int) {
         viewModelScope.launch {
-            repository.removeFromWantToRead(seriesId)
+            try {
+                repository.removeFromWantToRead(seriesId)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = "Failed to remove from Want To Read: ${e.message}") }
+            }
         }
     }
 

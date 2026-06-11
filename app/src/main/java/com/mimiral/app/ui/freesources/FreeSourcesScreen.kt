@@ -466,7 +466,13 @@ private fun FeedBrowseView(
             items(feed.navigationLinks, key = { "navlink_${it.href}" }) { link ->
                 NavigationLinkRow(
                     title = link.title ?: link.href,
-                    onClick = { /* Would need URL-based navigation */ }
+                    onClick = {
+                        // TODO: Implement URL-based navigation
+                        // Parse link.href to determine if it's a relative or absolute OPDS URL.
+                        // If relative, resolve against the current feed URL.
+                        // Then call viewModel.browseFeed(resolvedUrl, link.title) to navigate.
+                        // Example: viewModel.browseFeed(link.href, link.title ?: link.href)
+                    }
                 )
             }
         }

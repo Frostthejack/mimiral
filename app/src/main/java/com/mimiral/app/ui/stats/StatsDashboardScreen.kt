@@ -382,12 +382,16 @@ private fun ReadingActivityChart(
 
 // ── Genre Breakdown Pie Chart ───────────────────────────────
 
-private val PIE_COLORS = listOf(
-    Color(0xFF6750A4), Color(0xFFEF5350), Color(0xFF26A69A),
-    Color(0xFFFF7043), Color(0xFF42A5F5), Color(0xFFAB47BC),
-    Color(0xFF66BB6A), Color(0xFFFFCA28), Color(0xFF78909C),
-    Color(0xFFEC407A), Color(0xFF7E57C2), Color(0xFF29B6F6)
-)
+@Composable
+private fun GenrePieChartColors(): List<Color> {
+    val scheme = MaterialTheme.colorScheme
+    return listOf(
+        scheme.primary, scheme.secondary, scheme.tertiary,
+        scheme.error, scheme.primaryContainer, scheme.secondaryContainer,
+        scheme.tertiaryContainer, scheme.outline, scheme.surfaceVariant,
+        scheme.inversePrimary, scheme.inverseSecondary, scheme.inverseTertiary
+    )
+}
 
 @Composable
 private fun GenrePieChart(
@@ -396,6 +400,8 @@ private fun GenrePieChart(
 ) {
     val totalPages = data.sumOf { it.pagesRead }.coerceAtLeast(1)
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    val pieColors = GenrePieChartColors()
 
     Card(
         modifier = modifier,
@@ -418,7 +424,7 @@ private fun GenrePieChart(
                 var startAngle = -90f
                 data.forEachIndexed { index, genre ->
                     val sweepAngle = (genre.pagesRead.toFloat() / totalPages) * 360f
-                    val color = PIE_COLORS[index % PIE_COLORS.size]
+                    val color = pieColors[index % pieColors.size]
                     drawArc(
                         color = color,
                         startAngle = startAngle,
@@ -442,7 +448,7 @@ private fun GenrePieChart(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Canvas(modifier = Modifier.size(10.dp)) {
                             drawCircle(
-                                color = PIE_COLORS[index % PIE_COLORS.size],
+                                color = pieColors[index % pieColors.size],
                                 radius = size.minDimension / 2
                             )
                         }

@@ -562,7 +562,9 @@ fun MimiralNavGraph(navController: NavHostController) {
 
             // OPDS catalog browser (browse catalogs, add/remove catalogs, and download books)
             composable(Screen.OpdsCatalog.route) {
-                OpdsCatalogBrowserScreen()
+                OpdsCatalogBrowserScreen(
+                    onOpenDrawer = openDrawer
+                )
             }
 
             // Free sources browser

@@ -574,7 +574,7 @@ private fun buildAnnotatedStringInlined(text: String): AnnotatedString {
                         withStyle(
                             SpanStyle(
                                 fontFamily = FontFamily.Monospace,
-                                background = Color(0xFFE0E0E0),
+                                background = MaterialTheme.colorScheme.surfaceVariant,
                                 fontSize = androidx.compose.ui.text.TextStyle().fontSize * 0.9f
                             )
                         ) {
@@ -585,7 +585,7 @@ private fun buildAnnotatedStringInlined(text: String): AnnotatedString {
                     "link" -> {
                         withStyle(
                             SpanStyle(
-                                color = Color(0xFF1A73E8),
+                                color = MaterialTheme.colorScheme.primary,
                                 textDecoration = TextDecoration.Underline
                             )
                         ) {

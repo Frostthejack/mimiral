@@ -290,7 +290,7 @@ fun PdfReaderScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A1A))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         when {
             uiState.isLoading -> {
@@ -481,7 +481,7 @@ fun PdfReaderScreen(
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.BottomCenter)
             ) {
-                PdfBottomReaderControls(
+                BottomReaderControls(
                     currentPage = uiState.currentPage,
                     totalPages = uiState.totalPages,
                     progressPercent = uiState.progressPercent,
@@ -563,7 +563,7 @@ private fun PdfPageView(
     val scrollState = remember { androidx.compose.foundation.lazy.LazyListState() }
 
     BoxWithConstraints(
-        modifier = modifier.background(Color(0xFF1A1A1A))
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         if (pageBitmap != null) {
             val containerWidth = constraints.maxWidth.toFloat()
@@ -884,7 +884,7 @@ private fun TopReaderBar(
     onNavigateToReadingMode: () -> Unit = {}
 ) {
     Surface(
-        color = Color.Black.copy(alpha = 0.75f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -898,13 +898,13 @@ private fun TopReaderBar(
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Back",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
 
             Text(
                 text = title,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
@@ -914,7 +914,7 @@ private fun TopReaderBar(
             // Page indicator
             Text(
                 text = if (totalPages > 0) "${currentPage + 1} / $totalPages" else "—",
-                color = Color.White.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
@@ -927,7 +927,7 @@ private fun TopReaderBar(
                     Icon(
                         imageVector = Icons.Default.RecordVoiceOver,
                         contentDescription = "Read Aloud",
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -936,7 +936,7 @@ private fun TopReaderBar(
                 Icon(
                     imageVector = Icons.Default.Crop,
                     contentDescription = "Crop margins",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -945,7 +945,7 @@ private fun TopReaderBar(
                 Icon(
                     imageVector = Icons.Default.MenuBook,
                     contentDescription = "Reading Mode",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -953,7 +953,7 @@ private fun TopReaderBar(
                 Icon(
                     imageVector = Icons.Default.Bookmarks,
                     contentDescription = "Bookmark list",
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -965,7 +965,7 @@ private fun TopReaderBar(
                         Icons.Default.BookmarkBorder
                     },
                     contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
-                    tint = if (isBookmarked) Color(0xFFFFD700) else Color.White
+                    tint = if (isBookmarked) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -977,7 +977,7 @@ private fun TopReaderBar(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun PdfBottomReaderControls(
+internal fun BottomReaderControls(
     currentPage: Int,
     totalPages: Int,
     progressPercent: Float,
@@ -986,7 +986,7 @@ private fun PdfBottomReaderControls(
     onPageSelected: (Int) -> Unit
 ) {
     Surface(
-        color = Color.Black.copy(alpha = 0.75f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -1005,7 +1005,7 @@ private fun PdfBottomReaderControls(
                     colors = SliderDefaults.colors(
                         thumbColor = MaterialTheme.colorScheme.primary,
                         activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                        inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                     )
                 )
             }
@@ -1022,13 +1022,13 @@ private fun PdfBottomReaderControls(
                     Icon(
                         imageVector = Icons.Default.ChevronLeft,
                         contentDescription = "Previous page",
-                        tint = if (currentPage > 0) Color.White else Color.White.copy(alpha = 0.3f)
+                        tint = if (currentPage > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                     )
                 }
 
                 Text(
                     text = if (totalPages > 0) "${currentPage + 1} / $totalPages" else "—",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f)
@@ -1042,11 +1042,9 @@ private fun PdfBottomReaderControls(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = "Next page",
                         tint = if (currentPage < totalPages - 1) {
-                            Color.White
+                            MaterialTheme.colorScheme.onSurface
                         } else {
-                            Color.White.copy(
-                                alpha = 0.3f
-                            )
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                         }
                     )
                 }
@@ -1055,7 +1053,7 @@ private fun PdfBottomReaderControls(
             if (totalPages > 0) {
                 Text(
                     text = "${progressPercent.toInt()}%",
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     fontSize = 12.sp
                 )
             }
@@ -1074,13 +1072,13 @@ private fun PdfPageIndicator(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = Color.Black.copy(alpha = 0.5f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
     ) {
         Text(
             text = if (totalPages > 0) "${currentPage + 1} / $totalPages" else "—",
-            color = Color.White.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
@@ -1125,7 +1123,7 @@ private fun CropSettingsPanel(
     onDismiss: () -> Unit
 ) {
     Surface(
-        color = Color.Black.copy(alpha = 0.85f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
         shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
         modifier = Modifier
             .width(280.dp)
@@ -1146,7 +1144,7 @@ private fun CropSettingsPanel(
             ) {
                 Text(
                     text = "Margin Crop",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1154,18 +1152,18 @@ private fun CropSettingsPanel(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
 
-            Divider(color = Color.White.copy(alpha = 0.2f))
+            Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
 
             // Uniform crop slider
             val uniformCrop = cropMargins.left
             Text(
                 text = "Crop: $uniformCrop%",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 14.sp
             )
             Slider(
@@ -1177,14 +1175,14 @@ private fun CropSettingsPanel(
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
                     activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                 )
             )
 
             // Individual side controls
             Text(
                 text = "Individual sides",
-                color = Color.White.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 fontSize = 12.sp
             )
 
@@ -1201,7 +1199,7 @@ private fun CropSettingsPanel(
                 onCropChanged(cropMargins.copy(bottom = newVal))
             }
 
-            Divider(color = Color.White.copy(alpha = 0.2f))
+            Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
 
             // Auto-detect button
             Button(
@@ -1215,7 +1213,7 @@ private fun CropSettingsPanel(
                 if (autoDetecting) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSecondary,
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1236,7 +1234,7 @@ private fun CropSettingsPanel(
                     onClick = onApplySuggested,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4CAF50)
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Icon(
@@ -1254,7 +1252,7 @@ private fun CropSettingsPanel(
                 onClick = onResetCrop,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.White
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
                 Icon(
@@ -1275,7 +1273,7 @@ private fun CropSettingsPanel(
             Text(
                 text = "Crop removes white borders from PDF pages " +
                     "for better reading on small screens. 0% = no cropping.",
-                color = Color.White.copy(alpha = 0.5f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 fontSize = 11.sp,
                 lineHeight = 16.sp
             )
@@ -1296,12 +1294,12 @@ private fun CropSideSlider(
         ) {
             Text(
                 text = label,
-                color = Color.White.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                 fontSize = 12.sp
             )
             Text(
                 text = "$value%",
-                color = Color.White.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 fontSize = 12.sp
             )
         }
@@ -1313,7 +1311,7 @@ private fun CropSideSlider(
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
             )
         )
     }

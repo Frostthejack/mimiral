@@ -46,9 +46,12 @@ class KavitaMarkReadViewModel @Inject constructor(
      */
     fun markChapterRead(chapterId: Int, seriesId: Int) {
         viewModelScope.launch {
-            markReadRepository.markChapterRead(chapterId)
-            // Refresh progress indicators
-            refreshSeriesVolumes(seriesId)
+            val success = markReadRepository.markChapterRead(chapterId)
+            if (success) {
+                // Refresh progress indicators
+                refreshSeriesVolumes(seriesId)
+            }
+            // Errors are already reflected in _uiState via repository state mirroring
         }
     }
 
@@ -60,8 +63,10 @@ class KavitaMarkReadViewModel @Inject constructor(
      */
     fun markVolumeRead(volumeId: Int, seriesId: Int) {
         viewModelScope.launch {
-            markReadRepository.markVolumeRead(volumeId)
-            refreshSeriesVolumes(seriesId)
+            val success = markReadRepository.markVolumeRead(volumeId)
+            if (success) {
+                refreshSeriesVolumes(seriesId)
+            }
         }
     }
 
@@ -73,8 +78,10 @@ class KavitaMarkReadViewModel @Inject constructor(
      */
     fun markVolumeUnread(volumeId: Int, seriesId: Int) {
         viewModelScope.launch {
-            markReadRepository.markVolumeUnread(volumeId)
-            refreshSeriesVolumes(seriesId)
+            val success = markReadRepository.markVolumeUnread(volumeId)
+            if (success) {
+                refreshSeriesVolumes(seriesId)
+            }
         }
     }
 
@@ -85,8 +92,10 @@ class KavitaMarkReadViewModel @Inject constructor(
      */
     fun markSeriesRead(seriesId: Int) {
         viewModelScope.launch {
-            markReadRepository.markSeriesRead(seriesId)
-            refreshSeriesVolumes(seriesId)
+            val success = markReadRepository.markSeriesRead(seriesId)
+            if (success) {
+                refreshSeriesVolumes(seriesId)
+            }
         }
     }
 
@@ -97,8 +106,10 @@ class KavitaMarkReadViewModel @Inject constructor(
      */
     fun markSeriesUnread(seriesId: Int) {
         viewModelScope.launch {
-            markReadRepository.markSeriesUnread(seriesId)
-            refreshSeriesVolumes(seriesId)
+            val success = markReadRepository.markSeriesUnread(seriesId)
+            if (success) {
+                refreshSeriesVolumes(seriesId)
+            }
         }
     }
 
@@ -109,7 +120,10 @@ class KavitaMarkReadViewModel @Inject constructor(
      */
     fun markMultipleSeriesRead(seriesIds: List<Int>) {
         viewModelScope.launch {
-            markReadRepository.markMultipleSeriesRead(seriesIds)
+            val success = markReadRepository.markMultipleSeriesRead(seriesIds)
+            if (success) {
+                seriesIds.forEach { refreshSeriesVolumes(it) }
+            }
         }
     }
 
@@ -120,7 +134,10 @@ class KavitaMarkReadViewModel @Inject constructor(
      */
     fun markMultipleSeriesUnread(seriesIds: List<Int>) {
         viewModelScope.launch {
-            markReadRepository.markMultipleSeriesUnread(seriesIds)
+            val success = markReadRepository.markMultipleSeriesUnread(seriesIds)
+            if (success) {
+                seriesIds.forEach { refreshSeriesVolumes(it) }
+            }
         }
     }
 
@@ -137,12 +154,14 @@ class KavitaMarkReadViewModel @Inject constructor(
         volumesToInclude: Int = 0
     ) {
         viewModelScope.launch {
-            markReadRepository.markChapterUntilRead(
+            val success = markReadRepository.markChapterUntilRead(
                 seriesId = seriesId,
                 chapterId = chapterId,
                 volumesToInclude = volumesToInclude
             )
-            refreshSeriesVolumes(seriesId)
+            if (success) {
+                refreshSeriesVolumes(seriesId)
+            }
         }
     }
 

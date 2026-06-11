@@ -467,13 +467,12 @@ class KavitaAuthService @Inject constructor(
     }
 
     /**
-     * Launch OPDS URL derivation in background (fire-and-forget).
+     * Derive OPDS URL in background (fire-and-forget).
      * Failures are logged but don't block the auth flow.
      */
-    private fun launchOpdsUrlDerivation(baseUrl: String, jwtToken: String) {
-        // Use a simple thread since we're inside mutex.withLock
-        // and can't launch a coroutine from here easily
-        Thread {
+    fun launchOpdsUrlDerivation(baseUrl: String, jwtToken: String) {
+        // Use a coroutine instead of raw Thread for proper lifecycle management
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             try {
                 val request = Request.Builder()
                     .url("$baseUrl/api/Account/opds-url")
@@ -495,7 +494,7 @@ class KavitaAuthService @Inject constructor(
             } catch (e: Exception) {
                 Log.w(TAG, "OPDS URL derivation failed: ${e.message}")
             }
-        }.start()
+        }
     }
 
     /**

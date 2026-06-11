@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 
@@ -261,6 +262,10 @@ class KavitaSetupViewModel @Inject constructor(
 
                 serverDao.insertServer(server)
 
+                // Clear password from the entity after saving to credential store
+                val clearedServer = server.copy(password = null)
+                serverDao.updateServer(clearedServer)
+
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
                     isSaved = true,
@@ -352,46 +357,89 @@ class KavitaSetupViewModel @Inject constructor(
                 return Result.failure(Exception("Please enter an API key"))
             }
 
-            val opdsUrl = if (state.authMethod == AuthMethod.API_KEY) {
-                "$baseUrl/api/opds/$apiKey"
-            } else {
-                // For username/password, try the login endpoint first
-                "$baseUrl/api/Auth/login"
-            }
-
-            val request = okhttp3.Request.Builder()
-                .url(opdsUrl)
-                .header("User-Agent", "Mimiral/0.1.0")
-                .header("Accept", "*/*")
-                .get()
-                .build()
-
-            val httpResponse = client.newCall(request).execute()
-
-            when (httpResponse.code) {
-                200 -> {
-                    // Server is reachable and auth is valid
-                    Result.success(
-                        KavitaServerInfo(
-                            installId = null,
-                            version = null,
-                            totalLibraries = 0,
-                            isDocker = false
-                        )
+            if (state.authMethod == AuthMethod.USERNAME_PASSWORD) {
+                // For username/password, POST credentials to /api/Account/login
+                if (state.username.isBlank() || state.password.isBlank()) {
+                    return Result.failure(
+                        Exception("Please enter both username and password")
                     )
                 }
-                401 -> Result.failure(
-                    Exception("Authentication failed: invalid API key or credentials")
-                )
-                403 -> Result.failure(
-                    Exception("Access denied: insufficient permissions")
-                )
-                404 -> Result.failure(
-                    Exception("Server endpoint not found — check the URL")
-                )
-                else -> Result.failure(
-                    Exception("HTTP ${httpResponse.code}: ${httpResponse.message}")
-                )
+
+                val loginBody = """{"username":"${state.username}","password":"${state.password}"}"""
+                    .toRequestBody("application/json; charset=utf-8".toMediaType())
+
+                val loginRequest = okhttp3.Request.Builder()
+                    .url("$baseUrl/api/Account/login")
+                    .post(loginBody)
+                    .header("User-Agent", "Mimiral/0.1.0")
+                    .header("Content-Type", "application/json")
+                    .build()
+
+                val loginResponse = client.newCall(loginRequest).execute()
+
+                when (loginResponse.code) {
+                    200 -> {
+                        // Login succeeded — server is reachable and credentials are valid
+                        Result.success(
+                            KavitaServerInfo(
+                                installId = null,
+                                version = null,
+                                totalLibraries = 0,
+                                isDocker = false
+                            )
+                        )
+                    }
+                    401 -> Result.failure(
+                        Exception("Authentication failed: invalid username or password")
+                    )
+                    403 -> Result.failure(
+                        Exception("Access denied: insufficient permissions")
+                    )
+                    404 -> Result.failure(
+                        Exception("Login endpoint not found — check the server URL")
+                    )
+                    else -> Result.failure(
+                        Exception("HTTP ${loginResponse.code}: ${loginResponse.message}")
+                    )
+                }
+            } else {
+                // API key auth — use /api/Plugin/authenticate
+                val authUrl = "$baseUrl/api/Plugin/authenticate"
+
+                val authRequest = okhttp3.Request.Builder()
+                    .url(authUrl)
+                    .header("X-Api-Key", apiKey)
+                    .header("User-Agent", "Mimiral/0.1.0")
+                    .get()
+                    .build()
+
+                val httpResponse = client.newCall(authRequest).execute()
+
+                when (httpResponse.code) {
+                    200 -> {
+                        // Server is reachable and API key is valid
+                        Result.success(
+                            KavitaServerInfo(
+                                installId = null,
+                                version = null,
+                                totalLibraries = 0,
+                                isDocker = false
+                            )
+                        )
+                    }
+                    401 -> Result.failure(
+                        Exception("Authentication failed: invalid API key")
+                    )
+                    403 -> Result.failure(
+                        Exception("Access denied: insufficient permissions")
+                    )
+                    404 -> Result.failure(
+                        Exception("Server endpoint not found — check the URL")
+                    )
+                    else -> Result.failure(
+                        Exception("HTTP ${httpResponse.code}: ${httpResponse.message}")
+                    )
+                }
             }
         } catch (e: java.io.IOException) {
             Result.failure(

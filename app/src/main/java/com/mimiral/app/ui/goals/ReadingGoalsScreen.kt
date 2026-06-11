@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -63,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 @Composable
 fun ReadingGoalsScreen(
     onOpenDrawer: () -> Unit = {},
+    onNavigateBack: (() -> Unit)? = null,
     viewModel: ReadingGoalsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -80,11 +82,20 @@ fun ReadingGoalsScreen(
             TopAppBar(
                 title = { Text("Reading Goals") },
                 navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(
-                            Icons.Filled.Menu,
-                            contentDescription = "Open navigation menu"
-                        )
+                    if (onNavigateBack != null) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                Icons.Default.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(
+                                Icons.Filled.Menu,
+                                contentDescription = "Open navigation menu"
+                            )
+                        }
                     }
                 }
             )
@@ -264,9 +275,9 @@ private fun GoalCard(
 
     val progressColor by animateColorAsState(
         targetValue = when {
-            isComplete -> Color(0xFF4CAF50)
-            progress >= 0.75f -> Color(0xFF2196F3)
-            progress >= 0.5f -> Color(0xFFFFC107)
+            isComplete -> MaterialTheme.colorScheme.primary
+            progress >= 0.75f -> MaterialTheme.colorScheme.secondary
+            progress >= 0.5f -> MaterialTheme.colorScheme.tertiary
             else -> MaterialTheme.colorScheme.primary
         },
         label = "progressColor"
@@ -297,7 +308,7 @@ private fun GoalCard(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Completed",
-                            tint = Color(0xFF4CAF50),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(28.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))

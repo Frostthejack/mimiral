@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,6 +46,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -338,12 +340,14 @@ fun KavitaSetupScreen(
                 }
             }
 
-            // ── Existing config actions ──────────────────────
+            // ── Existing config actions ───────────────────────
             if (uiState.hasExistingConfig) {
                 HorizontalDivider()
 
+                var showClearConfirm by remember { mutableStateOf(false) }
+
                 OutlinedButton(
-                    onClick = { viewModel.clearConfiguration() },
+                    onClick = { showClearConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
@@ -356,6 +360,29 @@ fun KavitaSetupScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Remove Server Configuration")
+                }
+
+                if (showClearConfirm) {
+                    AlertDialog(
+                        onDismissRequest = { showClearConfirm = false },
+                        title = { Text("Remove Server Configuration") },
+                        text = { Text("This will remove all saved Kavita server settings. You will need to reconfigure the server to use Kavita features.") },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    viewModel.clearConfiguration()
+                                    showClearConfirm = false
+                                }
+                            ) {
+                                Text("Remove", color = MaterialTheme.colorScheme.error)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showClearConfirm = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
                 }
             }
 
