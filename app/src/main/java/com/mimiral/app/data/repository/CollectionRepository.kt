@@ -2,6 +2,7 @@ package com.mimiral.app.data.repository
 
 import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.CollectionDao
+import com.mimiral.app.data.local.dao.CollectionWithBookCount
 import com.mimiral.app.data.local.entity.BookCollectionCrossRef
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.CollectionEntity
@@ -20,6 +21,13 @@ class CollectionRepository @Inject constructor(
 ) {
     fun getAllCollections(): Flow<List<CollectionEntity>> =
         collectionDao.getAllCollections()
+
+    /**
+     * Single-query batch fetch of all collections with their book counts.
+     * Uses LEFT JOIN + GROUP BY to avoid the N+1 query problem.
+     */
+    fun getAllCollectionsWithBookCount(): Flow<List<CollectionWithBookCount>> =
+        collectionDao.getAllCollectionsWithBookCount()
 
     suspend fun getCollectionById(collectionId: Int): CollectionEntity? =
         collectionDao.getCollectionById(collectionId)

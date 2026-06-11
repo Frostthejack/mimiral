@@ -2,6 +2,7 @@ package com.mimiral.app.ui.collections
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mimiral.app.data.local.dao.CollectionWithBookCount
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.CollectionEntity
 import com.mimiral.app.data.repository.CollectionRepository
@@ -43,16 +44,10 @@ class CollectionsViewModel @Inject constructor(
 
     private fun loadCollections() {
         viewModelScope.launch {
-            collectionRepository.getAllCollections().collect { collections ->
-                val withCounts = collections.map { collection ->
-                    CollectionWithCount(
-                        collection = collection,
-                        bookCount = collectionRepository.getBookCountInCollection(collection.id)
-                    )
-                }
-                _collections.value = withCounts
+            collectionRepository.getAllCollectionsWithBookCount().collect { withCounts ->
+                _collections.value = withCounts.map { it.toCollectionWithCount() }
                 _uiState.value = _uiState.value.copy(
-                    collections = withCounts,
+                    collections = withCounts.map { it.toCollectionWithCount() },
                     isLoading = false
                 )
             }
@@ -147,4 +142,16 @@ class CollectionsViewModel @Inject constructor(
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
+
+    private fun CollectionWithBookCount.toCollectionWithCount(): CollectionWithCount =
+        CollectionWithCount(
+            collection = CollectionEntity(
+                id = id,
+                name = name,
+                description = description,
+                createdTime = createdTime,
+                sortOrder = sortOrder
+            ),
+            bookCount = bookCount
+        )
 }
