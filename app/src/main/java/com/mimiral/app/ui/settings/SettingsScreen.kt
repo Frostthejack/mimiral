@@ -603,7 +603,6 @@ fun SettingsScreen(
                 }
             }
 
-
             // SECTION: Library
             // ═══════════════════════════════════════════════════
             SectionHeader(

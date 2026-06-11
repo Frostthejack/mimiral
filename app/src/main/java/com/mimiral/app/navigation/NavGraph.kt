@@ -241,9 +241,6 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onNavigateToKavitaDeviceManagement = {
                         navController.navigate(Screen.KavitaDeviceManagement.route)
                     },
-                    onNavigateToReadingPreferences = {
-                        navController.navigate(Screen.ReadingPreferences.route)
-                    },
                     onNavigateToTTSSettings = {
                         navController.navigate(Screen.TTSSettings.route)
                     },

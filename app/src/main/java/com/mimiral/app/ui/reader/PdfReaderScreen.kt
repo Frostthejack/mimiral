@@ -965,7 +965,11 @@ private fun TopReaderBar(
                         Icons.Default.BookmarkBorder
                     },
                     contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
-                    tint = if (isBookmarked) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurface
+                    tint = if (isBookmarked) {
+                        Color(0xFFFFD700)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
                 )
             }
         }
@@ -1022,7 +1026,13 @@ internal fun BottomReaderControls(
                     Icon(
                         imageVector = Icons.Default.ChevronLeft,
                         contentDescription = "Previous page",
-                        tint = if (currentPage > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        tint = if (currentPage > 0) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = 0.3f
+                            )
+                        }
                     )
                 }
 

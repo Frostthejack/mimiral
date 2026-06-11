@@ -510,6 +510,7 @@ private fun parseInlineMarkdownInline(text: String): String {
         .replace(Regex("\\[([^]]+)]\\(([^)]+)\\)"), "$1")
 }
 
+@Composable
 private fun buildAnnotatedStringInlined(text: String): AnnotatedString {
     return buildAnnotatedString {
         var remaining = text

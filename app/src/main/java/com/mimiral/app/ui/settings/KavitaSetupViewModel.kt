@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 
 /**
@@ -366,9 +367,10 @@ class KavitaSetupViewModel @Inject constructor(
                     )
                 }
 
-                val loginBody = """{"username":"${state.username}","password":"${state.password}"}"""
-                    .toRequestBody("application/json; charset=utf-8".toMediaType())
-
+                val loginBody = (
+                    "{\"username\":\"${state.username}\"" +
+                        ",\"password\":\"${state.password}\"}"
+                    ).toRequestBody("application/json; charset=utf-8".toMediaType())
                 val loginRequest = okhttp3.Request.Builder()
                     .url("$baseUrl/api/Account/login")
                     .post(loginBody)

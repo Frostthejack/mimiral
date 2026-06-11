@@ -269,6 +269,7 @@ private fun OnDeckCard(
                         contentDescription = "Book cover placeholder",
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             // Title + progress

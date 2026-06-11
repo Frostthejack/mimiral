@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,7 +29,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -434,7 +434,7 @@ private fun GenrePieChartColors(): List<Color> {
         scheme.primary, scheme.secondary, scheme.tertiary,
         scheme.error, scheme.primaryContainer, scheme.secondaryContainer,
         scheme.tertiaryContainer, scheme.outline, scheme.surfaceVariant,
-        scheme.inversePrimary, scheme.inverseSecondary, scheme.inverseTertiary
+        scheme.inversePrimary, scheme.surface, scheme.background
     )
 }
 

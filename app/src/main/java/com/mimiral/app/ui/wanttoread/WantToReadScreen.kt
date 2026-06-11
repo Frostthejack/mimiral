@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,8 +22,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.ViewList
@@ -142,7 +149,7 @@ fun WantToReadScreen(
                     // Cleanup
                     IconButton(onClick = { viewModel.cleanup() }) {
                         Icon(
-                            Icons.Default.AutoFixHigh,
+                            Icons.Default.CleaningServices,
                             contentDescription = "Cleanup fully-read"
                         )
                     }
@@ -190,12 +197,12 @@ fun WantToReadScreen(
                         },
                         trailingIcon = {
                             Icon(
-                                Icons.Default.Clear,
+                                Icons.Default.Close,
                                 contentDescription = "Clear sort",
                                 modifier = Modifier.size(18.dp)
                             )
                         },
-                        modifier = Modifier.minimumInteractiveComponentSize(),
+                        modifier = Modifier.size(48.dp),
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -275,7 +282,7 @@ private fun SearchBar(
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = onClear) {
-                    Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                    Icon(Icons.Default.Close, contentDescription = "Clear search")
                 }
             }
         },
@@ -360,9 +367,9 @@ private fun SeriesGridCard(
                 ) {
                     Icon(
                         imageVector = if (isInList) {
-                            Icons.Default.BookmarkRemove
+                            Icons.Default.BookmarkBorder
                         } else {
-                            Icons.Default.BookmarkAdd
+                            Icons.Default.Bookmark
                         },
                         contentDescription = if (isInList) "Remove from WTR" else "Add to WTR",
                         tint = if (isInList) {
@@ -499,7 +506,7 @@ private fun SeriesListRow(
             IconButton(onClick = onToggleWantToRead) {
                 Icon(
                     imageVector = if (isInList) {
-                        Icons.Default.BookmarkRemove
+                        Icons.Default.BookmarkBorder
                     } else {
                         Icons.Outlined.BookmarkAdd
                     },
@@ -540,7 +547,7 @@ private fun PaginationBar(
             onClick = onPreviousPage,
             enabled = hasPrevious
         ) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Previous")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous")
             Text("Prev")
         }
 
@@ -555,7 +562,7 @@ private fun PaginationBar(
             enabled = hasNext
         ) {
             Text("Next")
-            Icon(Icons.Default.ChevronRight, contentDescription = "Next")
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next")
         }
     }
 }
@@ -671,7 +678,7 @@ fun WantToReadToggleChip(
         leadingIcon = {
             Icon(
                 imageVector = if (isAdded) {
-                    Icons.Default.BookmarkAdd
+                    Icons.Default.Bookmark
                 } else {
                     Icons.Outlined.BookmarkAdd
                 },

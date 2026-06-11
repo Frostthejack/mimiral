@@ -401,14 +401,14 @@ private fun SeriesGridCard(
                     )
                 }
             }
-        }
 
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = series.name,
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    text = series.name,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (series.pages > 0) {
                     Text(
@@ -486,7 +486,7 @@ private fun SeriesHeader(series: SeriesDetail) {
             ) {
                 Icon(
                     Icons.Filled.MenuBook,
-                    contentDescription = "Book cover placeholder",
+                    contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )

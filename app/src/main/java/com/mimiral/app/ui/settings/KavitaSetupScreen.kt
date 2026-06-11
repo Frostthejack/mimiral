@@ -51,7 +51,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -366,7 +368,13 @@ fun KavitaSetupScreen(
                     AlertDialog(
                         onDismissRequest = { showClearConfirm = false },
                         title = { Text("Remove Server Configuration") },
-                        text = { Text("This will remove all saved Kavita server settings. You will need to reconfigure the server to use Kavita features.") },
+                        text = {
+                            Text(
+                                "This will remove all saved Kavita server settings. " +
+                                    "You will need to reconfigure the server to use " +
+                                    "Kavita features."
+                            )
+                        },
                         confirmButton = {
                             TextButton(
                                 onClick = {

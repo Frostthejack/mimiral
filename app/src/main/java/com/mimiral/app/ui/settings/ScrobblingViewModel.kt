@@ -189,6 +189,13 @@ class ScrobblingViewModel @Inject constructor(
     }
 
     /**
+     * Clear the token update success flag.
+     */
+    fun clearTokenSuccess() {
+        _uiState.value = _uiState.value.copy(tokenUpdateSuccess = false)
+    }
+
+    /**
      * Update a scrobble provider token.
      *
      * @param provider Provider name (e.g., "AniList", "Mal", "GoogleBooks")
@@ -299,9 +306,5 @@ class ScrobblingViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
-    }
-
-    fun clearTokenSuccess() {
-        _uiState.value = _uiState.value.copy(tokenUpdateSuccess = false)
     }
 }

@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -472,7 +474,7 @@ class KavitaAuthService @Inject constructor(
      */
     fun launchOpdsUrlDerivation(baseUrl: String, jwtToken: String) {
         // Use a coroutine instead of raw Thread for proper lifecycle management
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        GlobalScope.launch(Dispatchers.IO) {
             try {
                 val request = Request.Builder()
                     .url("$baseUrl/api/Account/opds-url")
