@@ -18,7 +18,11 @@ object OpdsFeedParser {
 
     fun parse(xml: String): OpdsFeed {
         val factory = XmlPullParserFactory.newInstance()
-        factory.isNamespaceAware = false
+        factory.isNamespaceAware = true
+        // Disable XXE: no external general/parameter entities or DTDs
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
         val parser = factory.newPullParser()
         parser.setInput(StringReader(xml))
 
