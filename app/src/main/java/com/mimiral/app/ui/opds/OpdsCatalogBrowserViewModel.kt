@@ -322,14 +322,3 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 }
-
-private val OpdsLink.fileExtension: String?
-    get() {
-        val cleanType = type ?: return null
-        return when {
-            cleanType.contains("epub") -> ".epub"
-            cleanType.contains("pdf") -> ".pdf"
-            cleanType.contains("mobi") -> ".mobi"
-            else -> null
-        }
-    }
