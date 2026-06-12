@@ -13,7 +13,6 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -69,75 +68,71 @@ class StatisticsViewModel @Inject constructor(
                 val weekStart = ReadingStatsRepository.thisWeekStart()
                 val monthStart = ReadingStatsRepository.thisMonthStart()
 
-                // Collect sessions for different time ranges
-                combine(
-                    readingStatsRepository.getAllSessions(),
-                    readingStatsRepository.getSessionsBetweenDates(weekStart, todayString),
-                    readingStatsRepository.getSessionsBetweenDates(monthStart, todayString)
-                ) { allSessions, weekSessions, monthSessions ->
-                    // Today's stats
-                    val todaySessions = allSessions.filter { it.sessionDate == todayEpochDay }
-                    val todayPages = todaySessions.sumOf { it.pagesRead }
-                    val todayMs = todaySessions.sumOf { it.durationMs }
+                // Fetch all session data in parallel
+                val allSessions = readingStatsRepository.getAllSessions().first()
+                val weekSessions = readingStatsRepository.getSessionsBetweenDates(weekStart, todayString).first()
+                val monthSessions = readingStatsRepository.getSessionsBetweenDates(monthStart, todayString).first()
 
-                    // Week stats
-                    val weekPages = weekSessions.sumOf { it.pagesRead }
-                    val weekMs = weekSessions.sumOf { it.durationMs }
+                // Today's stats
+                val todaySessions = allSessions.filter { it.sessionDate == todayEpochDay }
+                val todayPages = todaySessions.sumOf { it.pagesRead }
+                val todayMs = todaySessions.sumOf { it.durationMs }
 
-                    // Month stats
-                    val monthPages = monthSessions.sumOf { it.pagesRead }
-                    val monthMs = monthSessions.sumOf { it.durationMs }
+                // Week stats
+                val weekPages = weekSessions.sumOf { it.pagesRead }
+                val weekMs = weekSessions.sumOf { it.durationMs }
 
-                    // Total stats
-                    val totalPages = allSessions.sumOf { it.pagesRead }
-                    val totalMs = allSessions.sumOf { it.durationMs }
+                // Month stats
+                val monthPages = monthSessions.sumOf { it.pagesRead }
+                val monthMs = monthSessions.sumOf { it.durationMs }
 
-                    // Books completed (progress >= 99%)
-                    val booksCompleted = bookRepository.getAllProgress().first()
-                        .count { it.progressPercent >= 99f }
+                // Total stats
+                val totalPages = allSessions.sumOf { it.pagesRead }
+                val totalMs = allSessions.sumOf { it.durationMs }
 
-                    // Daily stats for the last 30 days
-                    val last30Days = (0..29).map { daysAgo ->
-                        val date = LocalDate.now().minusDays(daysAgo.toLong())
-                        val daySessions = allSessions.filter { it.sessionDate == date.toEpochDay() }
-                        DailyStat(
-                            date = date.format(dateFormatter),
-                            totalSeconds = daySessions.sumOf { it.durationMs },
-                            totalPages = daySessions.sumOf { it.pagesRead },
-                            sessionCount = daySessions.size
-                        )
-                    }.reversed()
+                // Books completed (progress >= 99%)
+                val booksCompleted = bookRepository.getAllProgress().first()
+                    .count { it.progressPercent >= 99f }
 
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        totalBooksRead = booksCompleted,
-                        totalPagesRead = totalPages,
-                        totalReadingTimeSeconds = totalMs,
-                        todayPages = todayPages,
-                        todayMinutes = todayMs / 60000,
-                        todaySessionCount = todaySessions.size,
-                        weekPages = weekPages,
-                        weekMinutes = weekMs / 60000,
-                        monthPages = monthPages,
-                        monthMinutes = monthMs / 60000,
-                        dailyStats = last30Days,
-                        recentSessions = allSessions.take(10)
+                // Reading streak
+                val currentStreak = readingStatsRepository.getReadingStreak()
+                val longestStreak = readingStatsRepository.getLongestStreak()
+
+                // Daily stats for the last 30 days
+                val last30Days = (0..29).map { daysAgo ->
+                    val date = LocalDate.now().minusDays(daysAgo.toLong())
+                    val daySessions = allSessions.filter { it.sessionDate == date.toEpochDay() }
+                    DailyStat(
+                        date = date.format(dateFormatter),
+                        totalSeconds = daySessions.sumOf { it.durationMs } / 1000,
+                        totalPages = daySessions.sumOf { it.pagesRead },
+                        sessionCount = daySessions.size
                     )
-                }.collect { }
+                }.reversed()
+
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    totalBooksRead = booksCompleted,
+                    totalPagesRead = totalPages,
+                    totalReadingTimeSeconds = totalMs / 1000,
+                    currentStreak = currentStreak,
+                    longestStreak = longestStreak,
+                    todayPages = todayPages,
+                    todayMinutes = todayMs / 60000,
+                    todaySessionCount = todaySessions.size,
+                    weekPages = weekPages,
+                    weekMinutes = weekMs / 60000,
+                    monthPages = monthPages,
+                    monthMinutes = monthMs / 60000,
+                    dailyStats = last30Days,
+                    recentSessions = allSessions.take(10)
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "Failed to load statistics: ${e.message}"
                 )
             }
-        }
-
-        // Load streak separately
-        viewModelScope.launch {
-            try {
-                val streak = readingStatsRepository.getReadingStreak()
-                _uiState.value = _uiState.value.copy(currentStreak = streak)
-            } catch (_: Exception) { }
         }
     }
 
