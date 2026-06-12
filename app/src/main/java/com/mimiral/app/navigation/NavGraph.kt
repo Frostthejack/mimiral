@@ -80,7 +80,7 @@ fun routeForBookFormat(bookId: Int, format: String): String {
         "EPUB" -> "epub_reader/$bookId"
         "TXT", "RTF" -> "txt_rtf_reader/$bookId"
         "PDF" -> "pdf_reader/$bookId"
-        "MOBI", "AZW3" -> "mobi_reader/$bookId"
+        "MOBI", "AZW", "AZW3" -> "mobi_reader/$bookId"
         "FB2" -> "fb2_reader/$bookId"
         "CBZ", "CBR" -> "comic_reader/$bookId"
         "DOC", "DOCX" -> "doc_reader/$bookId"
