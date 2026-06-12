@@ -7,7 +7,6 @@ import com.mimiral.app.data.local.dao.ChapterDao
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ChapterEntity
 import com.mimiral.app.data.local.scanner.FileScanner
-import com.mimiral.app.data.local.scanner.ScanState
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
