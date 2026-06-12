@@ -43,7 +43,8 @@ interface KavitaApi {
      * Test connection to the Kavita server using the base URL.
      * GET /api/Server/info — lightweight connectivity check.
      */
-    suspend fun testConnection(): Response<KavitaServerInfo> = getServerInfo()
+    @GET("api/Server/info")
+    suspend fun testConnection(): Response<KavitaServerInfo>
 
     /**
      * Fallback login endpoint for Kavita versions before v0.7.
