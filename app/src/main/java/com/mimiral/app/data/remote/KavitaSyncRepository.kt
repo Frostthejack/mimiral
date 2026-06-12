@@ -9,10 +9,9 @@ import com.mimiral.app.di.KavitaApiClient
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -45,12 +44,9 @@ class KavitaSyncRepository @Inject constructor(
     private val progressSyncRepository: KavitaReadingProgressRepository
 ) {
 
-    private val dateFormat = SimpleDateFormat(
-        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-        Locale.US
-    ).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
+    private val dateFormatter: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+            .withZone(ZoneOffset.UTC)
 
     /**
      * Push local reading progress to Kavita.
@@ -103,7 +99,7 @@ class KavitaSyncRepository @Inject constructor(
         val libraryId = book.kavitaLibraryId
             ?: return SyncResult.NoKavitaBook
 
-        val timestamp = dateFormat.format(Date())
+        val timestamp = dateFormatter.format(Instant.now())
         val request = KavitaProgressRequest(
             seriesId = seriesId,
             libraryId = libraryId,
@@ -271,7 +267,7 @@ class KavitaSyncRepository @Inject constructor(
     private fun parseKavitaTimestamp(timestamp: String?): Long {
         if (timestamp == null) return 0L
         return try {
-            dateFormat.parse(timestamp)?.time ?: 0L
+            dateFormatter.parse(timestamp, Instant::from)?.toEpochMilli() ?: 0L
         } catch (_: Exception) {
             0L
         }
