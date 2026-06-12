@@ -190,7 +190,8 @@ fun KavitaBookmarksScreen(
                 ) {
                     ErrorRetryCard(
                         message = uiState.errorMessage!!,
-                        onRetry = { viewModel.loadAllBookmarks() }
+                        onRetry = { viewModel.loadAllBookmarks() },
+                        onDismiss = { viewModel.clearError() }
                     )
                 }
             } else if (uiState.groupedBookmarks.isEmpty()) {
@@ -482,6 +483,7 @@ private fun ChapterBookmarkGroup(
 private fun ErrorRetryCard(
     message: String,
     onRetry: () -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -509,8 +511,15 @@ private fun ErrorRetryCard(
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 textAlign = TextAlign.Center
             )
-            Button(onClick = onRetry) {
-                Text("Retry")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("Dismiss")
+                }
+                Button(onClick = onRetry) {
+                    Text("Retry")
+                }
             }
         }
     }

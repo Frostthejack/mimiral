@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -133,6 +134,7 @@ fun StatisticsScreen(
                 ErrorRetryCard(
                     message = uiState.error!!,
                     onRetry = { viewModel.retry() },
+                    onDismiss = { viewModel.clearError() },
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
@@ -149,6 +151,7 @@ fun StatisticsScreen(
 private fun ErrorRetryCard(
     message: String,
     onRetry: () -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -176,8 +179,15 @@ private fun ErrorRetryCard(
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 textAlign = TextAlign.Center
             )
-            Button(onClick = onRetry) {
-                Text("Retry")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("Dismiss")
+                }
+                Button(onClick = onRetry) {
+                    Text("Retry")
+                }
             }
         }
     }
