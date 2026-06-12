@@ -11,6 +11,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class CollectionWithCount(
@@ -46,10 +47,10 @@ class CollectionsViewModel @Inject constructor(
         viewModelScope.launch {
             collectionRepository.getAllCollectionsWithBookCount().collect { withCounts ->
                 _collections.value = withCounts.map { it.toCollectionWithCount() }
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     collections = withCounts.map { it.toCollectionWithCount() },
                     isLoading = false
-                )
+                ) }
             }
         }
     }
@@ -57,14 +58,14 @@ class CollectionsViewModel @Inject constructor(
     fun createCollection(name: String, description: String?) {
         viewModelScope.launch {
             try {
-                _uiState.value = _uiState.value.copy(isCreating = true)
+                _uiState.update { it.copy(isCreating = true) }
                 collectionRepository.createCollection(name, description)
-                _uiState.value = _uiState.value.copy(isCreating = false)
+                _uiState.update { it.copy(isCreating = false) }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     isCreating = false,
                     error = "Failed to create collection: ${e.message}"
-                )
+                ) }
             }
         }
     }
@@ -73,11 +74,11 @@ class CollectionsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 collectionRepository.updateCollection(collection)
-                _uiState.value = _uiState.value.copy(editingCollection = null)
+                _uiState.update { it.copy(editingCollection = null) }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     error = "Failed to update collection: ${e.message}"
-                )
+                ) }
             }
         }
     }
@@ -88,40 +89,40 @@ class CollectionsViewModel @Inject constructor(
                 collectionRepository.deleteCollection(collection)
                 // Collapse if this was the expanded collection
                 if (_uiState.value.expandedCollectionId == collection.id) {
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update { it.copy(
                         expandedCollectionId = null,
                         booksInExpanded = emptyList()
-                    )
+                    ) }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     error = "Failed to delete collection: ${e.message}"
-                )
+                ) }
             }
         }
     }
 
     fun startEditing(collection: CollectionEntity) {
-        _uiState.value = _uiState.value.copy(editingCollection = collection)
+        _uiState.update { it.copy(editingCollection = collection) }
     }
 
     fun cancelEditing() {
-        _uiState.value = _uiState.value.copy(editingCollection = null)
+        _uiState.update { it.copy(editingCollection = null) }
     }
 
     fun expandCollection(collectionId: Int) {
         if (_uiState.value.expandedCollectionId == collectionId) {
             // Collapse
-            _uiState.value = _uiState.value.copy(
+            _uiState.update { it.copy(
                 expandedCollectionId = null,
                 booksInExpanded = emptyList()
-            )
+            ) }
         } else {
             // Expand and load books
-            _uiState.value = _uiState.value.copy(expandedCollectionId = collectionId)
+            _uiState.update { it.copy(expandedCollectionId = collectionId) }
             viewModelScope.launch {
                 collectionRepository.getBooksInCollection(collectionId).collect { books ->
-                    _uiState.value = _uiState.value.copy(booksInExpanded = books)
+                    _uiState.update { it.copy(booksInExpanded = books) }
                 }
             }
         }
@@ -132,15 +133,15 @@ class CollectionsViewModel @Inject constructor(
             try {
                 collectionRepository.removeBookFromCollection(bookId, collectionId)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
+                _uiState.update { it.copy(
                     error = "Failed to remove book: ${e.message}"
-                )
+                ) }
             }
         }
     }
 
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 
     private fun CollectionWithBookCount.toCollectionWithCount(): CollectionWithCount =
