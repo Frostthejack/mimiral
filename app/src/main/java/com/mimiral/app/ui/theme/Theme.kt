@@ -29,6 +29,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
+import javax.inject.Inject
+import javax.inject.Singleton
 
 // ── Theme enum ─────────────────────────────────────────────
 enum class MimiralThemeType(val label: String) {
@@ -57,7 +59,7 @@ private val SepiaColorScheme = lightColorScheme(
     primary = SepiaPrimary,
     onPrimary = SepiaOnPrimary,
     secondary = SepiaSecondary,
-    onSecondary = SepiaOnSecondary,
+    onSecondary = DayOnSecondary,
     background = SepiaBackground,
     onBackground = SepiaOnBackground,
     surface = SepiaSurface,
@@ -110,8 +112,23 @@ private val HighContrastDarkColorScheme = darkColorScheme(
 
 // ── Theme State ────────────────────────────────────────────
 
-object ThemeState {
+/**
+ * Application-wide theme state, managed as a Hilt singleton.
+ *
+ * Replaces the previous global `object ThemeState` which was not
+ * lifecycle-aware and would leak memory across configuration changes.
+ * This class is injected via DI and scoped to [SingletonComponent],
+ * so it lives for the lifetime of the application process without
+ * holding references to activities or composables.
+ */
+@Singleton
+class ThemeState @Inject constructor() {
     var currentTheme by mutableStateOf(MimiralThemeType.DAY)
+        private set
+
+    fun setTheme(theme: MimiralThemeType) {
+        currentTheme = theme
+    }
 }
 
 /**
@@ -119,7 +136,7 @@ object ThemeState {
  * Must be called at the top of the composition tree (e.g. in MainContent).
  */
 @Composable
-fun rememberMimiralThemeState(): MimiralThemeType {
+fun rememberMimiralThemeState(themeState: ThemeState): MimiralThemeType {
     val context = LocalContext.current
     val settingsRepository = remember { ReaderSettingsRepository(context) }
     val settings by settingsRepository.settings.collectAsState(
@@ -133,10 +150,10 @@ fun rememberMimiralThemeState(): MimiralThemeType {
         } catch (_: IllegalArgumentException) {
             MimiralThemeType.DAY
         }
-        ThemeState.currentTheme = theme
+        themeState.setTheme(theme)
     }
 
-    return ThemeState.currentTheme
+    return themeState.currentTheme
 }
 
 // ── Theme Switcher Composable ──────────────────────────────
@@ -144,7 +161,7 @@ fun rememberMimiralThemeState(): MimiralThemeType {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MimiralThemeSwitcher(
-    currentTheme: MimiralThemeType = ThemeState.currentTheme,
+    currentTheme: MimiralThemeType,
     onThemeSelected: (MimiralThemeType) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -169,7 +186,6 @@ fun MimiralThemeSwitcher(
                 DropdownMenuItem(
                     text = { Text(theme.label) },
                     onClick = {
-                        ThemeState.currentTheme = theme
                         onThemeSelected(theme)
                         expanded = false
                     }
@@ -183,7 +199,7 @@ fun MimiralThemeSwitcher(
 
 @Composable
 fun MimiralTheme(
-    themeType: MimiralThemeType = ThemeState.currentTheme,
+    themeType: MimiralThemeType,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

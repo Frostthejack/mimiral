@@ -25,11 +25,13 @@ import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.navigation.MimiralNavGraph
 import com.mimiral.app.navigation.routeForBookFormat
 import com.mimiral.app.ui.theme.MimiralTheme
+import com.mimiral.app.ui.theme.ThemeState
 import com.mimiral.app.ui.theme.rememberMimiralThemeState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
 
 /**
  * Represents a pending external book to be opened (from ACTION_VIEW intent).
@@ -54,7 +56,12 @@ class MainActivity : ComponentActivity() {
     private var volumeKeyEventCallback: ((Int) -> Boolean)? = null
 
     /** External book handler injected by Hilt. */
+    @Inject
     lateinit var externalBookHandler: ExternalBookHandler
+
+    /** Theme state injected by Hilt. */
+    @Inject
+    lateinit var themeState: ThemeState
 
     /** Flow of pending external books from ACTION_VIEW intents. */
     private val _pendingExternalBook = MutableStateFlow<PendingExternalBook?>(null)
@@ -141,21 +148,20 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
 
-        // ExternalBookHandler is injected by Hilt, but we need to access it
-        // via manual injection since we can't use @Inject on fields in Activity
-        // with Hilt without @AndroidEntryPoint field injection
-        externalBookHandler = (application as MimiralApp).externalBookHandler
-
         // Check for ACTION_VIEW intent
         handleIncomingIntent(intent)
 
         setContent {
-            MimiralTheme {
+            val theme = rememberMimiralThemeState(themeState)
+            MimiralTheme(themeType = theme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainContent(onComposeReady = { isComposeReady = true })
+                    MainContent(
+                        themeState = themeState,
+                        onComposeReady = { isComposeReady = true }
+                    )
                 }
             }
         }
@@ -182,15 +188,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainContent(onComposeReady: () -> Unit = {}) {
+fun MainContent(
+    themeState: ThemeState,
+    onComposeReady: () -> Unit = {}
+) {
     val context = LocalContext.current
     val activity = context as MainActivity
     val settingsRepository = remember { ReaderSettingsRepository(context) }
     val settings by settingsRepository.settings.collectAsState(initial = ReaderSettings())
     val navController = rememberNavController()
-
-    // Initialize theme from DataStore
-    rememberMimiralThemeState()
 
     // Signal that Compose content is ready — this dismisses the splash screen
     LaunchedEffect(Unit) {
