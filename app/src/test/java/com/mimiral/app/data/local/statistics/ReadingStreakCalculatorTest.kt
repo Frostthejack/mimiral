@@ -207,20 +207,26 @@ class ReadingStreakCalculatorTest {
         assertEquals(today - 3, summary.lastReadDate)
     }
 
-    // --- epochDayToString tests ---
+    // --- Top-level utility function tests ---
 
     @Test
     fun `epochDayToString - formats correctly`() {
         val epochDay = date(2026, 6, 5)
-        assertEquals("2026-06-05", ReadingStreakCalculator.epochDayToString(epochDay))
+        assertEquals("2026-06-05", epochDayToString(epochDay))
     }
 
     @Test
     fun `epochDayToLocalDate - converts correctly`() {
         val epochDay = date(2026, 12, 25)
-        val localDate = ReadingStreakCalculator.epochDayToLocalDate(epochDay)
+        val localDate = epochDayToLocalDate(epochDay)
         assertEquals(2026, localDate.year)
         assertEquals(12, localDate.monthValue)
         assertEquals(25, localDate.dayOfMonth)
+    }
+
+    @Test
+    fun `todayEpochDay - returns today`() {
+        val today = java.time.LocalDate.now().toEpochDay()
+        assertEquals(today, todayEpochDay())
     }
 }

@@ -5,8 +5,8 @@ import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.entity.ReadingProgressEntity
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
+import com.mimiral.app.data.local.statistics.ReadingStreakCalculator
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -23,6 +23,7 @@ class ReadingStatsRepositoryTest {
     private lateinit var readingSessionDao: ReadingSessionDao
     private lateinit var readingProgressDao: ReadingProgressDao
     private lateinit var bookDao: BookDao
+    private lateinit var streakCalculator: ReadingStreakCalculator
     private lateinit var repository: ReadingStatsRepository
 
     @Before
@@ -30,7 +31,13 @@ class ReadingStatsRepositoryTest {
         readingSessionDao = mock()
         readingProgressDao = mock()
         bookDao = mock()
-        repository = ReadingStatsRepository(readingSessionDao, readingProgressDao, bookDao)
+        streakCalculator = mock()
+        repository = ReadingStatsRepository(
+            readingSessionDao,
+            readingProgressDao,
+            bookDao,
+            streakCalculator
+        )
     }
 
     // ---- recordSession ----
@@ -114,59 +121,63 @@ class ReadingStatsRepositoryTest {
     // ---- getReadingStreak ----
 
     @Test
+    fun `getReadingStreak - delegates to streak calculator`() = runTest {
+        val today = LocalDate.now().toEpochDay()
+        val dates = listOf(today, today - 1, today - 2)
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(dates)
+        whenever(streakCalculator.computeCurrentStreak(dates)).thenReturn(3)
+
+        assertEquals(3, repository.getReadingStreak())
+        verify(streakCalculator).computeCurrentStreak(dates)
+    }
+
+    @Test
     fun `getReadingStreak - empty dates returns zero`() = runTest {
         whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(emptyList())
+        whenever(streakCalculator.computeCurrentStreak(emptyList())).thenReturn(0)
+
         assertEquals(0, repository.getReadingStreak())
     }
 
     @Test
     fun `getReadingStreak - single day streak`() = runTest {
         val today = LocalDate.now().toEpochDay()
-        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(listOf(today))
+        val dates = listOf(today)
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(dates)
+        whenever(streakCalculator.computeCurrentStreak(dates)).thenReturn(1)
+
         assertEquals(1, repository.getReadingStreak())
     }
 
     @Test
-    fun `getReadingStreak - three day streak`() = runTest {
+    fun `getReadingStreak - broke streak returns zero`() = runTest {
         val today = LocalDate.now().toEpochDay()
-        val dates = (0..2).map { today - it }
+        val dates = listOf(today - 3, today - 4, today - 5)
         whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(dates)
-        assertEquals(3, repository.getReadingStreak())
-    }
+        whenever(streakCalculator.computeCurrentStreak(dates)).thenReturn(0)
 
-    @Test
-    fun `getReadingStreak - streak broken returns partial`() = runTest {
-        val today = LocalDate.now().toEpochDay()
-        val dates = listOf(
-            today,
-            today - 1,
-            // gap at minusDays(2)
-            today - 3
-        )
-        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(dates)
-        assertEquals(2, repository.getReadingStreak())
-    }
-
-    @Test
-    fun `getReadingStreak - yesterday only counts as streak of 1`() = runTest {
-        val yesterday = LocalDate.now().minusDays(1).toEpochDay()
-        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(listOf(yesterday))
-        assertEquals(1, repository.getReadingStreak())
-    }
-
-    @Test
-    fun `getReadingStreak - two days ago only returns zero`() = runTest {
-        val twoDaysAgo = LocalDate.now().minusDays(2).toEpochDay()
-        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(listOf(twoDaysAgo))
         assertEquals(0, repository.getReadingStreak())
     }
 
+    // ---- getLongestStreak ----
+
     @Test
-    fun `getReadingStreak - five day streak`() = runTest {
+    fun `getLongestStreak - delegates to streak calculator`() = runTest {
         val today = LocalDate.now().toEpochDay()
-        val dates = (0..4).map { today - it }
+        val dates = listOf(today, today - 1, today - 2, today - 3, today - 4)
         whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(dates)
-        assertEquals(5, repository.getReadingStreak())
+        whenever(streakCalculator.computeLongestStreak(dates)).thenReturn(5)
+
+        assertEquals(5, repository.getLongestStreak())
+        verify(streakCalculator).computeLongestStreak(dates)
+    }
+
+    @Test
+    fun `getLongestStreak - empty dates returns zero`() = runTest {
+        whenever(readingSessionDao.getDistinctReadingDates()).thenReturn(emptyList())
+        whenever(streakCalculator.computeLongestStreak(emptyList())).thenReturn(0)
+
+        assertEquals(0, repository.getLongestStreak())
     }
 
     // ---- getTotalBooksCompleted ----
@@ -187,6 +198,7 @@ class ReadingStatsRepositoryTest {
     @Test
     fun `getTotalBooksCompleted - empty list returns zero`() = runTest {
         whenever(readingProgressDao.getAllProgress()).thenReturn(flowOf(emptyList()))
+
         assertEquals(0, repository.getTotalBooksCompleted())
     }
 
