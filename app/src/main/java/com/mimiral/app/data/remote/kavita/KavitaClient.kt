@@ -56,8 +56,8 @@ class KavitaClient(
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         private val gson = Gson()
 
-        fun defaultClient(): OkHttpClient {
-            return OkHttpClient.Builder()
+        private val sharedClient: OkHttpClient by lazy {
+            OkHttpClient.Builder()
                 .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -66,14 +66,18 @@ class KavitaClient(
                 .build()
         }
 
-        private fun downloadClient(): OkHttpClient {
-            return OkHttpClient.Builder()
+        private val sharedDownloadClient: OkHttpClient by lazy {
+            OkHttpClient.Builder()
                 .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .readTimeout(DOWNLOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 .followRedirects(true)
                 .followSslRedirects(true)
                 .build()
         }
+
+        fun defaultClient(): OkHttpClient = sharedClient
+
+        private fun downloadClient(): OkHttpClient = sharedDownloadClient
 
         /** Create a KavitaClient with base URL only (no auth). */
         fun create(baseUrl: String): KavitaClient {
