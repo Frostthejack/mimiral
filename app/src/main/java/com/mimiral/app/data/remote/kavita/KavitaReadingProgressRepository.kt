@@ -19,6 +19,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,8 +86,8 @@ class KavitaReadingProgressRepository @Inject constructor(
     /** Mutex to serialize push operations */
     private val pushMutex = Mutex()
 
-    /** Scope for debounce coroutines */
-    private val scope = CoroutineScope(Dispatchers.IO)
+    /** Scope for debounce coroutines — bound to a SupervisorJob for lifecycle control */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     // ── Sync status ──
 
@@ -563,5 +564,13 @@ class KavitaReadingProgressRepository @Inject constructor(
      */
     suspend fun pendingOperationCount(): Int {
         return try { pendingOperationDao.count() } catch (_: Exception) { 0 }
+    }
+
+    /**
+     * Cancel the coroutine scope — call when the repository is no longer needed.
+     * Cancels all coroutines launched in [scope] including debounce timers.
+     */
+    fun close() {
+        scope.cancel()
     }
 }
