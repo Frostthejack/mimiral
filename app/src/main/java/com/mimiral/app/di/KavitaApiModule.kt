@@ -95,20 +95,6 @@ object KavitaApiModule {
 
     @Provides
     @Singleton
-    @KavitaApiClient
-    fun provideKavitaApiQualified(
-        @KavitaApiClient okHttpClient: OkHttpClient
-    ): KavitaApi {
-        val retrofit = Retrofit.Builder()
-            .baseUrl(PLACEHOLDER_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        return retrofit.create(KavitaApi::class.java)
-    }
-
-    @Provides
-    @Singleton
     fun provideAuthFailedCallback(
         authService: KavitaAuthService
     ): () -> Unit {
@@ -171,21 +157,22 @@ class KavitaBaseUrlInterceptor(
 
         // Normalize the server URL — ensure it ends with /
         val normalizedUrl = if (serverUrl.endsWith("/")) serverUrl else "$serverUrl/"
+        val serverHttpUrl = normalizedUrl.toHttpUrlOrNull()
+            ?: return chain.proceed(originalRequest)
+
+        // Preserve any base path on the server URL (e.g. https://host/kavita/).
+        // Without this, sub-path deployments lose their prefix and get 404s.
+        val serverBasePath = serverHttpUrl.encodedPath.trimEnd('/')
+        val combinedPath = serverBasePath + originalRequest.url.encodedPath
 
         // Build the new request with the resolved server URL
         val newUrl = originalRequest.url.newBuilder()
-            .scheme(normalizedUrl.toHttpUrlOrNull()?.scheme ?: "https")
-            .host(normalizedUrl.toHttpUrlOrNull()?.host ?: "")
-            .port(normalizedUrl.toHttpUrlOrNull()?.port ?: 443)
+            .scheme(serverHttpUrl.scheme)
+            .host(serverHttpUrl.host)
+            .port(serverHttpUrl.port)
+            .encodedPath(combinedPath)
             .build()
 
-        val requestBuilder = originalRequest.newBuilder()
-            .url(newUrl)
-
-        // NOTE: Auth headers (Authorization + X-Api-Key) are now injected by
-        // KavitaAuthInterceptor which runs after this interceptor in the chain.
-        // We no longer add X-Api-Key here to avoid duplication.
-
-        return chain.proceed(requestBuilder.build())
+        return chain.proceed(originalRequest.newBuilder().url(newUrl).build())
     }
 }

@@ -16,3 +16,16 @@ val highlightColors = listOf(
     HighlightColor("Orange", Color(0xFFFFAB40), "#FFFFAB40"),
     HighlightColor("Purple", Color(0xFFB388FF), "#FFB388FF")
 )
+
+fun parseHighlightColor(colorString: String): Color {
+    return try {
+        when {
+            colorString.startsWith("#") -> Color(android.graphics.Color.parseColor(colorString))
+            else -> highlightColors.firstOrNull {
+                it.name.equals(colorString, ignoreCase = true)
+            }?.color ?: highlightColors.first().color
+        }
+    } catch (_: Exception) {
+        highlightColors.first().color
+    }
+}

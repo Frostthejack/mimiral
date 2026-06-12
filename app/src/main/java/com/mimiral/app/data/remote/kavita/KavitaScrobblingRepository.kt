@@ -1,7 +1,6 @@
 package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
-import com.mimiral.app.di.KavitaApiClient
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,7 +18,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class KavitaScrobblingRepository @Inject constructor(
-    @KavitaApiClient private val kavitaApi: KavitaApi
+    private val kavitaApi: KavitaApi
 ) {
     companion object {
         private const val TAG = "KavitaScrobbling"

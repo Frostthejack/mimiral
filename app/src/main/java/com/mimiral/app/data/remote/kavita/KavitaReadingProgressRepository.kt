@@ -93,10 +93,6 @@ class KavitaReadingProgressRepository @Inject constructor(
     private val _syncStatus = MutableStateFlow(SyncStatus.IDLE)
     val syncStatus: StateFlow<SyncStatus> = _syncStatus.asStateFlow()
 
-    // ── Continue Reading ──
-
-    private val _continuePoint = MutableStateFlow<KavitaContinuePointDto?>(null)
-    val continuePoint: StateFlow<KavitaContinuePointDto?> = _continuePoint.asStateFlow()
 
     // ── Server check ──
 
@@ -319,36 +315,11 @@ class KavitaReadingProgressRepository @Inject constructor(
         _syncStatus.value = SyncStatus.SYNCING
 
         try {
-            // Flush offline queue
             flushPendingOperations()
-
-            // Fetch continue point
-            fetchContinuePoint()
-
             _syncStatus.value = SyncStatus.SYNCED
         } catch (e: Exception) {
             Log.w(TAG, "Full sync on startup failed: ${e.message}")
             _syncStatus.value = SyncStatus.ERROR
-        }
-    }
-
-    /**
-     * Fetch the continue-reading point from Kavita.
-     */
-    suspend fun fetchContinuePoint(): KavitaContinuePointDto? {
-        return try {
-            val response = kavitaApi.getContinuePoint()
-            if (response.isSuccessful) {
-                val point = response.body()
-                _continuePoint.value = point
-                point
-            } else {
-                Log.w(TAG, "getContinuePoint failed: ${response.code()}")
-                null
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Error fetching continue point: ${e.message}")
-            null
         }
     }
 
@@ -549,12 +520,9 @@ class KavitaReadingProgressRepository @Inject constructor(
             lastModifiedUtc = dateFormat.format(Date())
         )
         pushProgress(dto, bookId)
-
-        // Mark synced
-        val progress = readingProgressDao.getProgressForBook(bookId)
-        if (progress != null) {
-            readingProgressDao.saveProgress(progress.copy(kavitaSynced = true))
-        }
+        // kavitaSynced is set by pushProgress on successful server ACK;
+        // setting it here unconditionally would mark rows as synced even
+        // when the push was only queued offline.
         return true
     }
 

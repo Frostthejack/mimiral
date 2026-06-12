@@ -11,6 +11,7 @@ import com.mimiral.app.data.remote.kavita.KavitaResult
 import com.mimiral.app.data.remote.kavita.KavitaStatsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,12 +61,17 @@ class StatsDashboardViewModel @Inject constructor(
             var errorMsg: String? = null
             var hasServer = true
 
-            // Load all stats in parallel
-            val activityResult = statsRepository.getReadingActivity()
-            val genreResult = statsRepository.getGenreBreakdown()
-            val pagesResult = statsRepository.getPagesPerYear()
-            val paceResult = statsRepository.getReadingPace()
-            val authorsResult = statsRepository.getFavoriteAuthors()
+            val activityDeferred = async { statsRepository.getReadingActivity() }
+            val genreDeferred = async { statsRepository.getGenreBreakdown() }
+            val pagesDeferred = async { statsRepository.getPagesPerYear() }
+            val paceDeferred = async { statsRepository.getReadingPace() }
+            val authorsDeferred = async { statsRepository.getFavoriteAuthors() }
+
+            val activityResult = activityDeferred.await()
+            val genreResult = genreDeferred.await()
+            val pagesResult = pagesDeferred.await()
+            val paceResult = paceDeferred.await()
+            val authorsResult = authorsDeferred.await()
 
             val activity = when (activityResult) {
                 is KavitaResult.Success -> activityResult.data

@@ -293,12 +293,6 @@ class KavitaSyncRepository @Inject constructor(
     // ── Pass-through to enhanced repository ──
 
     /**
-     * Get the continue-reading point from Kavita.
-     * Delegates to KavitaReadingProgressRepository.
-     */
-    suspend fun fetchContinuePoint() = progressSyncRepository.fetchContinuePoint()
-
-    /**
      * Flush pending offline operations.
      * Delegates to KavitaReadingProgressRepository.
      */

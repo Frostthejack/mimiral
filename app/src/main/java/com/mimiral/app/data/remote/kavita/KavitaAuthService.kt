@@ -10,7 +10,6 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -53,8 +52,9 @@ class KavitaAuthService @Inject constructor(
     private val mutex = Mutex()
 
     /**
-     * Coroutine scope for background operations.
-     * Tied to the singleton lifecycle — cancelled on clearAuth().
+     * Coroutine scope for background operations. Tied to singleton lifetime;
+     * must NOT be cancelled on logout — cancelling a val scope permanently
+     * kills all future launches (including post-re-login OPDS derivation).
      */
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -431,7 +431,6 @@ class KavitaAuthService @Inject constructor(
     suspend fun clearAuth() = mutex.withLock {
         _authState = KavitaAuthState()
         credentialStore.clearAll()
-        coroutineScope.cancel()
 
         // Deactivate server in DB
         try {

@@ -7,6 +7,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Repository for marking chapters, volumes, and series as read or unread in Kavita.
@@ -34,6 +36,10 @@ class KavitaMarkReadRepository @Inject constructor(
     private val _uiState = MutableStateFlow(KavitaMarkReadUiState())
     val uiState: StateFlow<KavitaMarkReadUiState> = _uiState.asStateFlow()
 
+    // Serializes initClient() + the operation so concurrent calls cannot
+    // overwrite each other's configure() state on the shared client.
+    private val operationMutex = Mutex()
+
     /**
      * Initialize the Kavita client from the active server configuration.
      */
@@ -60,8 +66,8 @@ class KavitaMarkReadRepository @Inject constructor(
      * @param chapterId The Kavita chapter ID
      * @return True if operation succeeded, false otherwise
      */
-    suspend fun markChapterRead(chapterId: Int): Boolean {
-        if (!initClient()) return false
+    suspend fun markChapterRead(chapterId: Int): Boolean = operationMutex.withLock {
+        if (!initClient()) return@withLock false
         _uiState.value = _uiState.value.copy(isMarking = true, errorMessage = null)
 
         return when (val result = client.markChapterRead(chapterId)) {
@@ -92,8 +98,8 @@ class KavitaMarkReadRepository @Inject constructor(
      * @param volumeId The Kavita volume ID
      * @return True if operation succeeded, false otherwise
      */
-    suspend fun markVolumeRead(volumeId: Int): Boolean {
-        if (!initClient()) return false
+    suspend fun markVolumeRead(volumeId: Int): Boolean = operationMutex.withLock {
+        if (!initClient()) return@withLock false
         _uiState.value = _uiState.value.copy(isMarking = true, errorMessage = null)
 
         return when (val result = client.markVolumeRead(volumeId)) {
@@ -124,8 +130,8 @@ class KavitaMarkReadRepository @Inject constructor(
      * @param volumeId The Kavita volume ID
      * @return True if operation succeeded, false otherwise
      */
-    suspend fun markVolumeUnread(volumeId: Int): Boolean {
-        if (!initClient()) return false
+    suspend fun markVolumeUnread(volumeId: Int): Boolean = operationMutex.withLock {
+        if (!initClient()) return@withLock false
         _uiState.value = _uiState.value.copy(isMarking = true, errorMessage = null)
 
         return when (val result = client.markVolumeUnread(volumeId)) {
@@ -156,8 +162,8 @@ class KavitaMarkReadRepository @Inject constructor(
      * @param seriesId The Kavita series ID
      * @return True if operation succeeded, false otherwise
      */
-    suspend fun markSeriesRead(seriesId: Int): Boolean {
-        if (!initClient()) return false
+    suspend fun markSeriesRead(seriesId: Int): Boolean = operationMutex.withLock {
+        if (!initClient()) return@withLock false
         _uiState.value = _uiState.value.copy(isMarking = true, errorMessage = null)
 
         return when (val result = client.markSeriesRead(seriesId)) {
@@ -188,8 +194,8 @@ class KavitaMarkReadRepository @Inject constructor(
      * @param seriesId The Kavita series ID
      * @return True if operation succeeded, false otherwise
      */
-    suspend fun markSeriesUnread(seriesId: Int): Boolean {
-        if (!initClient()) return false
+    suspend fun markSeriesUnread(seriesId: Int): Boolean = operationMutex.withLock {
+        if (!initClient()) return@withLock false
         _uiState.value = _uiState.value.copy(isMarking = true, errorMessage = null)
 
         return when (val result = client.markSeriesUnread(seriesId)) {
@@ -220,8 +226,8 @@ class KavitaMarkReadRepository @Inject constructor(
      * @param seriesIds List of Kavita series IDs
      * @return True if operation succeeded, false otherwise
      */
-    suspend fun markMultipleSeriesRead(seriesIds: List<Int>): Boolean {
-        if (!initClient()) return false
+    suspend fun markMultipleSeriesRead(seriesIds: List<Int>): Boolean = operationMutex.withLock {
+        if (!initClient()) return@withLock false
         _uiState.value = _uiState.value.copy(isMarking = true, errorMessage = null)
 
         return when (val result = client.markMultipleSeriesRead(seriesIds)) {
@@ -252,8 +258,8 @@ class KavitaMarkReadRepository @Inject constructor(
      * @param seriesIds List of Kavita series IDs
      * @return True if operation succeeded, false otherwise
      */
-    suspend fun markMultipleSeriesUnread(seriesIds: List<Int>): Boolean {
-        if (!initClient()) return false
+    suspend fun markMultipleSeriesUnread(seriesIds: List<Int>): Boolean = operationMutex.withLock {
+        if (!initClient()) return@withLock false
         _uiState.value = _uiState.value.copy(isMarking = true, errorMessage = null)
 
         return when (val result = client.markMultipleSeriesUnread(seriesIds)) {
@@ -290,8 +296,8 @@ class KavitaMarkReadRepository @Inject constructor(
         seriesId: Int,
         chapterId: Int,
         volumesToInclude: Int = 0
-    ): Boolean {
-        if (!initClient()) return false
+    ): Boolean = operationMutex.withLock {
+        if (!initClient()) return@withLock false
         _uiState.value = _uiState.value.copy(isMarking = true, errorMessage = null)
 
         return when (
