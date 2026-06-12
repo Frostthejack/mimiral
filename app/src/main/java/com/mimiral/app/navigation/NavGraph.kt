@@ -63,14 +63,6 @@ import com.mimiral.app.ui.wanttoread.WantToReadScreen
 import kotlinx.coroutines.launch
 
 /**
- * Format-aware navigation: routes to the correct reader based on the book's format.
- * Defaults to PDF reader for unknown formats.
- */
-private fun routeForBook(bookId: Int): String {
-    return "pdf_reader/$bookId"
-}
-
-/**
  * Format-aware navigation route generator.
  * Call this from the library screen with the book's format string.
  */
