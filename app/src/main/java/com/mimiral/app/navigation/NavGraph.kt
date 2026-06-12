@@ -97,6 +97,7 @@ fun routeForBookFormat(bookId: Int, format: String): String {
 fun routeForBookReadingMode(bookId: Int, format: String): String {
     return when (format.uppercase()) {
         "CBZ", "CBR" -> "comic_reader/$bookId" // Comics don't have text
+        "DJVU" -> "djvu_reader/$bookId" // DJVU is image-based, no text extraction
         else -> "reading_mode/$bookId" // All other formats support text extraction
     }
 }
