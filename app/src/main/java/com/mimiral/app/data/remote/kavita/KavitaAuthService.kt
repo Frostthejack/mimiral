@@ -99,9 +99,9 @@ class KavitaAuthService @Inject constructor(
 
             if (server != null) {
                 // Check encrypted store first (more up-to-date tokens)
-                val jwt = credentialStore.getJwtToken() ?: server.jwtToken
+                val jwt = credentialStore.getJwtToken()
                 val refresh = credentialStore.getRefreshToken()
-                val apiKey = credentialStore.getApiKey() ?: server.apiKey
+                val apiKey = credentialStore.getApiKey()
 
                 _authState = KavitaAuthState(
                     serverUrl = server.url,
@@ -196,13 +196,10 @@ class KavitaAuthService @Inject constructor(
                 refreshToken = loginResponse.refreshToken
             )
 
-            // Update server entity
+            // Update server entity (credentials already saved to encrypted store above)
             updateServerEntity(
                 serverUrl = serverUrl,
-                username = username,
-                password = password,
-                jwtToken = loginResponse.token,
-                apiKey = loginResponse.apiKey
+                username = username
             )
 
             // Derive OPDS URL in background (non-blocking)
@@ -278,13 +275,10 @@ class KavitaAuthService @Inject constructor(
             credentialStore.saveApiKey(apiKey)
             credentialStore.saveTokens(jwtToken, null)
 
-            // Update server entity
+            // Update server entity (credentials already saved to encrypted store above)
             updateServerEntity(
                 serverUrl = serverUrl,
-                username = null,
-                password = null,
-                jwtToken = jwtToken,
-                apiKey = apiKey
+                username = null
             )
 
             // Derive OPDS URL
@@ -361,13 +355,8 @@ class KavitaAuthService @Inject constructor(
                 loginResponse.refreshToken ?: currentRefresh
             )
 
-            // Update server entity JWT
-            withContext(Dispatchers.IO) {
-                val server = serverDao.getActiveServerByType("KAVITA")
-                if (server != null) {
-                    serverDao.updateServer(server.copy(jwtToken = loginResponse.token))
-                }
-            }
+            // Note: jwtToken is stored only in credentialStore, not in Room ServerEntity
+            // The credentialStore.saveTokens() call above already persisted it.
 
             Log.d(TAG, "Token refresh successful")
             true
@@ -511,14 +500,13 @@ class KavitaAuthService @Inject constructor(
     }
 
     /**
-     * Update the ServerEntity in the database with the current auth info.
+     * Update the ServerEntity in the database with the current server info.
+     * Note: sensitive fields (password, jwtToken, apiKey) are stored only
+     * in EncryptedSharedPreferences via credentialStore, not in Room.
      */
     private suspend fun updateServerEntity(
         serverUrl: String,
-        username: String?,
-        password: String?,
-        jwtToken: String?,
-        apiKey: String?
+        username: String?
     ) {
         withContext(Dispatchers.IO) {
             try {
@@ -529,9 +517,6 @@ class KavitaAuthService @Inject constructor(
                         existing.copy(
                             url = serverUrl,
                             username = username,
-                            password = password,
-                            jwtToken = jwtToken,
-                            apiKey = apiKey,
                             isActive = true
                         )
                     )
@@ -542,9 +527,6 @@ class KavitaAuthService @Inject constructor(
                             type = "KAVITA",
                             url = serverUrl,
                             username = username,
-                            password = password,
-                            jwtToken = jwtToken,
-                            apiKey = apiKey,
                             isActive = true
                         )
                     )

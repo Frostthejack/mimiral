@@ -18,8 +18,9 @@ object KavitaDeviceModule {
     @Singleton
     fun provideKavitaDeviceRepository(
         kavitaClient: com.mimiral.app.data.remote.kavita.KavitaClient,
-        serverDao: com.mimiral.app.data.local.dao.ServerDao
+        serverDao: com.mimiral.app.data.local.dao.ServerDao,
+        credentialStore: com.mimiral.app.data.remote.kavita.KavitaCredentialStore
     ): KavitaDeviceRepository {
-        return KavitaDeviceRepository(kavitaClient, serverDao)
+        return KavitaDeviceRepository(kavitaClient, serverDao, credentialStore)
     }
 }

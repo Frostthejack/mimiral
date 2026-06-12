@@ -2,6 +2,7 @@ package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
 import com.mimiral.app.data.local.dao.ServerDao
+import com.mimiral.app.data.remote.kavita.KavitaCredentialStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +24,8 @@ import kotlinx.coroutines.withContext
 @Singleton
 class KavitaDeviceRepository @Inject constructor(
     private val kavitaClient: KavitaClient,
-    private val serverDao: ServerDao
+    private val serverDao: ServerDao,
+    private val credentialStore: KavitaCredentialStore
 ) {
     companion object {
         private const val TAG = "KavitaDeviceRepo"
@@ -45,7 +47,7 @@ class KavitaDeviceRepository @Inject constructor(
         if (activeServer.url.isBlank()) return null
         return KavitaClient.create(
             baseUrl = activeServer.url,
-            apiKey = activeServer.apiKey
+            apiKey = credentialStore.getApiKey()
         )
     }
 

@@ -27,7 +27,8 @@ data class OpdsCatalogUiState(
 
 @HiltViewModel
 class OpdsCatalogViewModel @Inject constructor(
-    private val opdsRepository: OpdsRepository
+    private val opdsRepository: OpdsRepository,
+    private val credentialStore: com.mimiral.app.data.remote.kavita.KavitaCredentialStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OpdsCatalogUiState())
@@ -62,7 +63,7 @@ class OpdsCatalogViewModel @Inject constructor(
             val result = opdsRepository.fetchFeed(
                 feedUrl = catalog.url,
                 username = catalog.username,
-                password = catalog.password
+                password = credentialStore.getOpdsPassword(catalog.id)
             )
             result.fold(
                 onSuccess = { feed ->
@@ -92,7 +93,7 @@ class OpdsCatalogViewModel @Inject constructor(
             val result = opdsRepository.fetchFeed(
                 feedUrl = url,
                 username = catalog?.username,
-                password = catalog?.password
+                password = if (catalog != null) credentialStore.getOpdsPassword(catalog.id) else null
             )
             result.fold(
                 onSuccess = { feed ->
@@ -149,7 +150,7 @@ class OpdsCatalogViewModel @Inject constructor(
                 downloadUrl = downloadLink.href,
                 destinationPath = destPath,
                 username = catalog.username,
-                password = catalog.password
+                password = credentialStore.getOpdsPassword(catalog.id)
             )
             result.fold(
                 onSuccess = {

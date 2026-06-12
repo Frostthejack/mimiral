@@ -22,6 +22,7 @@ class KavitaCredentialStore @Inject constructor(
     companion object {
         private const val TAG = "KavitaCredStore"
         private const val PREFS_FILE = "kavita_credentials"
+        private const val OPDS_PREFS_FILE = "opds_credentials"
 
         private const val KEY_SERVER_URL = "server_url"
         private const val KEY_USERNAME = "username"
@@ -29,11 +30,17 @@ class KavitaCredentialStore @Inject constructor(
         private const val KEY_API_KEY = "api_key"
         private const val KEY_JWT_TOKEN = "jwt_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
+
+        // OPDS-specific keys (stored in separate encrypted prefs file)
+        private const val KEY_OPDS_PREFIX = "opds_catalog_"
+    }
+
+    private val masterKeyAlias by lazy {
+        MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
     }
 
     private val prefs by lazy {
         try {
-            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
             EncryptedSharedPreferences.create(
                 PREFS_FILE,
                 masterKeyAlias,
@@ -43,9 +50,26 @@ class KavitaCredentialStore @Inject constructor(
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create EncryptedSharedPreferences: ${e.message}", e)
-            // Fallback to regular SharedPreferences if encryption is not available
-            // This is less secure but allows the app to function
             context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
+        }
+    }
+
+    /**
+     * Separate encrypted prefs file for OPDS catalog credentials.
+     * Each catalog's credentials are stored under a key prefixed with the catalog ID.
+     */
+    private val opdsPrefs by lazy {
+        try {
+            EncryptedSharedPreferences.create(
+                OPDS_PREFS_FILE,
+                masterKeyAlias,
+                context,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create OPDS EncryptedSharedPreferences: ${e.message}", e)
+            context.getSharedPreferences(OPDS_PREFS_FILE, Context.MODE_PRIVATE)
         }
     }
 
@@ -176,5 +200,67 @@ class KavitaCredentialStore @Inject constructor(
             .remove(KEY_REFRESH_TOKEN)
             .apply()
         Log.d(TAG, "Auth tokens cleared")
+    }
+
+    // ==================== OPDS Credentials ====================
+
+    /**
+     * Save OPDS catalog credentials to encrypted storage.
+     *
+     * @param catalogId The OPDS catalog ID
+     * @param password Optional password for HTTP Basic auth
+     * @param token Optional auth token
+     */
+    fun saveOpdsCredentials(catalogId: Int, password: String?, token: String?) {
+        val keyPrefix = "$KEY_OPDS_PREFIX$catalogId"
+        opdsPrefs.edit()
+            .putString("${keyPrefix}_password", password)
+            .putString("${keyPrefix}_token", token)
+            .apply()
+        Log.d(TAG, "OPDS credentials saved for catalog $catalogId")
+    }
+
+    /**
+     * Get the stored password for an OPDS catalog.
+     *
+     * @param catalogId The OPDS catalog ID
+     * @return The stored password, or null if not set
+     */
+    fun getOpdsPassword(catalogId: Int): String? {
+        val key = "$KEY_OPDS_PREFIX${catalogId}_password"
+        return opdsPrefs.getString(key, null)
+    }
+
+    /**
+     * Get the stored token for an OPDS catalog.
+     *
+     * @param catalogId The OPDS catalog ID
+     * @return The stored token, or null if not set
+     */
+    fun getOpdsToken(catalogId: Int): String? {
+        val key = "$KEY_OPDS_PREFIX${catalogId}_token"
+        return opdsPrefs.getString(key, null)
+    }
+
+    /**
+     * Clear OPDS credentials for a specific catalog.
+     *
+     * @param catalogId The OPDS catalog ID
+     */
+    fun clearOpdsCredentials(catalogId: Int) {
+        val keyPrefix = "$KEY_OPDS_PREFIX$catalogId"
+        opdsPrefs.edit()
+            .remove("${keyPrefix}_password")
+            .remove("${keyPrefix}_token")
+            .apply()
+        Log.d(TAG, "OPDS credentials cleared for catalog $catalogId")
+    }
+
+    /**
+     * Clear all OPDS credentials (all catalogs).
+     */
+    fun clearAllOpdsCredentials() {
+        opdsPrefs.edit().clear().apply()
+        Log.d(TAG, "All OPDS credentials cleared")
     }
 }

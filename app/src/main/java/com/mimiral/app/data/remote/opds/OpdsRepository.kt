@@ -3,6 +3,7 @@ package com.mimiral.app.data.remote.opds
 import android.util.Log
 import com.mimiral.app.data.local.dao.OpdsCatalogDao
 import com.mimiral.app.data.local.entity.OpdsCatalogEntity
+import com.mimiral.app.data.remote.kavita.KavitaCredentialStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +20,8 @@ import kotlinx.coroutines.flow.Flow
 class OpdsRepository @Inject constructor(
     private val client: OpdsClient,
     private val parser: OpdsParser,
-    private val catalogDao: OpdsCatalogDao
+    private val catalogDao: OpdsCatalogDao,
+    private val credentialStore: KavitaCredentialStore
 ) {
     companion object {
         private const val TAG = "OpdsRepository"
@@ -50,10 +52,14 @@ class OpdsRepository @Inject constructor(
             name = name,
             url = url,
             username = username,
-            password = password,
             isActive = true
         )
-        return catalogDao.insertCatalog(entity)
+        val id = catalogDao.insertCatalog(entity)
+        // Save sensitive credentials to encrypted storage
+        if (id > 0) {
+            credentialStore.saveOpdsCredentials(id.toInt(), password, null)
+        }
+        return id
     }
 
     /**
@@ -76,7 +82,7 @@ class OpdsRepository @Inject constructor(
         return client.fetchAndParseFeed(
             url = catalog.url,
             username = catalog.username,
-            password = catalog.password,
+            password = credentialStore.getOpdsPassword(catalog.id),
             parser = parser
         )
     }
@@ -172,6 +178,6 @@ class OpdsRepository @Inject constructor(
             .replace("{inputEncoding}", "UTF-8")
             .replace("{outputEncoding}", "UTF-8")
 
-        return browseFeed(searchUrl, catalog.username, catalog.password)
+        return browseFeed(searchUrl, catalog.username, credentialStore.getOpdsPassword(catalog.id))
     }
 }

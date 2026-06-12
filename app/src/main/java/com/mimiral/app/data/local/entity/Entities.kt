@@ -128,9 +128,6 @@ data class ServerEntity(
     val type: String, // KAVITA, CALIBRE, KOMGA
     val url: String,
     val username: String? = null,
-    val password: String? = null,
-    @ColumnInfo(name = "api_key") val apiKey: String? = null,
-    @ColumnInfo(name = "jwt_token") val jwtToken: String? = null,
     @ColumnInfo(name = "is_active") val isActive: Boolean = true,
     @ColumnInfo(name = "last_sync_time") val lastSyncTime: Long? = null
 )
@@ -141,8 +138,6 @@ data class OpdsCatalogEntity(
     val name: String,
     val url: String,
     val username: String? = null,
-    val password: String? = null,
-    val token: String? = null,
     @ColumnInfo(name = "auth_type") val authType: String = "NONE",
     @ColumnInfo(name = "is_active") val isActive: Boolean = true
 )

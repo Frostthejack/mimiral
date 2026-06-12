@@ -61,7 +61,7 @@ import com.mimiral.app.data.local.entity.TagEntity
         ReadingGoalEntity::class,
         PendingOperationEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class MimiralDatabase : RoomDatabase() {
@@ -450,6 +450,55 @@ abstract class MimiralDatabase : RoomDatabase() {
                         "`index_pending_operations_created_at` " +
                         "ON `pending_operations` (`created_at`)"
                 )
+            }
+        }
+
+        /**
+         * Migration from v12 to v13:
+         * - Remove password, apiKey, jwtToken columns from servers table
+         * - Remove password, token columns from opds_catalogs table
+         * Uses table recreation since SQLite doesn't support DROP COLUMN.
+         */
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Recreate servers table without sensitive columns
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `servers_new` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`type` TEXT NOT NULL, " +
+                        "`url` TEXT NOT NULL, " +
+                        "`username` TEXT, " +
+                        "`is_active` INTEGER NOT NULL, " +
+                        "`last_sync_time` INTEGER)"
+                )
+                db.execSQL(
+                    "INSERT INTO `servers_new` " +
+                        "(`id`, `name`, `type`, `url`, `username`, `is_active`, `last_sync_time`) " +
+                        "SELECT `id`, `name`, `type`, `url`, `username`, `is_active`, `last_sync_time` " +
+                        "FROM `servers`"
+                )
+                db.execSQL("DROP TABLE `servers`")
+                db.execSQL("ALTER TABLE `servers_new` RENAME TO `servers`")
+
+                // Recreate opds_catalogs table without sensitive columns
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `opds_catalogs_new` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`url` TEXT NOT NULL, " +
+                        "`username` TEXT, " +
+                        "`auth_type` TEXT NOT NULL, " +
+                        "`is_active` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "INSERT INTO `opds_catalogs_new` " +
+                        "(`id`, `name`, `url`, `username`, `auth_type`, `is_active`) " +
+                        "SELECT `id`, `name`, `url`, `username`, `auth_type`, `is_active` " +
+                        "FROM `opds_catalogs`"
+                )
+                db.execSQL("DROP TABLE `opds_catalogs`")
+                db.execSQL("ALTER TABLE `opds_catalogs_new` RENAME TO `opds_catalogs`")
             }
         }
     }

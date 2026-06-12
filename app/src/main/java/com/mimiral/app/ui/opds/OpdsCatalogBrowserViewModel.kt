@@ -40,7 +40,8 @@ data class BreadcrumbItem(
 @HiltViewModel
 class OpdsCatalogBrowserViewModel @Inject constructor(
     private val opdsRepository: OpdsRepository,
-    private val gutenbergSeeder: GutenbergCatalogSeeder
+    private val gutenbergSeeder: GutenbergCatalogSeeder,
+    private val credentialStore: com.mimiral.app.data.remote.kavita.KavitaCredentialStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OpdsBrowserUiState())
@@ -81,7 +82,7 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
             currentFeed = null
         )
         feedHistory.clear()
-        browseFeed(catalog.url, catalog.name, catalog.username, catalog.password)
+        browseFeed(catalog.url, catalog.name, catalog.username, credentialStore.getOpdsPassword(catalog.id))
     }
 
     fun browseFeed(
@@ -90,6 +91,9 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
         username: String? = null,
         password: String? = null
     ) {
+        // If password not provided, try to read from encrypted storage
+        val effectivePassword = password
+            ?: _uiState.value.selectedCatalog?.let { credentialStore.getOpdsPassword(it.id) }
         _uiState.value = _uiState.value.copy(
             isLoadingFeed = true,
             errorMessage = null
@@ -105,7 +109,7 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val result = opdsRepository.fetchFeed(url, username, password)
+            val result = opdsRepository.fetchFeed(url, username, effectivePassword)
             result.fold(
                 onSuccess = { feed ->
                     val nextLink = feed.links.firstOrNull {
@@ -146,7 +150,7 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
             val result = opdsRepository.fetchFeed(
                 nextUrl,
                 catalog?.username,
-                catalog?.password
+                if (catalog != null) credentialStore.getOpdsPassword(catalog.id) else null
             )
             result.fold(
                 onSuccess = { nextFeed ->
@@ -191,7 +195,7 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
                 url = navLink.href,
                 title = entry.title,
                 username = catalog?.username,
-                password = catalog?.password
+                password = if (catalog != null) credentialStore.getOpdsPassword(catalog.id) else null
             )
         }
     }
@@ -224,7 +228,7 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
                 downloadUrl = downloadLink.href,
                 destinationPath = destPath,
                 username = catalog.username,
-                password = catalog.password
+                password = credentialStore.getOpdsPassword(catalog.id)
             )
             result.fold(
                 onSuccess = {
@@ -253,7 +257,7 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
                 url = previous.feedUrl,
                 title = previous.title,
                 username = catalog?.username,
-                password = catalog?.password
+                password = if (catalog != null) credentialStore.getOpdsPassword(catalog.id) else null
             )
         } else {
             showCatalogList()
@@ -288,10 +292,13 @@ class OpdsCatalogBrowserViewModel @Inject constructor(
                     name = name,
                     url = url,
                     username = username?.ifBlank { null },
-                    password = password?.ifBlank { null },
                     isActive = true
                 )
-                opdsRepository.insertCatalog(catalog)
+                val id = opdsRepository.insertCatalog(catalog)
+                // Save sensitive credentials to encrypted storage
+                if (id > 0) {
+                    credentialStore.saveOpdsCredentials(id.toInt(), password?.ifBlank { null }, null)
+                }
                 _uiState.value =
                     _uiState.value.copy(showAddCatalogDialog = false)
             } catch (e: Exception) {

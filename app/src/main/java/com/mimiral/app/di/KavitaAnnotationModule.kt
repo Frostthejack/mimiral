@@ -29,8 +29,9 @@ object KavitaAnnotationModule {
     @Singleton
     fun provideKavitaAnnotationRepository(
         client: KavitaAnnotationClient,
-        serverDao: com.mimiral.app.data.local.dao.ServerDao
+        serverDao: com.mimiral.app.data.local.dao.ServerDao,
+        credentialStore: com.mimiral.app.data.remote.kavita.KavitaCredentialStore
     ): KavitaAnnotationRepository {
-        return KavitaAnnotationRepository(client, serverDao)
+        return KavitaAnnotationRepository(client, serverDao, credentialStore)
     }
 }

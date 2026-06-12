@@ -2,6 +2,7 @@ package com.mimiral.app.data.remote.kavita
 
 import android.util.Log
 import com.mimiral.app.data.local.dao.ServerDao
+import com.mimiral.app.data.remote.kavita.KavitaCredentialStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,8 @@ import kotlinx.coroutines.flow.asStateFlow
 @Singleton
 class KavitaMarkReadRepository @Inject constructor(
     private val client: KavitaMarkReadClient,
-    private val serverDao: ServerDao
+    private val serverDao: ServerDao,
+    private val credentialStore: KavitaCredentialStore
 ) {
     companion object {
         private const val TAG = "KavitaMarkRead"
@@ -44,10 +46,10 @@ class KavitaMarkReadRepository @Inject constructor(
         }
         client.configure(
             url = server.url,
-            key = server.apiKey,
-            token = server.jwtToken,
+            key = credentialStore.getApiKey(),
+            token = credentialStore.getJwtToken(),
             user = server.username,
-            pass = server.password
+            pass = credentialStore.getPassword()
         )
         return true
     }

@@ -123,7 +123,7 @@ fun OpdsCatalogBrowserScreen(
                                         url = catalog.url,
                                         title = catalog.name,
                                         username = catalog.username,
-                                        password = catalog.password
+                                        password = null // Password is read from encrypted storage in ViewModel
                                     )
                                 }
                             }

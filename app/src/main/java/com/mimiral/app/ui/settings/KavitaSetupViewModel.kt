@@ -8,6 +8,7 @@ import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.remote.ConnectionStatus
 import com.mimiral.app.data.remote.KavitaServerInfo
+import com.mimiral.app.data.remote.kavita.KavitaCredentialStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -49,7 +50,8 @@ data class KavitaSetupUiState(
 @HiltViewModel
 class KavitaSetupViewModel @Inject constructor(
     application: Application,
-    private val serverDao: ServerDao
+    private val serverDao: ServerDao,
+    private val credentialStore: KavitaCredentialStore
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -83,7 +85,7 @@ class KavitaSetupViewModel @Inject constructor(
         viewModelScope.launch {
             val existingServer = serverDao.getActiveServerByType("KAVITA")
             if (existingServer != null) {
-                val authMethod = if (!existingServer.apiKey.isNullOrBlank()) {
+                val authMethod = if (!credentialStore.getApiKey().isNullOrBlank()) {
                     AuthMethod.API_KEY
                 } else {
                     AuthMethod.USERNAME_PASSWORD
@@ -92,8 +94,8 @@ class KavitaSetupViewModel @Inject constructor(
                     serverUrl = existingServer.url,
                     authMethod = authMethod,
                     username = existingServer.username ?: "",
-                    password = existingServer.password ?: "",
-                    apiKey = existingServer.apiKey ?: "",
+                    password = credentialStore.getPassword() ?: "",
+                    apiKey = credentialStore.getApiKey() ?: "",
                     hasExistingConfig = true
                 )
             }
@@ -254,16 +256,6 @@ class KavitaSetupViewModel @Inject constructor(
                     } else {
                         null
                     },
-                    password = if (state.authMethod == AuthMethod.USERNAME_PASSWORD) {
-                        state.password.ifBlank { null }
-                    } else {
-                        null
-                    },
-                    apiKey = if (state.authMethod == AuthMethod.API_KEY) {
-                        state.apiKey.ifBlank { null }
-                    } else {
-                        null
-                    },
                     isActive = true
                 )
 
@@ -275,9 +267,15 @@ class KavitaSetupViewModel @Inject constructor(
 
                 serverDao.insertServer(server)
 
-                // Clear password from the entity after saving to credential store
-                val clearedServer = server.copy(password = null)
-                serverDao.updateServer(clearedServer)
+                // Save credentials to encrypted storage
+                if (state.authMethod == AuthMethod.USERNAME_PASSWORD) {
+                    credentialStore.saveCredentials(
+                        username = state.username,
+                        password = state.password
+                    )
+                } else {
+                    credentialStore.saveApiKey(state.apiKey)
+                }
 
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,

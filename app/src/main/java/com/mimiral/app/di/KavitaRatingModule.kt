@@ -25,8 +25,9 @@ object KavitaRatingModule {
     @Singleton
     fun provideKavitaRatingRepository(
         client: KavitaRatingClient,
-        serverDao: com.mimiral.app.data.local.dao.ServerDao
+        serverDao: com.mimiral.app.data.local.dao.ServerDao,
+        credentialStore: com.mimiral.app.data.remote.kavita.KavitaCredentialStore
     ): KavitaRatingRepository {
-        return KavitaRatingRepository(client, serverDao)
+        return KavitaRatingRepository(client, serverDao, credentialStore)
     }
 }

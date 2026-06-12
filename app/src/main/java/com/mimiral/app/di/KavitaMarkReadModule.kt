@@ -25,8 +25,9 @@ object KavitaMarkReadModule {
     @Singleton
     fun provideKavitaMarkReadRepository(
         client: KavitaMarkReadClient,
-        serverDao: com.mimiral.app.data.local.dao.ServerDao
+        serverDao: com.mimiral.app.data.local.dao.ServerDao,
+        credentialStore: com.mimiral.app.data.remote.kavita.KavitaCredentialStore
     ): KavitaMarkReadRepository {
-        return KavitaMarkReadRepository(client, serverDao)
+        return KavitaMarkReadRepository(client, serverDao, credentialStore)
     }
 }

@@ -261,8 +261,8 @@ class KavitaRepository @Inject constructor(
                 val loginResponse = response.body()
                 val token = loginResponse?.token ?: ""
                 if (token.isNotBlank()) {
-                    // Update stored token
-                    serverDao.updateServer(server.copy(jwtToken = token))
+                    // Note: jwtToken is stored in credentialStore by the caller (KavitaAuthService),
+                    // not in Room ServerEntity. The server entity no longer has a jwtToken column.
                     KavitaResult.Success(token)
                 } else {
                     KavitaResult.Error(message = "Empty token in login response")

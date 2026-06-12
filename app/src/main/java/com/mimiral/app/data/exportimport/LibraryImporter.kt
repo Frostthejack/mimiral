@@ -379,9 +379,6 @@ class LibraryImporter(
         type = type,
         url = url,
         username = username,
-        password = null, // Do not import passwords for security
-        apiKey = null, // Do not import API keys for security
-        jwtToken = null,
         isActive = isActive,
         lastSyncTime = null
     )
@@ -391,8 +388,6 @@ class LibraryImporter(
         name = name,
         url = url,
         username = username,
-        password = null, // Do not import passwords for security
-        token = null,
         authType = authType,
         isActive = isActive
     )

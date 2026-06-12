@@ -48,7 +48,8 @@ class OpdsViewModel @Inject constructor(
     application: Application,
     private val opdsRepository: OpdsRepository,
     private val opdsSearchRepository: OpdsSearchRepository,
-    private val opdsDownloadManager: OpdsDownloadManager
+    private val opdsDownloadManager: OpdsDownloadManager,
+    private val credentialStore: com.mimiral.app.data.remote.kavita.KavitaCredentialStore
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(OpdsSearchUiState())
@@ -102,7 +103,7 @@ class OpdsViewModel @Inject constructor(
                 catalogUrl = catalog.url,
                 query = query,
                 username = catalog.username,
-                password = catalog.password
+                password = credentialStore.getOpdsPassword(catalog.id)
             )
 
             result.fold(
@@ -173,7 +174,7 @@ class OpdsViewModel @Inject constructor(
                 entry = entry,
                 acquisitionLink = acquisitionLink,
                 catalogUsername = catalog.username,
-                catalogPassword = catalog.password
+                catalogPassword = credentialStore.getOpdsPassword(catalog.id)
             )
 
             result.fold(

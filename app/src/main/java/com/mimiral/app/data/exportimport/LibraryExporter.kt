@@ -251,7 +251,7 @@ class LibraryExporter(
         type = type,
         url = url,
         username = username,
-        apiKey = apiKey,
+        apiKey = null, // Do not export API keys for security
         isActive = isActive,
         lastSyncTime = lastSyncTime
     )
