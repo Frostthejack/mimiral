@@ -212,42 +212,48 @@ class KavitaReadingProgressRepository @Inject constructor(
         volumeId: Int,
         bookScrollId: String? = null
     ) {
-        pagesSinceLastPush++
-        val now = System.currentTimeMillis()
-        val timeSinceLastPush = now - lastPushTimeMs
+        scope.launch {
+            pushMutex.withLock {
+                pagesSinceLastPush++
+                val now = System.currentTimeMillis()
+                val timeSinceLastPush = now - lastPushTimeMs
 
-        val dto = KavitaProgressDto(
-            volumeId = volumeId,
-            chapterId = chapterId,
-            pageNum = pageNum,
-            seriesId = seriesId,
-            libraryId = libraryId,
-            bookScrollId = bookScrollId,
-            lastModifiedUtc = dateFormat.format(Date(now))
-        )
+                val dto = KavitaProgressDto(
+                    volumeId = volumeId,
+                    chapterId = chapterId,
+                    pageNum = pageNum,
+                    seriesId = seriesId,
+                    libraryId = libraryId,
+                    bookScrollId = bookScrollId,
+                    lastModifiedUtc = dateFormat.format(Date(now))
+                )
 
-        val shouldPush = pagesSinceLastPush >= DEBOUNCE_PAGE_INTERVAL ||
-            timeSinceLastPush >= DEBOUNCE_TIME_MS
+                val shouldPush = pagesSinceLastPush >= DEBOUNCE_PAGE_INTERVAL ||
+                    timeSinceLastPush >= DEBOUNCE_TIME_MS
 
-        if (shouldPush) {
-            // Immediate push — reset counters
-            pagesSinceLastPush = 0
-            lastPushTimeMs = now
-            debounceTimerJob?.cancel()
-            debounceTimerJob = null
-            scope.launch { pushProgress(dto, bookId) }
-        } else {
-            // Store as pending and start/restart the time-based debounce timer
-            pendingPush.value = dto
-            if (debounceTimerJob == null || !debounceTimerJob!!.isActive) {
-                debounceTimerJob = scope.launch {
-                    delay(DEBOUNCE_TIME_MS - timeSinceLastPush)
-                    val pending = pendingPush.value
-                    if (pending != null) {
-                        pagesSinceLastPush = 0
-                        lastPushTimeMs = System.currentTimeMillis()
-                        pushProgress(pending, bookId)
-                        pendingPush.value = null
+                if (shouldPush) {
+                    // Immediate push — reset counters
+                    pagesSinceLastPush = 0
+                    lastPushTimeMs = now
+                    debounceTimerJob?.cancel()
+                    debounceTimerJob = null
+                    launch { pushProgress(dto, bookId) }
+                } else {
+                    // Store as pending and start/restart the time-based debounce timer
+                    pendingPush.value = dto
+                    if (debounceTimerJob == null || !debounceTimerJob!!.isActive) {
+                        debounceTimerJob = scope.launch {
+                            delay(DEBOUNCE_TIME_MS - timeSinceLastPush)
+                            val pending = pendingPush.value
+                            if (pending != null) {
+                                pushMutex.withLock {
+                                    pagesSinceLastPush = 0
+                                    lastPushTimeMs = System.currentTimeMillis()
+                                    pendingPush.value = null
+                                }
+                                pushProgress(pending, bookId)
+                            }
+                        }
                     }
                 }
             }
@@ -279,11 +285,13 @@ class KavitaReadingProgressRepository @Inject constructor(
         volumeId: Int,
         bookScrollId: String? = null
     ) {
-        debounceTimerJob?.cancel()
-        debounceTimerJob = null
-        pagesSinceLastPush = 0
-        lastPushTimeMs = System.currentTimeMillis()
-        pendingPush.value = null
+        pushMutex.withLock {
+            debounceTimerJob?.cancel()
+            debounceTimerJob = null
+            pagesSinceLastPush = 0
+            lastPushTimeMs = System.currentTimeMillis()
+            pendingPush.value = null
+        }
 
         val dto = KavitaProgressDto(
             volumeId = volumeId,
