@@ -3,6 +3,7 @@ package com.mimiral.app.data.local.statistics
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import java.time.LocalDate
 
+import java.time.temporal.ChronoUnit
 /**
  * Calculates reading streaks and related statistics from reading session data.
  *
@@ -151,7 +152,8 @@ class ReadingStreakCalculator(private val sessionDao: ReadingSessionDao) {
 
     companion object {
         /** Convert a [LocalDate] to epoch day. */
-        fun LocalDate.toEpochDay(): Long = this.toEpochDay()
+        fun localDateToEpochDay(date: LocalDate): Long =
+            java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.ofEpochDay(0), date)
 
         /** Convert epoch day to [LocalDate]. */
         fun epochDayToLocalDate(epochDay: Long): LocalDate =
