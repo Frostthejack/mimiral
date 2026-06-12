@@ -12,8 +12,9 @@ import com.mimiral.app.data.reader.SentenceBoundaryDetector
 import java.util.ArrayDeque
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 enum class TTSState {
     IDLE,
@@ -514,26 +515,27 @@ class TTSManager(
     /**
      * Load persisted settings from a TTSSettingsRepository.
      * Call this after initialization to apply saved preferences.
+     * Suspending function — dispatches DataStore read to IO thread.
      */
-    fun loadPersistedSettings(repository: TTSSettingsRepository) {
-        runBlocking {
-            val persisted = repository.settings.firstOrNull() ?: return@runBlocking
-            settings.speechRate = persisted.speechRate
-            settings.pitch = persisted.pitch
+    suspend fun loadPersistedSettings(repository: TTSSettingsRepository) {
+        val persisted = withContext(Dispatchers.IO) {
+            repository.settings.firstOrNull()
+        } ?: return
+        settings.speechRate = persisted.speechRate
+        settings.pitch = persisted.pitch
+        if (persisted.localeTag.isNotBlank()) {
+            settings.locale = Locale.forLanguageTag(persisted.localeTag)
+        }
+        ttsEngine?.let { engine ->
+            engine.setSpeechRate(persisted.speechRate)
+            engine.setPitch(persisted.pitch)
             if (persisted.localeTag.isNotBlank()) {
-                settings.locale = Locale.forLanguageTag(persisted.localeTag)
+                engine.language = settings.locale
             }
-            ttsEngine?.let { engine ->
-                engine.setSpeechRate(persisted.speechRate)
-                engine.setPitch(persisted.pitch)
-                if (persisted.localeTag.isNotBlank()) {
-                    engine.language = settings.locale
-                }
-                if (persisted.voiceName.isNotBlank()) {
-                    val voice = getAvailableVoices().find { it.name == persisted.voiceName }
-                    if (voice != null) {
-                        setVoice(voice)
-                    }
+            if (persisted.voiceName.isNotBlank()) {
+                val voice = getAvailableVoices().find { it.name == persisted.voiceName }
+                if (voice != null) {
+                    setVoice(voice)
                 }
             }
         }
