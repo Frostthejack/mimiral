@@ -7,8 +7,10 @@ import com.mimiral.app.data.local.entity.ServerEntity
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -49,6 +51,12 @@ class KavitaAuthService @Inject constructor(
     }
 
     private val mutex = Mutex()
+
+    /**
+     * Coroutine scope for background operations.
+     * Tied to the singleton lifecycle — cancelled on clearAuth().
+     */
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Lightweight HTTP client for auth operations only.
@@ -423,6 +431,7 @@ class KavitaAuthService @Inject constructor(
     suspend fun clearAuth() = mutex.withLock {
         _authState = KavitaAuthState()
         credentialStore.clearAll()
+        coroutineScope.cancel()
 
         // Deactivate server in DB
         try {
@@ -474,7 +483,7 @@ class KavitaAuthService @Inject constructor(
      */
     fun launchOpdsUrlDerivation(baseUrl: String, jwtToken: String) {
         // Use a coroutine instead of raw Thread for proper lifecycle management
-        GlobalScope.launch(Dispatchers.IO) {
+        coroutineScope.launch {
             try {
                 val request = Request.Builder()
                     .url("$baseUrl/api/Account/opds-url")
@@ -487,7 +496,9 @@ class KavitaAuthService @Inject constructor(
                 if (response.isSuccessful) {
                     val opdsUrl = response.body?.string()
                     if (!opdsUrl.isNullOrBlank()) {
-                        _authState = _authState.copy(opdsUrl = opdsUrl)
+                        mutex.withLock {
+                            _authState = _authState.copy(opdsUrl = opdsUrl)
+                        }
                         Log.d(TAG, "OPDS URL derived: $opdsUrl")
                     }
                 } else {
