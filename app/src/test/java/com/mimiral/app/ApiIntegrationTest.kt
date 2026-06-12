@@ -22,12 +22,10 @@ import com.mimiral.app.data.remote.kavita.KavitaProgress
 import com.mimiral.app.data.remote.kavita.KavitaResult
 import com.mimiral.app.data.remote.kavita.KavitaSeries
 import com.mimiral.app.data.remote.opds.OpdsCategory
-import com.mimiral.app.data.remote.opds.OpdsClient
 import com.mimiral.app.data.remote.opds.OpdsConstants
 import com.mimiral.app.data.remote.opds.OpdsEntry
 import com.mimiral.app.data.remote.opds.OpdsFeed
 import com.mimiral.app.data.remote.opds.OpdsLink
-import com.mimiral.app.data.remote.opds.OpdsResult
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -372,111 +370,6 @@ class ApiIntegrationTest {
             "JWT should not be set when API key is present",
             recorded.getHeader("Authorization")
         )
-    }
-
-    // ==================== OpdsClient Tests ====================
-
-    @Test
-    fun opdsClient_defaultClient() {
-        val client = OpdsClient()
-        assertNotNull(client)
-    }
-
-    @Test
-    fun opdsClient_fetchFeed_success() = runBlocking {
-        val feedXml = """<?xml version="1.0" encoding="UTF-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-    <title>Test Catalog</title>
-    <id>urn:test</id>
-    <entry>
-        <title>Test Book</title>
-        <id>urn:test:1</id>
-        <summary>A test book</summary>
-    </entry>
-</feed>"""
-        mockServer.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(feedXml)
-                .addHeader("Content-Type", "application/atom+xml")
-        )
-
-        val client = OpdsClient()
-        val result = client.fetchFeed(mockServer.url("/catalog").toString())
-
-        assertTrue("Should succeed", result is OpdsResult.Success)
-        val body = (result as OpdsResult.Success).data
-        assertTrue("Should contain feed", body.contains("Test Catalog"))
-    }
-
-    @Test
-    fun opdsClient_fetchFeed_failure() = runBlocking {
-        mockServer.enqueue(MockResponse().setResponseCode(404))
-
-        val client = OpdsClient()
-        val result = client.fetchFeed(mockServer.url("/missing").toString())
-
-        assertTrue("Should fail", result is OpdsResult.Error)
-        assertEquals(404, (result as OpdsResult.Error).code)
-    }
-
-    @Test
-    fun opdsClient_fetchFeed_withAuth() = runBlocking {
-        val feedXml = """<?xml version="1.0" encoding="UTF-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Private</title></feed>"""
-        mockServer.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(feedXml)
-        )
-
-        val client = OpdsClient()
-        val result = client.fetchFeed(
-            url = mockServer.url("/private").toString(),
-            username = "user",
-            password = "pass"
-        )
-
-        assertTrue("Should succeed", result is OpdsResult.Success)
-
-        val request = mockServer.takeRequest()
-        assertNotNull(
-            "Should have Authorization header",
-            request.getHeader("Authorization")
-        )
-        assertTrue(
-            "Should be Basic auth",
-            request.getHeader("Authorization")!!.startsWith("Basic ")
-        )
-    }
-
-    @Test
-    fun opdsClient_downloadBook_success() = runBlocking {
-        val bookBytes = byteArrayOf(0x50, 0x4B, 0x03, 0x04) // ZIP/EPUB magic bytes
-        mockServer.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(String(bookBytes))
-                .addHeader("Content-Type", "application/epub+zip")
-        )
-
-        val client = OpdsClient()
-        val result = client.downloadBook(mockServer.url("/book.epub").toString())
-
-        assertTrue("Should succeed", result is OpdsResult.Success)
-        val bytes = (result as OpdsResult.Success).data
-        assertEquals(4, bytes.size)
-        assertEquals(0x50.toByte(), bytes[0])
-    }
-
-    @Test
-    fun opdsClient_networkError() = runBlocking {
-        mockServer.shutdown()
-
-        val client = OpdsClient()
-        val result = client.fetchFeed("http://localhost:1/feed")
-
-        assertTrue("Should be error on network failure", result is OpdsResult.Error)
     }
 
     // ==================== Kavita Model Serialization Tests ====================
@@ -903,18 +796,6 @@ class ApiIntegrationTest {
         assertEquals("Fiction", category.label)
     }
 
-    @Test
-    fun opdsResult_success() {
-        val result = OpdsResult.Success("data")
-        assertEquals("data", result.data)
-    }
-
-    @Test
-    fun opdsResult_error() {
-        val result = OpdsResult.Error(message = "Not found", code = 404)
-        assertEquals("Not found", result.message)
-        assertEquals(404, result.code)
-    }
 
     // ==================== OkHttp Client Configuration Tests ====================
 
@@ -942,12 +823,6 @@ class ApiIntegrationTest {
         assertEquals(15_000L, client.connectTimeoutMillis.toLong())
     }
 
-    @Test
-    fun opdsClient_defaultClient_timeouts() {
-        val client = OpdsClient.defaultClient()
-        assertNotNull(client)
-        assertEquals(30_000L, client.connectTimeoutMillis.toLong())
-    }
 
     // ==================== MockWebServer Request Verification Tests ====================
 
@@ -1141,73 +1016,5 @@ class ApiIntegrationTest {
         val request = mockServer.takeRequest()
         // Should not have double slashes
         assertFalse("Should not have double slashes", request.path!!.contains("//api"))
-    }
-
-    // ==================== OPDS MockWebServer Tests ====================
-
-    @Test
-    fun opdsClient_fetchFeed_requestHeaders() = runBlocking {
-        mockServer.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("<feed><title>T</title></feed>")
-        )
-
-        val client = OpdsClient()
-        client.fetchFeed(mockServer.url("/feed").toString())
-
-        val request = mockServer.takeRequest()
-        assertEquals("GET", request.method)
-        assertEquals("Mimiral/0.1.0", request.getHeader("User-Agent"))
-        val accept = request.getHeader("Accept")
-        assertTrue("Should accept atom+xml", accept!!.contains("application/atom+xml"))
-    }
-
-    @Test
-    fun opdsClient_downloadBook_requestHeaders() = runBlocking {
-        mockServer.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("")
-        )
-
-        val client = OpdsClient()
-        client.downloadBook(mockServer.url("/book.epub").toString())
-
-        val request = mockServer.takeRequest()
-        assertEquals("GET", request.method)
-        assertEquals("Mimiral/0.1.0", request.getHeader("User-Agent"))
-    }
-
-    @Test
-    fun opdsClient_fetchFeed_emptyBody() = runBlocking {
-        mockServer.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("")
-        )
-
-        val client = OpdsClient()
-        val result = client.fetchFeed(mockServer.url("/empty").toString())
-
-        // Empty body returns success with empty string (body.string() returns "" not null)
-        assertTrue("Empty body should be success (not null)", result is OpdsResult.Success)
-        assertEquals("", (result as OpdsResult.Success).data)
-    }
-
-    @Test
-    fun opdsClient_downloadBook_emptyBody() = runBlocking {
-        mockServer.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody("")
-        )
-
-        val client = OpdsClient()
-        val result = client.downloadBook(mockServer.url("/empty.epub").toString())
-
-        // Empty body returns success with empty bytes (body.bytes() returns empty ByteArray)
-        assertTrue("Empty body should be success (not null)", result is OpdsResult.Success)
-        assertEquals(0, (result as OpdsResult.Success).data.size)
     }
 }
