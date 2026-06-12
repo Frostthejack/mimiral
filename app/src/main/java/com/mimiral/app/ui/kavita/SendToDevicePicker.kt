@@ -29,7 +29,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -63,8 +62,6 @@ fun SendToDevicePicker(
     val sheetState = rememberModalBottomSheetState()
     val devices by deviceRepository.devices.collectAsState()
     val sendState by deviceRepository.sendState.collectAsState()
-    val scope = rememberCoroutineScope()
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState

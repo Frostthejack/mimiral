@@ -42,7 +42,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,8 +79,6 @@ fun DjvuReaderScreen(
     viewModel: DjvuReaderViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val scope = rememberCoroutineScope()
-
     // Initialize DJVU renderer
     val djvuRenderer = remember(uiState.filePath) {
         if (uiState.filePath.isNotEmpty()) {
