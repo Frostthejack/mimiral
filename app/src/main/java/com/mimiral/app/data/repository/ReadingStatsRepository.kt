@@ -4,6 +4,7 @@ import com.mimiral.app.data.local.dao.BookDao
 import com.mimiral.app.data.local.dao.ReadingProgressDao
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import com.mimiral.app.data.local.entity.ReadingSessionEntity
+import com.mimiral.app.data.local.statistics.ReadingStreakCalculator
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -15,7 +16,8 @@ import kotlinx.coroutines.flow.first
 class ReadingStatsRepository @Inject constructor(
     private val readingSessionDao: ReadingSessionDao,
     private val readingProgressDao: ReadingProgressDao,
-    private val bookDao: BookDao
+    private val bookDao: BookDao,
+    private val streakCalculator: ReadingStreakCalculator
 ) {
 
     private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
@@ -84,58 +86,22 @@ class ReadingStatsRepository @Inject constructor(
     /**
      * Calculate the current reading streak (consecutive days with reading activity).
      * Returns 0 if no reading sessions exist or today has no activity yet.
+     *
+     * Delegates to [ReadingStreakCalculator] for the calculation.
      */
     suspend fun getReadingStreak(): Int {
         val dates = readingSessionDao.getDistinctReadingDates()
-        if (dates.isEmpty()) return 0
-
-        val today = LocalDate.now().toEpochDay()
-        val yesterday = today - 1
-
-        // Check if today or yesterday has activity
-        val latestDate = dates.first()
-        if (latestDate != today && latestDate != yesterday) return 0
-
-        var streak = 1
-        var currentDate = latestDate
-
-        for (i in 1 until dates.size) {
-            val prevDate = dates[i]
-            if (currentDate - 1 == prevDate) {
-                streak++
-                currentDate = prevDate
-            } else {
-                break
-            }
-        }
-
-        return streak
+        return streakCalculator.computeCurrentStreak(dates)
     }
 
     /**
      * Calculate the longest reading streak (maximum consecutive days with reading activity).
+     *
+     * Delegates to [ReadingStreakCalculator] for the calculation.
      */
     suspend fun getLongestStreak(): Int {
         val dates = readingSessionDao.getDistinctReadingDates()
-        if (dates.isEmpty()) return 0
-        if (dates.size == 1) return 1
-
-        var longestStreak = 1
-        var currentStreak = 1
-        var latestDate = dates.first()
-
-        for (i in 1 until dates.size) {
-            val prevDate = dates[i]
-            if (latestDate - 1 == prevDate) {
-                currentStreak++
-                longestStreak = maxOf(longestStreak, currentStreak)
-            } else {
-                currentStreak = 1
-            }
-            latestDate = prevDate
-        }
-
-        return longestStreak
+        return streakCalculator.computeLongestStreak(dates)
     }
 
     /**

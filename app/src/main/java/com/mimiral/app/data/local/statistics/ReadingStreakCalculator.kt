@@ -2,6 +2,8 @@ package com.mimiral.app.data.local.statistics
 
 import com.mimiral.app.data.local.dao.ReadingSessionDao
 import java.time.LocalDate
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Calculates reading streaks and related statistics from reading session data.
@@ -12,7 +14,10 @@ import java.time.LocalDate
  * All date calculations use epoch days (days since 1970-01-01 UTC) to match the
  * `session_date` column in the `reading_sessions` table.
  */
-class ReadingStreakCalculator(private val sessionDao: ReadingSessionDao) {
+@Singleton
+class ReadingStreakCalculator @Inject constructor(
+    private val sessionDao: ReadingSessionDao
+) {
 
     /**
      * Data class representing a complete streak summary.
@@ -36,7 +41,6 @@ class ReadingStreakCalculator(private val sessionDao: ReadingSessionDao) {
 
     /**
      * Compute the full streak summary.
-     * This is a convenience method that calls the individual calculation methods.
      */
     suspend fun computeStreakSummary(): StreakSummary {
         val distinctDates = sessionDao.getDistinctReadingDates()
@@ -47,7 +51,6 @@ class ReadingStreakCalculator(private val sessionDao: ReadingSessionDao) {
         val totalPages = sessionDao.getTotalPagesRead()
 
         val currentStreakStart = if (currentStreak > 0 && distinctDates.isNotEmpty()) {
-            // The current streak starts at the most recent date minus (currentStreak - 1) days
             distinctDates.first() - (currentStreak - 1)
         } else {
             null
@@ -148,20 +151,17 @@ class ReadingStreakCalculator(private val sessionDao: ReadingSessionDao) {
     suspend fun getPagesReadForDate(epochDay: Long): Int {
         return sessionDao.getTotalPagesForDay(epochDay)
     }
-
-    companion object {
-        /** Convert a [LocalDate] to epoch day. */
-        fun LocalDate.toEpochDay(): Long = this.toEpochDay()
-
-        /** Convert epoch day to [LocalDate]. */
-        fun epochDayToLocalDate(epochDay: Long): LocalDate =
-            LocalDate.ofEpochDay(epochDay)
-
-        /** Get today as epoch day. */
-        fun todayEpochDay(): Long = LocalDate.now().toEpochDay()
-
-        /** Convert epoch day to human-readable string (yyyy-MM-dd). */
-        fun epochDayToString(epochDay: Long): String =
-            LocalDate.ofEpochDay(epochDay).toString()
-    }
 }
+
+// Top-level utility functions (previously companion object methods)
+
+/** Get today as epoch day. */
+fun todayEpochDay(): Long = LocalDate.now().toEpochDay()
+
+/** Convert epoch day to [LocalDate]. */
+fun epochDayToLocalDate(epochDay: Long): LocalDate =
+    LocalDate.ofEpochDay(epochDay)
+
+/** Convert epoch day to human-readable string (yyyy-MM-dd). */
+fun epochDayToString(epochDay: Long): String =
+    LocalDate.ofEpochDay(epochDay).toString()
