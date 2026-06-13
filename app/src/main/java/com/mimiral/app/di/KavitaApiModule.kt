@@ -103,7 +103,7 @@ object KavitaApiModule {
     fun provideAuthFailedCallback(
         authService: KavitaAuthService
     ): () -> Unit {
-        return { authService.clearTokens() }
+        return { runBlocking { authService.clearTokens() } }
     }
 
     @Provides

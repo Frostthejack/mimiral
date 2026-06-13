@@ -451,7 +451,7 @@ class KavitaAuthService @Inject constructor(
      * Clear only in-memory tokens (keep server config for re-login).
      * Used when interceptor signals auth failure but user hasn't explicitly logged out.
      */
-    fun clearTokens() {
+    suspend fun clearTokens() = mutex.withLock {
         _authState = _authState.copy(
             jwtToken = null,
             refreshToken = null,

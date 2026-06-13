@@ -83,17 +83,9 @@ class ExternalBookHandler @Inject constructor(
                 val destFile = copyToInternalStorage(uri, fileName)
 
                 // Check if book already exists in library
-                val existing = bookDao.getAllFilePaths().find { it == destFile.absolutePath }
+                val existing = bookDao.getBookByFilePath(destFile.absolutePath)
                 if (existing != null) {
-                    // Book already imported - find its ID
-                    val book = bookDao.getAllFilePaths()
-                        .let { paths ->
-                            // Query by path - need to find the book entity
-                            findBookByPath(destFile.absolutePath)
-                        }
-                    if (book != null) {
-                        return@withContext ExternalBookResult.AlreadyExists(book.id, book.format)
-                    }
+                    return@withContext ExternalBookResult.AlreadyExists(existing.id, existing.format)
                 }
 
                 // Insert into database
@@ -229,29 +221,6 @@ class ExternalBookHandler @Inject constructor(
         }
 
         return "Imported Book"
-    }
-
-    /**
-     * Find a book entity by its file path.
-     */
-    private suspend fun findBookByPath(filePath: String): BookEntity? {
-        // BookDao doesn't have a getByPath method, so we do a manual lookup
-        // by getting all books and filtering. This is fine for small libraries.
-        // A dedicated DAO query would be more efficient but requires schema changes.
-        try {
-            // Use a simple heuristic: if the file exists at this path, the
-            // scanAndImportFile will return its existing ID
-            val existing = bookDao.getAllFilePaths()
-            if (filePath in existing) {
-                // The book exists but we don't have a direct path->id lookup.
-                // For now, return null and let the caller re-import (insertBook
-                // with UNIQUE constraint on filePath would handle dedup).
-                return null
-            }
-        } catch (_: Exception) {
-            // Ignore
-        }
-        return null
     }
 
     /**
