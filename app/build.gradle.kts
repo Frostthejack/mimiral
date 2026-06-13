@@ -20,10 +20,6 @@ android {
     namespace = "com.mimiral.app"
     compileSdk = 35
 
-    // Room schema export location for migration testing
-    room {
-        schemaLocation("$projectDir/schemas")
-    }
 
     defaultConfig {
         applicationId = "com.mimiral.app"
@@ -164,4 +160,9 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }

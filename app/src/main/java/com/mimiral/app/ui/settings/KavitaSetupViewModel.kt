@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.dao.ServerDao
+import androidx.room.withTransaction
 import com.mimiral.app.data.local.database.MimiralDatabase
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.remote.ConnectionStatus
@@ -272,7 +273,7 @@ class KavitaSetupViewModel @Inject constructor(
                 // Deactivate any existing Kavita servers, insert new server, and clear
                 // password atomically in a single transaction so the plaintext password is
                 // never observable by another DB connection mid-write.
-                database.runInTransaction {
+                database.withTransaction {
                     val existingServer = serverDao.getActiveServerByType("KAVITA")
                     if (existingServer != null) {
                         serverDao.updateServer(existingServer.copy(isActive = false))
