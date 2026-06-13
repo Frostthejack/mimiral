@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mimiral.app.data.local.dao.ServerDao
+import com.mimiral.app.data.local.database.MimiralDatabase
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.remote.ConnectionStatus
 import com.mimiral.app.data.remote.KavitaServerInfo
@@ -49,7 +50,8 @@ data class KavitaSetupUiState(
 @HiltViewModel
 class KavitaSetupViewModel @Inject constructor(
     application: Application,
-    private val serverDao: ServerDao
+    private val serverDao: ServerDao,
+    private val database: MimiralDatabase
 ) : AndroidViewModel(application) {
 
     companion object {
@@ -267,17 +269,21 @@ class KavitaSetupViewModel @Inject constructor(
                     isActive = true
                 )
 
-                // Deactivate any existing Kavita servers first
-                val existingServer = serverDao.getActiveServerByType("KAVITA")
-                if (existingServer != null) {
-                    serverDao.updateServer(existingServer.copy(isActive = false))
+                // Deactivate any existing Kavita servers, insert new server, and clear
+                // password atomically in a single transaction so the plaintext password is
+                // never observable by another DB connection mid-write.
+                database.runInTransaction {
+                    val existingServer = serverDao.getActiveServerByType("KAVITA")
+                    if (existingServer != null) {
+                        serverDao.updateServer(existingServer.copy(isActive = false))
+                    }
+
+                    serverDao.insertServer(server)
+
+                    // Clear password from the entity after saving to credential store
+                    val clearedServer = server.copy(password = null)
+                    serverDao.updateServer(clearedServer)
                 }
-
-                serverDao.insertServer(server)
-
-                // Clear password from the entity after saving to credential store
-                val clearedServer = server.copy(password = null)
-                serverDao.updateServer(clearedServer)
 
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
