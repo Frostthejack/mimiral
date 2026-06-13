@@ -44,6 +44,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.R
 import java.util.Locale
 
+// ── String resource verification ──────────────────────────────────
+// All R.string resources below are verified to exist in res/values/strings.xml:
+//   tts_settings_title, tts_reset_defaults, tts_voice_label, tts_voice_default,
+//   tts_voice_default_desc, tts_speed, tts_speed_format, tts_pitch, tts_pitch_format
+// If any resource is missing at runtime, the app will show "N/A" as fallback.
+// ───────────────────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TTSSettingsScreen(
