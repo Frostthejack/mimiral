@@ -229,8 +229,8 @@ class LibraryExporter(
     private fun ReadingSessionEntity.toExport() = ExportReadingSession(
         id = id,
         bookId = bookId,
-        startTime = 0,
-        endTime = 0,
+        startTime = createdAt,
+        endTime = createdAt + durationMs,
         durationSeconds = durationMs / 1000,
         pagesRead = pagesRead,
         date = sessionDate.toString()

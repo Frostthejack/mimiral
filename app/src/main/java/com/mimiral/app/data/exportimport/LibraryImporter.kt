@@ -361,7 +361,8 @@ class LibraryImporter(
         bookId = bookId,
         sessionDate = date.toLongOrNull() ?: 0,
         durationMs = durationSeconds * 1000,
-        pagesRead = pagesRead
+        pagesRead = pagesRead,
+        createdAt = startTime
     )
 
     private fun ExportPdfSettings.toEntity(bookId: Int) = PdfSettingsEntity(
