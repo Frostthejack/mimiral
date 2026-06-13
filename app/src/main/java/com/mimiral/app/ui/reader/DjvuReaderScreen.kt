@@ -130,8 +130,9 @@ fun DjvuReaderScreen(
         }
     }
 
-    // Cleanup resources
-    DisposableEffect(Unit) {
+    // Cleanup resources — keyed on djvuRenderer so config changes (rotation)
+    // properly dispose old bitmaps before the composition is recreated.
+    DisposableEffect(djvuRenderer) {
         onDispose {
             djvuRenderer?.close()
             pageBitmaps.values.forEach { it.recycle() }
