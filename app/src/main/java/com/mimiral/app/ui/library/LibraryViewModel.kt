@@ -72,6 +72,7 @@ class LibraryViewModel @Inject constructor(
     private val _viewMode = MutableStateFlow(ViewMode.GRID)
     private val _isRefreshing = MutableStateFlow(false)
     private val _scanState = MutableStateFlow<ScanState>(ScanState.Idle)
+    private val _error = MutableStateFlow<String?>(null)
     private val _scanDirectories = mutableSetOf<String>()
 
     init {
@@ -88,6 +89,11 @@ class LibraryViewModel @Inject constructor(
             libraryRepository.scanState.collect { state ->
                 _scanState.value = state
                 _isRefreshing.value = state is ScanState.Scanning
+                if (state is ScanState.Error) {
+                    _error.value = state.message
+                } else if (state is ScanState.Scanning) {
+                    _error.value = null
+                }
             }
         }
         loadRecentBooks()
@@ -147,6 +153,8 @@ class LibraryViewModel @Inject constructor(
         state.copy(isRefreshing = refreshing)
     }.combine(_scanState) { state, scanState ->
         state.copy(scanState = scanState)
+    }.combine(_error) { state, error ->
+        state.copy(error = error)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -216,7 +224,16 @@ class LibraryViewModel @Inject constructor(
                 null
             }
         }
-        libraryRepository.refreshLibrary(additionalRoots)
+        try {
+            libraryRepository.refreshLibrary(additionalRoots)
+            _error.value = null
+        } catch (e: Exception) {
+            _error.value = e.message ?: "Failed to refresh library"
+        }
+    }
+
+    fun clearError() {
+        _error.value = null
     }
 
     fun deleteBook(book: BookEntity) {
