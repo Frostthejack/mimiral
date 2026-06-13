@@ -40,12 +40,6 @@ interface KavitaApi {
     ): Response<KavitaLoginResponse>
 
     /**
-     * Test connection to the Kavita server using the base URL.
-     * GET /api/Server/info — lightweight connectivity check.
-     */
-    suspend fun testConnection(): Response<KavitaServerInfo> = getServerInfo()
-
-    /**
      * Fallback login endpoint for Kavita versions before v0.7.
      * POST /api/Auth/login
      *
