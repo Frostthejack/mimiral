@@ -14,6 +14,7 @@ import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import com.mimiral.app.BuildConfig
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -51,7 +52,11 @@ object KavitaApiModule {
         authInterceptor: KavitaAuthInterceptor
     ): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.BASIC
+            }
         }
         return OkHttpClient.Builder()
             // Order matters: base URL resolves first, then auth, then logging
