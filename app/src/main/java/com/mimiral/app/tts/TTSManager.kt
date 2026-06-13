@@ -12,6 +12,7 @@ import com.mimiral.app.data.reader.SentenceBoundaryDetector
 import java.util.ArrayDeque
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.flow.firstOrNull
 
 enum class TTSState {
@@ -58,10 +59,12 @@ class TTSManager(
     }
 
     private var ttsEngine: TextToSpeech? = null
+    @Volatile
     private var _state: TTSState = TTSState.IDLE
     val state: TTSState get() = _state
 
     private val queue = ArrayDeque<TTSQueueItem>()
+    private val queueLock = Any()
     private val settings = TTSSettings()
 
     val preprocessor = TTSPreprocessor()
@@ -74,11 +77,12 @@ class TTSManager(
     private var chapterBoundaries: List<ChapterBoundary> = emptyList()
     private var paragraphBoundaries: List<ParagraphBoundary> = emptyList()
 
+    @Volatile
     var onInitialized: ((Boolean) -> Unit)? = null
-    val onUtteranceStarted: MutableList<(String) -> Unit> = mutableListOf()
-    val onUtteranceDone: MutableList<(String, Boolean) -> Unit> = mutableListOf()
-    val onRangeProgress: MutableList<(String, Int, Int) -> Unit> = mutableListOf()
-    val onSkip: MutableList<(String) -> Unit> = mutableListOf()
+    val onUtteranceStarted: CopyOnWriteArrayList<(String) -> Unit> = CopyOnWriteArrayList()
+    val onUtteranceDone: CopyOnWriteArrayList<(String, Boolean) -> Unit> = CopyOnWriteArrayList()
+    val onRangeProgress: CopyOnWriteArrayList<(String, Int, Int) -> Unit> = CopyOnWriteArrayList()
+    val onSkip: CopyOnWriteArrayList<(String) -> Unit> = CopyOnWriteArrayList()
 
     /**
      * Callback fired when the active sentence changes during TTS playback.
@@ -86,7 +90,7 @@ class TTSManager(
      * @param sentence The sentence currently being read, or null if playback
      *                 has stopped/paused and the highlight should be cleared.
      */
-    val onSentenceChanged: MutableList<(Sentence?) -> Unit> = mutableListOf()
+    val onSentenceChanged: CopyOnWriteArrayList<(Sentence?) -> Unit> = CopyOnWriteArrayList()
 
     /**
      * Callback fired when the active word range changes during TTS playback.
@@ -96,15 +100,17 @@ class TTSManager(
      *
      * Driven by the TTS engine's onRangeStart callback which reports word boundaries.
      */
-    val onWordChanged: MutableList<(Int, Int) -> Unit> = mutableListOf()
+    val onWordChanged: CopyOnWriteArrayList<(Int, Int) -> Unit> = CopyOnWriteArrayList()
 
     /** Callback fired when word highlight should be cleared (stop/pause). */
-    val onWordCleared: MutableList<() -> Unit> = mutableListOf()
+    val onWordCleared: CopyOnWriteArrayList<() -> Unit> = CopyOnWriteArrayList()
 
     /** Sentences extracted from the currently playing text. */
+    @Volatile
     private var currentSentences: List<Sentence> = emptyList()
 
     /** Index of the sentence currently being read, or -1 if none. */
+    @Volatile
     private var currentSentenceIndex: Int = -1
 
     override fun onInit(status: Int) {
@@ -165,7 +171,7 @@ class TTSManager(
         if (text.isBlank()) return
         val processedText = preprocessor.preprocess(text)
         val item = TTSQueueItem(text = processedText, locale = locale)
-        queue.addLast(item)
+        synchronized(queueLock) { queue.addLast(item) }
         fullText = text
         currentOffset = 0
 
@@ -217,7 +223,7 @@ class TTSManager(
         currentSentenceIndex = -1
         onSentenceChanged.forEach { cb -> cb(null) }
         onWordCleared.forEach { cb -> cb() }
-        Log.d(TAG, "TTS paused, queue size=" + queue.size)
+        Log.d(TAG, "TTS paused, queue size=" + synchronized(queueLock) { queue.size })
     }
 
     fun resume() {
@@ -235,7 +241,7 @@ class TTSManager(
 
     fun stop() {
         ttsEngine?.stop()
-        queue.clear()
+        synchronized(queueLock) { queue.clear() }
         // Clear sentence highlight on stop
         currentSentenceIndex = -1
         currentSentences = emptyList()
@@ -323,7 +329,7 @@ class TTSManager(
         ttsEngine?.stop()
         ttsEngine?.shutdown()
         ttsEngine = null
-        queue.clear()
+        synchronized(queueLock) { queue.clear() }
         currentSentences = emptyList()
         currentSentenceIndex = -1
         _state = TTSState.STOPPED
@@ -337,7 +343,7 @@ class TTSManager(
         val nextSentence = sentences.find { it.start > currentOffset }
         if (nextSentence != null) {
             Log.d(TAG, "Skip sentence forward to offset ${nextSentence.start}")
-            onSkip?.forEach { it("sentence_forward") }
+            onSkip.forEach { it("sentence_forward") }
             playFromOffset(nextSentence.start)
         } else {
             Log.d(TAG, "Skip sentence forward: no more sentences, trying paragraph skip")
@@ -358,7 +364,7 @@ class TTSManager(
                     TAG,
                     "Skip sentence backward to current sentence start ${currentSentence.start}"
                 )
-                onSkip?.forEach { it("sentence_backward") }
+                onSkip.forEach { it("sentence_backward") }
                 playFromOffset(currentSentence.start)
             }
             prevSentence != null -> {
@@ -366,7 +372,7 @@ class TTSManager(
                     TAG,
                     "Skip sentence backward to previous sentence start ${prevSentence.start}"
                 )
-                onSkip?.forEach { it("sentence_backward") }
+                onSkip.forEach { it("sentence_backward") }
                 playFromOffset(prevSentence.start)
             }
             else -> {
@@ -380,7 +386,7 @@ class TTSManager(
         val nextParagraph = paragraphBoundaries.find { it.startOffset > currentOffset }
         return if (nextParagraph != null) {
             Log.d(TAG, "Skip paragraph forward to offset ${nextParagraph.startOffset}")
-            onSkip?.forEach { it("paragraph_forward") }
+            onSkip.forEach { it("paragraph_forward") }
             playFromOffset(nextParagraph.startOffset)
             true
         } else {
@@ -400,7 +406,7 @@ class TTSManager(
                     "Skip paragraph backward to current paragraph " +
                         "start ${currentParagraph.startOffset}"
                 )
-                onSkip?.forEach { it("paragraph_backward") }
+                onSkip.forEach { it("paragraph_backward") }
                 playFromOffset(currentParagraph.startOffset)
                 true
             }
@@ -410,7 +416,7 @@ class TTSManager(
                     "Skip paragraph backward to previous paragraph " +
                         "start ${prevParagraph.startOffset}"
                 )
-                onSkip?.forEach { it("paragraph_backward") }
+                onSkip.forEach { it("paragraph_backward") }
                 playFromOffset(prevParagraph.startOffset)
                 true
             }
@@ -434,7 +440,7 @@ class TTSManager(
                 TAG,
                 "Skip chapter forward to chapter ${nextChapter.chapterIndex}: ${nextChapter.title}"
             )
-            onSkip?.forEach { it("chapter_forward") }
+            onSkip.forEach { it("chapter_forward") }
             playFromOffset(nextChapter.startOffset)
         } else {
             Log.d(TAG, "Skip chapter forward: already at last chapter")
@@ -459,7 +465,7 @@ class TTSManager(
                 TAG,
                 "Skip chapter backward to chapter ${prevChapter.chapterIndex}: ${prevChapter.title}"
             )
-            onSkip?.forEach { it("chapter_backward") }
+            onSkip.forEach { it("chapter_backward") }
             playFromOffset(prevChapter.startOffset)
         } else {
             Log.d(TAG, "Skip chapter backward: already at first chapter")
@@ -478,15 +484,17 @@ class TTSManager(
 
     private fun speakNext() {
         val engine = ttsEngine ?: return
-        if (queue.isEmpty()) {
-            _state = TTSState.READY
-            // All utterances done — clear sentence and word highlight
-            currentSentenceIndex = -1
-            onSentenceChanged.forEach { cb -> cb(null) }
-            onWordCleared.forEach { cb -> cb() }
-            return
+        val item = synchronized(queueLock) {
+            if (queue.isEmpty()) {
+                _state = TTSState.READY
+                // All utterances done — clear sentence and word highlight
+                currentSentenceIndex = -1
+                onSentenceChanged.forEach { cb -> cb(null) }
+                onWordCleared.forEach { cb -> cb() }
+                return
+            }
+            queue.removeFirst()
         }
-        val item = queue.removeFirst()
         _state = TTSState.PLAYING
         if (engine.language != item.locale) {
             engine.language = item.locale
