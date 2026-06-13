@@ -628,7 +628,8 @@ interface ReadingListDao {
             "reading_lists.sort_order AS sortOrder, " +
             "COUNT(book_reading_lists.book_id) AS bookCount " +
             "FROM reading_lists " +
-            "LEFT JOIN book_reading_lists ON reading_lists.id = book_reading_lists.reading_list_id " +
+            "LEFT JOIN book_reading_lists " +
+            "ON reading_lists.id = book_reading_lists.reading_list_id " +
             "GROUP BY reading_lists.id ORDER BY reading_lists.sort_order"
     )
     fun getAllReadingListsWithBookCount(): Flow<List<ReadingListWithBookCount>>

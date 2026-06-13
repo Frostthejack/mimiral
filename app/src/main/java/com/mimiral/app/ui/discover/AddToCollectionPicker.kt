@@ -89,7 +89,9 @@ fun AddToCollectionPicker(
 
     // When loading finishes (true -> false) with no error and a pending collection, call onAdded
     LaunchedEffect(uiState.addSeriesLoading) {
-        if (!uiState.addSeriesLoading && pendingCollectionId != null && uiState.addSeriesError == null) {
+        if (!uiState.addSeriesLoading && pendingCollectionId != null &&
+            uiState.addSeriesError == null
+        ) {
             val id = pendingCollectionId ?: return@LaunchedEffect
             val title = pendingCollectionTitle ?: return@LaunchedEffect
             onAdded(id, title)
