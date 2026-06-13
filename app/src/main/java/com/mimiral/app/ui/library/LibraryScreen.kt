@@ -93,13 +93,15 @@ fun LibraryScreen(
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
     // True when library is genuinely empty (not just filtered to nothing)
-    val isLibraryEmpty = uiState.books.isEmpty() &&
-        recentBooks.isEmpty() &&
-        uiState.searchQuery.isBlank() &&
-        uiState.filterOption == FilterOption.ALL &&
-        uiState.error == null &&
-        !uiState.isLoading &&
-        uiState.scanState !is ScanState.Scanning
+    val isLibraryEmpty = remember(uiState, recentBooks) {
+        uiState.books.isEmpty() &&
+            recentBooks.isEmpty() &&
+            uiState.searchQuery.isBlank() &&
+            uiState.filterOption == FilterOption.ALL &&
+            uiState.error == null &&
+            !uiState.isLoading &&
+            uiState.scanState !is ScanState.Scanning
+    }
 
     Scaffold(
         topBar = {
