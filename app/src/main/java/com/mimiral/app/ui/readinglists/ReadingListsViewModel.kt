@@ -2,6 +2,7 @@ package com.mimiral.app.ui.readinglists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mimiral.app.data.local.dao.ReadingListWithBookCount as DaoReadingListWithBookCount
 import com.mimiral.app.data.local.entity.BookEntity
 import com.mimiral.app.data.local.entity.ReadingListEntity
 import com.mimiral.app.data.repository.ReadingListRepository
@@ -40,15 +41,9 @@ class ReadingListsViewModel @Inject constructor(
 
     private fun loadReadingLists() {
         viewModelScope.launch {
-            readingListRepository.getAllReadingLists().collect { lists ->
-                val withCounts = lists.map { list ->
-                    ReadingListWithCount(
-                        list = list,
-                        bookCount = readingListRepository.getBookCountInReadingList(list.id)
-                    )
-                }
+            readingListRepository.getAllReadingListsWithBookCount().collect { withCounts ->
                 _uiState.value = _uiState.value.copy(
-                    lists = withCounts,
+                    lists = withCounts.map { it.toReadingListWithCount() },
                     isLoading = false
                 )
             }
@@ -137,4 +132,16 @@ class ReadingListsViewModel @Inject constructor(
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
+
+    private fun DaoReadingListWithBookCount.toReadingListWithCount(): ReadingListWithCount =
+        ReadingListWithCount(
+            list = ReadingListEntity(
+                id = id,
+                name = name,
+                listType = listType,
+                createdTime = createdTime,
+                sortOrder = sortOrder
+            ),
+            bookCount = bookCount
+        )
 }
