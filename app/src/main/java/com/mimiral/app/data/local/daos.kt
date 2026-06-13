@@ -129,6 +129,9 @@ interface BookDao {
 
     @Query("SELECT * FROM books WHERE series_name = :seriesName ORDER BY series_order ASC")
     fun getBooksInSeries(seriesName: String): Flow<List<BookEntity>>
+
+    @Query("SELECT * FROM books WHERE id IN (:bookIds)")
+    suspend fun getBooksByIds(bookIds: List<Int>): List<BookEntity>
 }
 
 @Dao
@@ -547,6 +550,17 @@ interface ChapterDao {
             "WHERE chapters_fts MATCH :query AND chapters.book_id = :bookId"
     )
     fun searchChaptersInBook(bookId: Int, query: String): Flow<List<ChapterEntity>>
+
+    /**
+     * FTS5 search returning distinct book IDs whose chapters match the query.
+     * Used by searchBooksAndChapters to include chapter-content matches.
+     */
+    @Query(
+        "SELECT DISTINCT chapters.book_id FROM chapters " +
+            "INNER JOIN chapters_fts ON chapters.id = chapters_fts.rowid " +
+            "WHERE chapters_fts MATCH :query"
+    )
+    suspend fun searchChapterBookIds(query: String): List<Int>
 }
 
 @Dao
