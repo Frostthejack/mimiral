@@ -51,6 +51,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -332,13 +335,29 @@ private fun CollectionSeriesView(
 ) {
     val listState = rememberLazyListState()
 
-    // Load more when near bottom
-    LaunchedEffect(listState, series) {
-        val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-        val totalItems = listState.layoutInfo.totalItemsCount
-        if (lastVisibleIndex >= totalItems - 3 && page < totalPages && !isLoading) {
-            onLoadMore()
+    // Load more when near bottom — uses snapshotFlow on scroll position only,
+    // with a guard flag to prevent rapid-fire when new data arrives while
+    // the user is already near the bottom.
+    var isLoadMoreGuard by remember { mutableStateOf(false) }
+    LaunchedEffect(listState) {
+        snapshotFlow {
+            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val total = listState.layoutInfo.totalItemsCount
+            lastVisible to total
         }
+            .distinctUntilChanged()
+            .filter { (_, total) -> total > 0 }
+            .collect { (lastVisible, total) ->
+                if (!isLoadMoreGuard && lastVisible >= total - 3) {
+                    isLoadMoreGuard = true
+                    onLoadMore()
+                }
+            }
+    }
+
+    // Reset guard after series data changes (new page loaded)
+    LaunchedEffect(series) {
+        isLoadMoreGuard = false
     }
 
     LazyColumn(
