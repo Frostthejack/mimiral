@@ -5,6 +5,7 @@ import com.mimiral.app.data.local.entity.ReadingTimeEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 
 /**
  * Repository for reading time tracking.
@@ -71,6 +72,6 @@ class ReadingTimeRepository @Inject constructor(
     /** Get today as epoch day. */
     companion object {
         fun todayEpochDay(): Long =
-            System.currentTimeMillis() / 86_400_000L
+            LocalDate.now().toEpochDay()
     }
 }
