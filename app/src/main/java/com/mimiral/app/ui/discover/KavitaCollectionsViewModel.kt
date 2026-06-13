@@ -29,7 +29,9 @@ data class KavitaCollectionsUiState(
     val showCreateDialog: Boolean = false,
     val showDeleteConfirm: Boolean = false,
     val showEditDialog: Boolean = false,
-    val createSuccess: Boolean = false
+    val createSuccess: Boolean = false,
+    val addSeriesLoading: Boolean = false,
+    val addSeriesError: String? = null
 )
 
 @HiltViewModel
@@ -221,6 +223,7 @@ class KavitaCollectionsViewModel @Inject constructor(
         seriesIds: List<Int>
     ) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(addSeriesLoading = true, addSeriesError = null)
             when (
                 val result = collectionRepository.addSeriesToCollection(
                     collectionId,
@@ -228,6 +231,7 @@ class KavitaCollectionsViewModel @Inject constructor(
                 )
             ) {
                 is KavitaResult.Success -> {
+                    _uiState.value = _uiState.value.copy(addSeriesLoading = false)
                     // Reload to reflect changes
                     loadCollections()
                     _uiState.value.selectedCollection?.let {
@@ -236,7 +240,8 @@ class KavitaCollectionsViewModel @Inject constructor(
                 }
                 is KavitaResult.Error -> {
                     _uiState.value = _uiState.value.copy(
-                        errorMessage = "Add series failed: ${result.message}"
+                        addSeriesLoading = false,
+                        addSeriesError = "Add series failed: ${result.message}"
                     )
                 }
             }
@@ -296,5 +301,9 @@ class KavitaCollectionsViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    fun clearAddSeriesError() {
+        _uiState.value = _uiState.value.copy(addSeriesError = null)
     }
 }
