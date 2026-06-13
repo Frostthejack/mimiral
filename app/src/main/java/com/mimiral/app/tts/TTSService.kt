@@ -518,6 +518,17 @@ class TTSService : Service() {
             Log.w(TAG, "handlePlay: no text to play")
             return
         }
+        when (mgr.state) {
+            TTSState.INITIALIZING -> {
+                Log.w(TAG, "handlePlay: TTS engine still initializing, ignoring play request")
+                return
+            }
+            TTSState.IDLE, TTSState.STOPPED -> {
+                Log.w(TAG, "handlePlay: TTS engine not ready (state=${mgr.state}), ignoring play request")
+                return
+            }
+            else -> { /* READY, PLAYING, PAUSED — proceed */ }
+        }
         startForeground(NOTIFICATION_ID, buildNotification())
         mgr.play(currentText)
         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING)
