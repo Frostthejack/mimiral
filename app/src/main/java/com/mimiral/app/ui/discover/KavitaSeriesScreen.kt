@@ -812,7 +812,9 @@ private fun VolumeDetailView(
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(
+                                enabled = volume.seriesId > 0,
                                 onClick = {
+                                    if (volume.seriesId <= 0) return@TextButton
                                     if (isFullyRead) {
                                         markReadViewModel.markVolumeUnread(
                                             volume.id,
