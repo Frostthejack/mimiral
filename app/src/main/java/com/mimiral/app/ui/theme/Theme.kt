@@ -198,20 +198,16 @@ fun MimiralTheme(
             // High contrast themes must not use dynamic colors
             themeType.toColorScheme()
         }
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && themeType != MimiralThemeType.NIGHT -> {
             val view = LocalView.current
             if (view.isInEditMode) {
                 themeType.toColorScheme()
             } else {
-                if (themeType == MimiralThemeType.NIGHT) {
-                    NightColorScheme
+                val context = view.context
+                if (isDark) {
+                    dynamicDarkColorScheme(context)
                 } else {
-                    val context = view.context
-                    if (isDark) {
-                        dynamicDarkColorScheme(context)
-                    } else {
-                        dynamicLightColorScheme(context)
-                    }
+                    dynamicLightColorScheme(context)
                 }
             }
         }
