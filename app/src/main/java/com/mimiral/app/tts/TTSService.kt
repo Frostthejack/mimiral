@@ -19,6 +19,11 @@ import androidx.core.app.NotificationCompat
 import com.mimiral.app.MainActivity
 import com.mimiral.app.R
 import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class TTSService : Service() {
 
@@ -190,6 +195,9 @@ class TTSService : Service() {
     private val sleepTimerHandler = Handler(Looper.getMainLooper())
     private var sleepTimerRunnable: Runnable? = null
 
+    // Coroutine scope for async operations (e.g. loading persisted TTS settings)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     inner class TTSBinder : Binder() {
         fun getService(): TTSService = this@TTSService
     }
@@ -204,12 +212,14 @@ class TTSService : Service() {
             onInitialized = { success ->
                 if (success) {
                     Log.d(TAG, "TTS engine ready in service")
-                    // Load persisted settings
+                    // Load persisted settings asynchronously to avoid blocking main thread
                     val repo = com.mimiral.app.data.local.settings.TTSSettingsRepository(
                         applicationContext
                     )
-                    loadPersistedSettings(repo)
-                    broadcastTTSState()
+                    serviceScope.launch {
+                        loadPersistedSettings(repo)
+                        broadcastTTSState()
+                    }
                 } else {
                     Log.e(TAG, "TTS engine failed to initialize in service")
                     stopSelf()
@@ -319,6 +329,7 @@ class TTSService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "Service onDestroy")
+        serviceScope.cancel()
         cancelSleepTimerInternal()
         ttsManager?.stop()
         ttsManager?.shutdown()
