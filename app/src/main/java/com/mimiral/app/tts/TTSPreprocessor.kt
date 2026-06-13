@@ -113,7 +113,6 @@ class TTSPreprocessor {
             Pair(LIGATURE_AE, "AE"),
             Pair(LIGATURE_ae, "ae"),
             Pair(LIGATURE_OE, "OE"),
-            Pair(LIGATURE_OE, "OE"),
             Pair(LIGATURE_oe, "oe"),
             Pair(LIGATURE_SS, "ss"),
             Pair(LIGATURE_ff, "ff"),
