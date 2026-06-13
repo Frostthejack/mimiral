@@ -44,14 +44,26 @@ class CollectionsViewModel @Inject constructor(
 
     private fun loadCollections() {
         viewModelScope.launch {
-            collectionRepository.getAllCollectionsWithBookCount().collect { withCounts ->
-                _collections.value = withCounts.map { it.toCollectionWithCount() }
+            try {
+                collectionRepository.getAllCollectionsWithBookCount().collect { withCounts ->
+                    _collections.value = withCounts.map { it.toCollectionWithCount() }
+                    _uiState.value = _uiState.value.copy(
+                        collections = withCounts.map { it.toCollectionWithCount() },
+                        isLoading = false
+                    )
+                }
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    collections = withCounts.map { it.toCollectionWithCount() },
-                    isLoading = false
+                    isLoading = false,
+                    error = "Failed to load collections: ${e.message}"
                 )
             }
         }
+    }
+
+    fun retry() {
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+        loadCollections()
     }
 
     fun createCollection(name: String, description: String?) {
