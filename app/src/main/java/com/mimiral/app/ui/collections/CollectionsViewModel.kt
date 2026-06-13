@@ -59,7 +59,10 @@ class CollectionsViewModel @Inject constructor(
             try {
                 _uiState.value = _uiState.value.copy(isCreating = true)
                 collectionRepository.createCollection(name, description)
-                _uiState.value = _uiState.value.copy(isCreating = false)
+                _uiState.value = _uiState.value.copy(
+                    isCreating = false,
+                    editingCollection = null
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isCreating = false,
