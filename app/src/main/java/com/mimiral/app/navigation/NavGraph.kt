@@ -67,7 +67,7 @@ import kotlinx.coroutines.launch
  * Defaults to PDF reader for unknown formats.
  */
 private fun routeForBook(bookId: Int): String {
-    return "pdf_reader/$bookId"
+    return Screen.PdfReader.createRoute(bookId)
 }
 
 /**
@@ -76,16 +76,16 @@ private fun routeForBook(bookId: Int): String {
  */
 fun routeForBookFormat(bookId: Int, format: String): String {
     return when (format.uppercase()) {
-        "DJVU" -> "djvu_reader/$bookId"
-        "EPUB" -> "epub_reader/$bookId"
-        "TXT", "RTF" -> "txt_rtf_reader/$bookId"
-        "PDF" -> "pdf_reader/$bookId"
-        "MOBI", "AZW3" -> "mobi_reader/$bookId"
-        "FB2" -> "fb2_reader/$bookId"
-        "CBZ", "CBR" -> "comic_reader/$bookId"
-        "DOC", "DOCX" -> "doc_reader/$bookId"
-        "MD" -> "markdown_reader/$bookId"
-        else -> "pdf_reader/$bookId"
+        "DJVU" -> Screen.DjvuReader.createRoute(bookId)
+        "EPUB" -> Screen.EpubReader.createRoute(bookId)
+        "TXT", "RTF" -> Screen.TxtRtfReader.createRoute(bookId)
+        "PDF" -> Screen.PdfReader.createRoute(bookId)
+        "MOBI", "AZW3" -> Screen.MobiReader.createRoute(bookId)
+        "FB2" -> Screen.Fb2Reader.createRoute(bookId)
+        "CBZ", "CBR" -> Screen.ComicReader.createRoute(bookId)
+        "DOC", "DOCX" -> Screen.DocReader.createRoute(bookId)
+        "MD" -> Screen.MarkdownReader.createRoute(bookId)
+        else -> Screen.PdfReader.createRoute(bookId)
     }
 }
 
@@ -96,8 +96,8 @@ fun routeForBookFormat(bookId: Int, format: String): String {
  */
 fun routeForBookReadingMode(bookId: Int, format: String): String {
     return when (format.uppercase()) {
-        "CBZ", "CBR" -> "comic_reader/$bookId" // Comics don't have text
-        else -> "reading_mode/$bookId" // All other formats support text extraction
+        "CBZ", "CBR" -> Screen.ComicReader.createRoute(bookId) // Comics don't have text
+        else -> Screen.ReadingMode.createRoute(bookId) // All other formats support text extraction
     }
 }
 
@@ -229,7 +229,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                         navController.popBackStack()
                     },
                     onNavigateToKavitaSeries = { seriesId ->
-                        navController.navigate("kavita_series/$seriesId")
+                        navController.navigate(Screen.KavitaSeries.createRoute(seriesId))
                     }
                 )
             }
@@ -336,7 +336,7 @@ fun MimiralNavGraph(navController: NavHostController) {
 
             // Reader routes
             composable(
-                route = "pdf_reader/{bookId}",
+                route = Screen.PdfReader.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -345,13 +345,13 @@ fun MimiralNavGraph(navController: NavHostController) {
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToReadingMode = {
-                        navController.navigate("reading_mode/$bookId")
+                        navController.navigate(Screen.ReadingMode.createRoute(bookId))
                     }
                 )
             }
 
             composable(
-                route = "epub_reader/{bookId}",
+                route = Screen.EpubReader.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -360,13 +360,13 @@ fun MimiralNavGraph(navController: NavHostController) {
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToReadingMode = {
-                        navController.navigate("reading_mode/$bookId")
+                        navController.navigate(Screen.ReadingMode.createRoute(bookId))
                     }
                 )
             }
 
             composable(
-                route = "djvu_reader/{bookId}",
+                route = Screen.DjvuReader.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -378,7 +378,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
 
             composable(
-                route = "txt_rtf_reader/{bookId}",
+                route = Screen.TxtRtfReader.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -390,7 +390,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
 
             composable(
-                route = "mobi_reader/{bookId}",
+                route = Screen.MobiReader.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -402,7 +402,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
 
             composable(
-                route = "fb2_reader/{bookId}",
+                route = Screen.Fb2Reader.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -414,7 +414,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
 
             composable(
-                route = "comic_reader/{bookId}",
+                route = Screen.ComicReader.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -426,7 +426,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
 
             composable(
-                route = "doc_reader/{bookId}",
+                route = Screen.DocReader.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -438,7 +438,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
 
             composable(
-                route = "markdown_reader/{bookId}",
+                route = Screen.MarkdownReader.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -450,7 +450,7 @@ fun MimiralNavGraph(navController: NavHostController) {
             }
 
             composable(
-                route = "reading_mode/{bookId}",
+                route = Screen.ReadingMode.route,
                 arguments = listOf(navArgument("bookId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getInt("bookId")
@@ -480,7 +480,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                 WantToReadScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToSeries = { seriesId ->
-                        navController.navigate("kavita_series/$seriesId")
+                        navController.navigate(Screen.KavitaSeries.createRoute(seriesId))
                     },
                     onOpenDrawer = openDrawer
                 )
@@ -498,7 +498,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                 KavitaCollectionsScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToSeries = { seriesId ->
-                        navController.navigate("kavita_series/$seriesId")
+                        navController.navigate(Screen.KavitaSeries.createRoute(seriesId))
                     },
                     onOpenDrawer = openDrawer
                 )
