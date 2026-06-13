@@ -135,6 +135,10 @@ fun StatisticsScreen(
                     onRetry = { viewModel.retry() },
                     modifier = Modifier.align(Alignment.Center)
                 )
+            } else if (uiState.dailyStats.all { it.sessionCount == 0 }) {
+                EmptyStatsState(
+                    modifier = Modifier.align(Alignment.Center)
+                )
             } else {
                 StatisticsContent(
                     uiState = uiState,
@@ -362,14 +366,6 @@ private fun StatisticsContent(
             )
         }
 
-        // ── Empty state ───────────────────────────────────
-        if (uiState.dailyStats.all { it.sessionCount == 0 }) {
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                EmptyStatsState()
-            }
-        }
-
         // Bottom spacer
         item {
             Spacer(modifier = Modifier.height(16.dp))
@@ -565,9 +561,11 @@ private fun ReadingActivityChart(
 }
 
 @Composable
-private fun EmptyStatsState() {
+private fun EmptyStatsState(
+    modifier: Modifier = Modifier
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
