@@ -60,6 +60,7 @@ class TTSService : Service() {
         const val EXTRA_VOICE_NAME = "extra_voice_name"
 
         const val EXTRA_TEXT = "extra_text"
+        const val EXTRA_BOOK_TITLE = "extra_book_title"
         const val EXTRA_LOCALE = "extra_locale"
         const val EXTRA_SLEEP_MINUTES = "extra_sleep_minutes"
 
@@ -89,10 +90,15 @@ class TTSService : Service() {
         const val ACTION_TTS_STATE = "com.mimiral.app.tts.ACTION_TTS_STATE"
         const val EXTRA_TTS_STATE = "extra_tts_state"
 
-        fun createPlayIntent(context: Context, text: String? = null): Intent {
+        fun createPlayIntent(
+            context: Context,
+            text: String? = null,
+            bookTitle: String? = null
+        ): Intent {
             return Intent(context, TTSService::class.java).apply {
                 action = ACTION_PLAY
                 text?.let { putExtra(EXTRA_TEXT, it) }
+                bookTitle?.let { putExtra(EXTRA_BOOK_TITLE, it) }
             }
         }
 
@@ -188,6 +194,11 @@ class TTSService : Service() {
     private var mediaSession: MediaSessionCompat? = null
     private var notificationManager: NotificationManager? = null
     private var currentText: String = ""
+    private var currentBookTitle: String = ""
+
+    // Set when ACTION_PLAY arrives while the engine is still initializing,
+    // so we can replay the request once initialization completes.
+    private var pendingPlay: Boolean = false
 
     // Sleep timer state
     private var sleepTimerActive = false
@@ -212,16 +223,21 @@ class TTSService : Service() {
             onInitialized = { success ->
                 if (success) {
                     Log.d(TAG, "TTS engine ready in service")
-                    // Load persisted settings asynchronously to avoid blocking main thread
                     val repo = com.mimiral.app.data.local.settings.TTSSettingsRepository(
                         applicationContext
                     )
                     serviceScope.launch {
                         loadPersistedSettings(repo)
                         broadcastTTSState()
+                        // Replay a play request that arrived while we were still initializing.
+                        if (pendingPlay && currentText.isNotBlank()) {
+                            pendingPlay = false
+                            handlePlay()
+                        }
                     }
                 } else {
                     Log.e(TAG, "TTS engine failed to initialize in service")
+                    pendingPlay = false
                     stopSelf()
                 }
             }
@@ -257,6 +273,9 @@ class TTSService : Service() {
                 val text = intent.getStringExtra(EXTRA_TEXT) ?: ""
                 if (text.isNotBlank()) {
                     currentText = text
+                }
+                intent.getStringExtra(EXTRA_BOOK_TITLE)?.takeIf { it.isNotBlank() }?.let {
+                    currentBookTitle = it
                 }
                 handlePlay()
             }
@@ -520,11 +539,15 @@ class TTSService : Service() {
         }
         when (mgr.state) {
             TTSState.INITIALIZING -> {
-                Log.w(TAG, "handlePlay: TTS engine still initializing, ignoring play request")
+                Log.d(TAG, "handlePlay: TTS engine still initializing, queuing play request")
+                pendingPlay = true
                 return
             }
             TTSState.IDLE, TTSState.STOPPED -> {
-                Log.w(TAG, "handlePlay: TTS engine not ready (state=${mgr.state}), ignoring play request")
+                Log.w(
+                    TAG,
+                    "handlePlay: TTS engine not ready (state=${mgr.state}), ignoring play request"
+                )
                 return
             }
             else -> { /* READY, PLAYING, PAUSED — proceed */ }
@@ -728,10 +751,12 @@ class TTSService : Service() {
     }
 
     private fun buildNotificationText(): String {
-        val baseText = if (currentText.isNotBlank()) {
-            currentText.take(80) + if (currentText.length > 80) "..." else ""
-        } else {
-            getString(R.string.tts_notification_text)
+        val baseText = when {
+            currentBookTitle.isNotBlank() -> currentBookTitle
+            currentText.isNotBlank() -> {
+                currentText.take(80) + if (currentText.length > 80) "..." else ""
+            }
+            else -> getString(R.string.tts_notification_text)
         }
 
         return if (sleepTimerActive && sleepTimerRemainingSeconds > 0) {

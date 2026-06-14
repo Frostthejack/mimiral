@@ -125,11 +125,7 @@ class PaginationEngine(private val context: Context) {
         screenHeightPx: Int
     ): PaginationResult {
         if (blocks.isEmpty()) {
-            val result = PaginationResult(
-                pages = listOf(ContentPage(0, emptyList(), 0)),
-                totalPages = 1,
-                config = config
-            )
+            val result = PaginationResult(pages = emptyList(), totalPages = 0, config = config)
             _paginationResult = mutableStateOf(result)
             return result
         }
@@ -180,11 +176,7 @@ class PaginationEngine(private val context: Context) {
         screenHeightPx: Int
     ): PaginationResult {
         if (text.isBlank()) {
-            val result = PaginationResult(
-                pages = listOf(ContentPage(0, emptyList(), 0)),
-                totalPages = 1,
-                config = config
-            )
+            val result = PaginationResult(pages = emptyList(), totalPages = 0, config = config)
             _paginationResult = mutableStateOf(result)
             return result
         }
@@ -347,9 +339,7 @@ class PaginationEngine(private val context: Context) {
             )
         }
 
-        return pages.ifEmpty {
-            listOf(ContentPage(0, emptyList(), 0))
-        }
+        return pages
     }
 
     /**

@@ -71,7 +71,9 @@ import com.mimiral.app.data.reader.Sentence
 import com.mimiral.app.data.reader.TextSpan
 import com.mimiral.app.tts.TTSService
 import com.mimiral.app.tts.TTSState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Reading Mode screen — reflowable text display for books.
@@ -116,6 +118,7 @@ fun ReadingModeScreen(
 
     // Track last paginated settings to avoid re-paginating on every recomposition
     var lastPaginatedFont by remember { mutableIntStateOf(-1) }
+    var isPaginating by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.chapters, textSettings.fontSize) {
         if (uiState.chapters.isEmpty()) return@LaunchedEffect
@@ -123,61 +126,67 @@ fun ReadingModeScreen(
             return@LaunchedEffect
         }
         lastPaginatedFont = textSettings.fontSize
+        isPaginating = true
 
-        val allPages = mutableListOf<ReadingPage>()
-        var globalPageIndex = 0
+        val capturedChapters = uiState.chapters
+        val renderConfig = textSettings.toRenderConfig()
 
-        for (chapter in uiState.chapters) {
-            val renderConfig = textSettings.toRenderConfig()
+        val allPages = withContext(Dispatchers.Default) {
+            val result = mutableListOf<ReadingPage>()
+            var globalPageIndex = 0
 
-            // Use structured pagination when contentBlocks are available
-            if (chapter.contentBlocks.isNotEmpty()) {
-                val result = paginationEngine.paginateBlocks(
-                    blocks = chapter.contentBlocks,
-                    config = renderConfig,
-                    screenWidthPx = screenWidthPx,
-                    screenHeightPx = screenHeightPx
-                )
-
-                for (page in result.pages) {
-                    val pageText = page.blocks.joinToString("\n\n") { it.text }
-                    allPages.add(
-                        ReadingPage(
-                            pageIndex = globalPageIndex++,
-                            chapterIndex = chapter.index,
-                            text = pageText,
-                            startCharOffset = page.startCharOffset,
-                            contentBlocks = page.blocks
-                        )
+            for (chapter in capturedChapters) {
+                // Use structured pagination when contentBlocks are available
+                if (chapter.contentBlocks.isNotEmpty()) {
+                    val paginated = paginationEngine.paginateBlocks(
+                        blocks = chapter.contentBlocks,
+                        config = renderConfig,
+                        screenWidthPx = screenWidthPx,
+                        screenHeightPx = screenHeightPx
                     )
-                }
-            } else {
-                // Fallback to text-based pagination for chapters without blocks
-                val chapterText = chapter.paragraphs.joinToString("\n\n") { it.text }
-                if (chapterText.isBlank()) continue
 
-                val result = paginationEngine.paginate(
-                    text = chapterText,
-                    config = renderConfig,
-                    screenWidthPx = screenWidthPx,
-                    screenHeightPx = screenHeightPx
-                )
-
-                for (page in result.pages) {
-                    allPages.add(
-                        ReadingPage(
-                            pageIndex = globalPageIndex++,
-                            chapterIndex = chapter.index,
-                            text = page.blocks.joinToString("\n\n") { it.text },
-                            startCharOffset = page.startCharOffset,
-                            contentBlocks = page.blocks
+                    for (page in paginated.pages) {
+                        val pageText = page.blocks.joinToString("\n\n") { it.text }
+                        result.add(
+                            ReadingPage(
+                                pageIndex = globalPageIndex++,
+                                chapterIndex = chapter.index,
+                                text = pageText,
+                                startCharOffset = page.startCharOffset,
+                                contentBlocks = page.blocks
+                            )
                         )
+                    }
+                } else {
+                    // Fallback to text-based pagination for chapters without blocks
+                    val chapterText = chapter.paragraphs.joinToString("\n\n") { it.text }
+                    if (chapterText.isBlank()) continue
+
+                    val paginated = paginationEngine.paginate(
+                        text = chapterText,
+                        config = renderConfig,
+                        screenWidthPx = screenWidthPx,
+                        screenHeightPx = screenHeightPx
                     )
+
+                    for (page in paginated.pages) {
+                        result.add(
+                            ReadingPage(
+                                pageIndex = globalPageIndex++,
+                                chapterIndex = chapter.index,
+                                text = page.blocks.joinToString("\n\n") { it.text },
+                                startCharOffset = page.startCharOffset,
+                                contentBlocks = page.blocks
+                            )
+                        )
+                    }
                 }
             }
+            result
         }
 
         viewModel.setPages(allPages)
+        isPaginating = false
     }
 
     // Pager state
@@ -458,8 +467,8 @@ fun ReadingModeScreen(
         }
     ) { paddingValues ->
         when {
-            uiState.isLoading -> {
-                // Loading state
+            uiState.isLoading || isPaginating -> {
+                // Loading/paginating state
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -470,7 +479,11 @@ fun ReadingModeScreen(
                         CircularProgressIndicator()
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Extracting text content\u2026",
+                            text = if (uiState.isLoading) {
+                                "Extracting text content\u2026"
+                            } else {
+                                "Preparing pages\u2026"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -506,8 +519,8 @@ fun ReadingModeScreen(
                 }
             }
 
-            uiState.paragraphs.isEmpty() -> {
-                // Empty content
+            uiState.pages.isEmpty() && uiState.chapters.isEmpty() -> {
+                // Truly empty — no content at all
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

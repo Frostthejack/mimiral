@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -54,6 +56,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,20 +66,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusTarget
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mimiral.app.data.local.settings.PageTurnStyle
 import com.mimiral.app.data.local.settings.ReaderSettings
 import com.mimiral.app.data.local.settings.ReaderSettingsRepository
 import com.mimiral.app.data.local.settings.TTSSettingsRepository
+import com.mimiral.app.data.reader.ContentBlock
 import com.mimiral.app.data.reader.Sentence
+import com.mimiral.app.data.reader.TextSpan
 import com.mimiral.app.tts.TTSService
 import com.mimiral.app.tts.TTSState
 import kotlin.math.abs
@@ -126,15 +138,30 @@ fun EpubReaderScreen(
         }
     }
 
-    // Paginate text whenever text settings or content changes
+    // Paginate whenever content or text settings change — prefer structured blocks when available.
+    // Run on Default dispatcher to avoid blocking the UI thread during StaticLayout measurement.
     var paginationResult by remember { mutableStateOf<PaginationResult?>(null) }
     LaunchedEffect(chapterText, textSettings, screenWidthPx, screenHeightPx) {
-        paginationResult = paginationEngine.paginate(
-            text = chapterText,
-            config = textSettings.toRenderConfig(),
-            screenWidthPx = screenWidthPx,
-            screenHeightPx = screenHeightPx
-        )
+        val capturedBlocks = uiState.contentBlocks
+        val capturedText = chapterText
+        val renderConfig = textSettings.toRenderConfig()
+        paginationResult = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            if (capturedBlocks.isNotEmpty()) {
+                paginationEngine.paginateBlocks(
+                    blocks = capturedBlocks,
+                    config = renderConfig,
+                    screenWidthPx = screenWidthPx,
+                    screenHeightPx = screenHeightPx
+                )
+            } else {
+                paginationEngine.paginate(
+                    text = capturedText,
+                    config = renderConfig,
+                    screenWidthPx = screenWidthPx,
+                    screenHeightPx = screenHeightPx
+                )
+            }
+        }
     }
 
     // Apply default font family from preferences on first load
@@ -171,6 +198,11 @@ fun EpubReaderScreen(
     var toolbarVisible by remember { mutableStateOf(false) }
     var showTextSettings by remember { mutableStateOf(false) }
 
+    // TTS highlight offset tracking: map page indices to their start offset within
+    // the textToRead string that was passed to TtsControlsHelper.play().
+    var ttsStartPage by remember { mutableIntStateOf(-1) }
+    var ttsPageOffsets by remember { mutableStateOf(emptyList<Int>()) }
+
     // Track page changes and notify ViewModel
     LaunchedEffect(pagerState.currentPage) {
         val chapterIndex = uiState.currentChapter
@@ -188,9 +220,15 @@ fun EpubReaderScreen(
         focusRequester.requestFocus()
     }
 
-    // Volume key handler
-    val handleVolumeKey: (Int) -> Boolean = remember(settings) {
+    // Volume key handler — yields to system volume control while TTS is active
+    val ttsActiveForVolume =
+        uiState.ttsState == TTSState.PLAYING || uiState.ttsState == TTSState.PAUSED
+    val handleVolumeKey: (Int) -> Boolean = remember(settings, ttsActiveForVolume) {
         { keyCode ->
+            // When TTS is playing/paused, let the system handle volume keys so the
+            // user can adjust media volume without turning pages.
+            if (ttsActiveForVolume) return@remember false
+
             if (!settings.volumeKeyNavigationEnabled) {
                 return@remember false
             }
@@ -219,7 +257,21 @@ fun EpubReaderScreen(
                     }
                     true
                 }
-                else -> true
+                else -> false
+            }
+        }
+    }
+
+    // Route volume keys to STREAM_MUSIC while TTS is active so the hardware buttons
+    // control audio volume rather than being ignored.
+    val activity = context as? android.app.Activity
+    DisposableEffect(ttsActiveForVolume) {
+        if (ttsActiveForVolume) {
+            activity?.setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC)
+        }
+        onDispose {
+            if (ttsActiveForVolume) {
+                activity?.setVolumeControlStream(android.media.AudioManager.USE_DEFAULT_STREAM_TYPE)
             }
         }
     }
@@ -285,7 +337,11 @@ fun EpubReaderScreen(
         fun registerTtsReceiver(receiver: BroadcastReceiver, action: String) {
             val filter = IntentFilter(action)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(receiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+                context.registerReceiver(
+                    receiver,
+                    filter,
+                    android.content.Context.RECEIVER_NOT_EXPORTED
+                )
             } else {
                 context.registerReceiver(receiver, filter)
             }
@@ -366,13 +422,33 @@ fun EpubReaderScreen(
                         val isTtsReady = uiState.ttsState == TTSState.READY
                         if (isTtsIdle || isTtsReady) {
                             IconButton(onClick = {
+                                // Build text from the current page forward (capped at 150 K chars to
+                                // stay under Android's ~1 MB binder transaction limit), and record the
+                                // start offset of each page within that string so word highlights can
+                                // be mapped back to the correct position inside each block's text.
+                                val offsets = mutableListOf<Int>()
                                 val textToRead = if (pages.isNotEmpty()) {
-                                    pages.joinToString("\n\n") { it.text }
+                                    buildString {
+                                        var cumOffset = 0
+                                        for (i in pagerState.currentPage until pages.size) {
+                                            val t = pages.getOrNull(i)?.text ?: break
+                                            if (isNotEmpty()) {
+                                                append("\n\n")
+                                                cumOffset += 2
+                                            }
+                                            offsets.add(cumOffset)
+                                            append(t)
+                                            cumOffset += t.length
+                                            if (length > 150_000) break
+                                        }
+                                    }
                                 } else {
                                     ""
                                 }
                                 if (textToRead.isNotBlank()) {
-                                    TtsControlsHelper.play(context, textToRead)
+                                    ttsStartPage = pagerState.currentPage
+                                    ttsPageOffsets = offsets
+                                    TtsControlsHelper.play(context, textToRead, currentChapterTitle)
                                 }
                             }) {
                                 Icon(
@@ -698,10 +774,22 @@ fun EpubReaderScreen(
                                 )
                             }
                     ) {
-                        val pageText = pages.getOrNull(pageIndex)?.text ?: ""
+                        val page = pages.getOrNull(pageIndex)
+                        val pageText = page?.text ?: ""
+                        val pageBlocks = page?.blocks ?: emptyList()
+
+                        // Compute this page's start offset within the textToRead string that
+                        // was passed to TTS. Used to convert full-text word positions to
+                        // block-local positions for accurate karaoke highlighting.
+                        val ttsPageOffset = if (ttsStartPage >= 0 && pageIndex >= ttsStartPage) {
+                            ttsPageOffsets.getOrNull(pageIndex - ttsStartPage) ?: -1
+                        } else {
+                            -1
+                        }
 
                         EpubPageContent(
                             pageText = pageText,
+                            contentBlocks = pageBlocks,
                             pageNumber = pageIndex + 1,
                             totalPages = pageCount,
                             chapterTitle = if (pageIndex == 0) {
@@ -728,6 +816,7 @@ fun EpubReaderScreen(
                             } else {
                                 -1
                             },
+                            ttsPageOffset = ttsPageOffset,
                             onLongPress = onTextLongPress
                         )
                     }
@@ -856,6 +945,7 @@ private fun buildProgressText(uiState: ReaderUiState): String {
 @Composable
 private fun EpubPageContent(
     pageText: String,
+    contentBlocks: List<ContentBlock> = emptyList(),
     pageNumber: Int,
     totalPages: Int,
     chapterTitle: String? = null,
@@ -864,79 +954,320 @@ private fun EpubPageContent(
     ttsSentence: Sentence? = null,
     ttsWordStart: Int = -1,
     ttsWordEnd: Int = -1,
+    ttsPageOffset: Int = -1,
     onLongPress: (String, Int, Int) -> Unit = { _, _, _ -> }
 ) {
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
+    val highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+    val fontScale = textSettings.fontSize.toFloat() / 18f
+    val lineHeight = textSettings.lineSpacingMultiplier
 
-    // Auto-scroll to keep the highlighted TTS word visible in the viewport.
-    // Approximates pixel position from character ratio in the text.
+    // Auto-scroll to keep highlighted TTS word visible (only for plain-text fallback path).
     LaunchedEffect(ttsWordStart, ttsWordEnd) {
-        if (ttsWordStart >= 0 && ttsWordEnd > ttsWordStart && pageText.isNotEmpty()) {
-            val charRatio = ttsWordStart.toFloat() / pageText.length.toFloat()
-            // Estimate total content height from line count and font size
-            val lineHeightDp = textSettings.fontSize * textSettings.lineSpacingMultiplier
-            val estimatedLineHeightPx: Float = with(density) {
-                lineHeightDp.dp.toPx()
-            }
-            val approximateLineCount: Float =
-                (pageText.count { it == '\n' } + 1).toFloat()
+        if (contentBlocks.isNotEmpty()) return@LaunchedEffect
+        val localStart = if (ttsPageOffset >= 0 && ttsWordStart >= 0) {
+            ttsWordStart - ttsPageOffset
+        } else {
+            ttsWordStart
+        }
+        if (localStart >= 0 && ttsWordEnd > ttsWordStart && pageText.isNotEmpty()) {
+            val charRatio = localStart.toFloat() / pageText.length.toFloat()
+            val lineHeightDp = textSettings.fontSize * lineHeight
+            val estimatedLineHeightPx: Float = with(density) { lineHeightDp.dp.toPx() }
+            val approximateLineCount: Float = (pageText.count { it == '\n' } + 1).toFloat()
             val totalHeightPx: Float = approximateLineCount * estimatedLineHeightPx
             val targetPx: Int = (charRatio * totalHeightPx).toInt()
-            // Scroll to bring the target into view, centering it if possible
             val viewportHeight = scrollState.maxValue
             val centeredTarget = (targetPx - viewportHeight / 2).coerceIn(0, scrollState.maxValue)
             if (kotlin.math.abs(scrollState.value - centeredTarget) > viewportHeight / 4) {
-                kotlinx.coroutines.delay(50) // small delay to avoid jank
+                kotlinx.coroutines.delay(50)
                 scrollState.animateScrollTo(centeredTarget)
             }
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(
-                start = textSettings.marginLeft.dp,
-                end = textSettings.marginRight.dp,
-                top = textSettings.marginTop.dp,
-                bottom = textSettings.marginBottom.dp
-            )
-            .verticalScroll(scrollState)
-    ) {
-        if (chapterTitle != null && pageNumber == 1) {
-            Text(
-                text = chapterTitle,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+    if (contentBlocks.isNotEmpty()) {
+        val baseParagraphStyle = MaterialTheme.typography.bodyLarge.copy(
+            fontSize = textSettings.fontSize.toFloat().sp,
+            lineHeight = (textSettings.fontSize.toFloat() * lineHeight).sp,
+            fontFamily = textSettings.selectedFontFamily.fontFamily
+        )
+
+        // Precompute each block's start offset within the page's text
+        // (blocks joined with "\n\n"). Used to convert full-text TTS word
+        // positions to block-local positions for accurate highlighting.
+        val blockStartOffsets = remember(contentBlocks) {
+            var off = 0
+            contentBlocks.map { block ->
+                val s = off
+                off += block.text.length + 2 // +2 for "\n\n" separator between blocks
+                s
+            }
         }
 
-        HighlightableText(
-            text = pageText,
-            highlights = highlights,
-            textSettings = textSettings,
-            ttsSentence = ttsSentence,
-            ttsWordStart = ttsWordStart,
-            ttsWordEnd = ttsWordEnd,
-            onLongPress = onLongPress,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "$pageNumber",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp)
-                .wrapContentWidth(Alignment.CenterHorizontally)
-        )
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(
+                    start = textSettings.marginLeft.dp,
+                    end = textSettings.marginRight.dp,
+                    top = textSettings.marginTop.dp,
+                    bottom = textSettings.marginBottom.dp
+                )
+        ) {
+            if (chapterTitle != null && pageNumber == 1) {
+                item {
+                    Text(
+                        text = chapterTitle,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+                }
+            }
+            itemsIndexed(contentBlocks, key = { index, _ -> index }) { blockIndex, block ->
+                // Convert full-text TTS word positions to positions within this block.
+                // blockStartInText is the block's start offset within textToRead.
+                // Only highlight if the current word falls inside this block's range.
+                val blockLocalOffset = blockStartOffsets.getOrNull(blockIndex) ?: 0
+                val blockStartInText =
+                    if (ttsPageOffset >= 0) ttsPageOffset + blockLocalOffset else -1
+                val showBlockHighlight = blockStartInText >= 0 &&
+                    ttsWordStart >= blockStartInText &&
+                    ttsWordStart < blockStartInText + block.text.length
+                val localTtsStart = if (showBlockHighlight) ttsWordStart - blockStartInText else -1
+                val localTtsEnd = if (showBlockHighlight) ttsWordEnd - blockStartInText else -1
+
+                when (block) {
+                    is ContentBlock.Heading -> {
+                        val headingStyle = when (block.level) {
+                            1 -> MaterialTheme.typography.headlineLarge.copy(
+                                fontSize = (32f * fontScale).sp,
+                                lineHeight = (32f * fontScale * lineHeight).sp,
+                                fontFamily = textSettings.selectedFontFamily.fontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                            2 -> MaterialTheme.typography.headlineMedium.copy(
+                                fontSize = (28f * fontScale).sp,
+                                lineHeight = (28f * fontScale * lineHeight).sp,
+                                fontFamily = textSettings.selectedFontFamily.fontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                            3 -> MaterialTheme.typography.titleMedium.copy(
+                                fontSize = (22f * fontScale).sp,
+                                lineHeight = (22f * fontScale * lineHeight).sp,
+                                fontFamily = textSettings.selectedFontFamily.fontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                            else -> MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = (18f * fontScale).sp,
+                                lineHeight = (18f * fontScale * lineHeight).sp,
+                                fontFamily = textSettings.selectedFontFamily.fontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Text(
+                            text = applyEpubTtsHighlight(
+                                block.text,
+                                localTtsStart,
+                                localTtsEnd,
+                                highlightColor
+                            ),
+                            style = headingStyle,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        )
+                    }
+                    is ContentBlock.Paragraph -> {
+                        val style = if (block.isBold) {
+                            baseParagraphStyle.copy(fontWeight = FontWeight.Bold)
+                        } else {
+                            baseParagraphStyle
+                        }
+                        Text(
+                            text = buildEpubParagraphAnnotatedString(
+                                block.text,
+                                block.spans,
+                                localTtsStart,
+                                localTtsEnd,
+                                highlightColor
+                            ),
+                            style = style,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        )
+                    }
+                    is ContentBlock.Quote -> {
+                        val quoteStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = (16f * fontScale).sp,
+                            lineHeight = (16f * fontScale * lineHeight).sp,
+                            fontStyle = FontStyle.Italic,
+                            fontFamily = textSettings.selectedFontFamily.fontFamily,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = applyEpubTtsHighlight(
+                                block.text,
+                                localTtsStart,
+                                localTtsEnd,
+                                highlightColor
+                            ),
+                            style = quoteStyle,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 24.dp, top = 4.dp, bottom = 4.dp)
+                        )
+                    }
+                    is ContentBlock.ListItem -> {
+                        // Displayed text has a prefix ("• " or "N. ") that is not in block.text,
+                        // so shift localTts offsets right by the prefix length.
+                        val prefix = if (block.order > 0) "${block.order}. " else "• "
+                        Text(
+                            text = applyEpubTtsHighlight(
+                                "$prefix${block.text}",
+                                if (localTtsStart >= 0) localTtsStart + prefix.length else -1,
+                                if (localTtsEnd >= 0) localTtsEnd + prefix.length else -1,
+                                highlightColor
+                            ),
+                            style = baseParagraphStyle,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, top = 2.dp, bottom = 2.dp)
+                        )
+                    }
+                    is ContentBlock.Rule -> {
+                        HorizontalDivider(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+            item {
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = "$pageNumber",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                        .wrapContentWidth(Alignment.CenterHorizontally)
+                )
+            }
+        }
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(
+                    start = textSettings.marginLeft.dp,
+                    end = textSettings.marginRight.dp,
+                    top = textSettings.marginTop.dp,
+                    bottom = textSettings.marginBottom.dp
+                )
+                .verticalScroll(scrollState)
+        ) {
+            if (chapterTitle != null && pageNumber == 1) {
+                Text(
+                    text = chapterTitle,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+            }
+
+            // Convert full-text TTS positions to page-local positions.
+            val pageLocalTtsStart = if (ttsPageOffset >= 0 && ttsWordStart >= 0) {
+                ttsWordStart - ttsPageOffset
+            } else {
+                ttsWordStart
+            }
+            val pageLocalTtsEnd = if (ttsPageOffset >= 0 && ttsWordEnd >= 0) {
+                ttsWordEnd - ttsPageOffset
+            } else {
+                ttsWordEnd
+            }
+            HighlightableText(
+                text = pageText,
+                highlights = highlights,
+                textSettings = textSettings,
+                ttsSentence = ttsSentence,
+                ttsWordStart = pageLocalTtsStart,
+                ttsWordEnd = pageLocalTtsEnd,
+                onLongPress = onLongPress,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Text(
+                text = "$pageNumber",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .wrapContentWidth(Alignment.CenterHorizontally)
+            )
+        }
+    }
+}
+
+private fun applyEpubTtsHighlight(
+    text: String,
+    ttsWordStart: Int,
+    ttsWordEnd: Int,
+    highlightColor: Color
+): AnnotatedString {
+    if (ttsWordStart < 0 || ttsWordEnd <= ttsWordStart) return AnnotatedString(text)
+    val localEnd = ttsWordEnd.coerceAtMost(text.length)
+    val localStart = ttsWordStart.coerceAtLeast(0).coerceAtMost(localEnd)
+    return if (localStart < localEnd) {
+        buildAnnotatedString {
+            append(text)
+            addStyle(SpanStyle(background = highlightColor), localStart, localEnd)
+        }
+    } else {
+        AnnotatedString(text)
+    }
+}
+
+private fun buildEpubParagraphAnnotatedString(
+    text: String,
+    spans: List<TextSpan>,
+    ttsWordStart: Int,
+    ttsWordEnd: Int,
+    highlightColor: Color
+): AnnotatedString {
+    return buildAnnotatedString {
+        append(text)
+        for (span in spans) {
+            val spanStyle = SpanStyle(
+                fontWeight = if (span.isBold) FontWeight.Bold else null,
+                fontStyle = if (span.isItalic) FontStyle.Italic else null
+            )
+            addStyle(
+                style = spanStyle,
+                start = span.start.coerceIn(0, text.length),
+                end = span.end.coerceIn(0, text.length)
+            )
+        }
+        if (ttsWordStart >= 0 && ttsWordEnd > ttsWordStart) {
+            val localEnd = ttsWordEnd.coerceAtMost(text.length)
+            val localStart = ttsWordStart.coerceAtLeast(0).coerceAtMost(localEnd)
+            if (localStart < localEnd) {
+                addStyle(SpanStyle(background = highlightColor), localStart, localEnd)
+            }
+        }
     }
 }
 

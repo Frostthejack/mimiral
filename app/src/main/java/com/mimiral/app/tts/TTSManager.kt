@@ -27,7 +27,9 @@ enum class TTSState {
 data class TTSQueueItem(
     val utteranceId: String = UUID.randomUUID().toString(),
     val text: String,
-    val locale: Locale = Locale.getDefault()
+    val locale: Locale = Locale.getDefault(),
+    /** Character offset of this utterance's start in the full text, for word-highlight mapping. */
+    val startOffset: Int = 0
 )
 
 data class TTSSettings(
@@ -59,6 +61,7 @@ class TTSManager(
     }
 
     private var ttsEngine: TextToSpeech? = null
+
     @Volatile
     private var _state: TTSState = TTSState.IDLE
     val state: TTSState get() = _state
@@ -76,6 +79,10 @@ class TTSManager(
 
     private var chapterBoundaries: List<ChapterBoundary> = emptyList()
     private var paragraphBoundaries: List<ParagraphBoundary> = emptyList()
+
+    /** Start offset (in full text) of the utterance currently being spoken. */
+    @Volatile
+    private var currentUtteranceOffset: Int = 0
 
     @Volatile
     var onInitialized: ((Boolean) -> Unit)? = null
@@ -169,11 +176,9 @@ class TTSManager(
 
     fun play(text: String, locale: Locale = settings.locale) {
         if (text.isBlank()) return
-        val processedText = preprocessor.preprocess(text)
-        val item = TTSQueueItem(text = processedText, locale = locale)
-        synchronized(queueLock) { queue.addLast(item) }
         fullText = text
         currentOffset = 0
+        currentUtteranceOffset = 0
 
         // Extract sentence boundaries for highlighting
         currentSentences = sentenceDetector.findSentences(fullText)
@@ -182,6 +187,40 @@ class TTSManager(
             TAG,
             "play: extracted ${currentSentences.size} sentences from ${fullText.length} chars"
         )
+
+        // Enqueue each sentence as its own utterance — Android TTS caps single utterances
+        // at TextToSpeech.getMaxSpeechInputLength() (typically 4000 chars). Sending more
+        // returns ERROR_INVALID_REQUEST (-8) and produces no audio.
+        synchronized(queueLock) {
+            if (currentSentences.isNotEmpty()) {
+                for (sentence in currentSentences) {
+                    val sentenceText = preprocessor.preprocess(sentence.text)
+                    if (sentenceText.isNotBlank()) {
+                        queue.addLast(
+                            TTSQueueItem(
+                                text = sentenceText,
+                                locale = locale,
+                                startOffset = sentence.start
+                            )
+                        )
+                    }
+                }
+            } else {
+                // No sentence boundaries detected; chunk to stay under 4000-char limit
+                val processedText = preprocessor.preprocess(text)
+                var offset = 0
+                while (offset < processedText.length) {
+                    val end = minOf(offset + 3500, processedText.length)
+                    val chunk = processedText.substring(offset, end).trim()
+                    if (chunk.isNotBlank()) {
+                        queue.addLast(
+                            TTSQueueItem(text = chunk, locale = locale, startOffset = offset)
+                        )
+                    }
+                    offset = end
+                }
+            }
+        }
 
         // Fire callback for first sentence
         if (currentSentenceIndex >= 0) {
@@ -487,7 +526,6 @@ class TTSManager(
         val item = synchronized(queueLock) {
             if (queue.isEmpty()) {
                 _state = TTSState.READY
-                // All utterances done — clear sentence and word highlight
                 currentSentenceIndex = -1
                 onSentenceChanged.forEach { cb -> cb(null) }
                 onWordCleared.forEach { cb -> cb() }
@@ -495,6 +533,7 @@ class TTSManager(
             }
             queue.removeFirst()
         }
+        currentUtteranceOffset = item.startOffset
         _state = TTSState.PLAYING
         if (engine.language != item.locale) {
             engine.language = item.locale
@@ -517,6 +556,15 @@ class TTSManager(
         engine.setSpeechRate(settings.speechRate)
         engine.setPitch(settings.pitch)
         engine.language = settings.locale
+        // Route TTS audio through STREAM_MUSIC so volume keys control media volume.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            engine.setAudioAttributes(
+                android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
+        }
     }
 
     /**
@@ -569,11 +617,20 @@ class TTSManager(
                     if (_state == TTSState.PLAYING || _state == TTSState.READY) { speakNext() }
                 }
                 override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
-                    utteranceId?.let { id -> onRangeProgress.forEach { cb -> cb(id, start, end) } }
-                    // Update sentence highlight based on word position
-                    updateCurrentSentence(start)
-                    // Update word-level highlight
-                    onWordChanged.forEach { cb -> cb(start, end) }
+                    // Adjust offsets from utterance-relative to full-text-relative
+                    val fullStart = currentUtteranceOffset + start
+                    val fullEnd = currentUtteranceOffset + end
+                    utteranceId?.let { id ->
+                        onRangeProgress.forEach { cb ->
+                            cb(
+                                id,
+                                fullStart,
+                                fullEnd
+                            )
+                        }
+                    }
+                    updateCurrentSentence(fullStart)
+                    onWordChanged.forEach { cb -> cb(fullStart, fullEnd) }
                 }
             })
         }

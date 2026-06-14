@@ -4,8 +4,8 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.mimiral.app.data.local.dao.ServerDao
 import androidx.room.withTransaction
+import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.local.database.MimiralDatabase
 import com.mimiral.app.data.local.entity.ServerEntity
 import com.mimiral.app.data.remote.ConnectionStatus
@@ -422,9 +422,38 @@ class KavitaSetupViewModel @Inject constructor(
                     )
                 }
             }
+        } catch (e: java.net.UnknownHostException) {
+            val host = e.message?.substringBefore(":") ?: baseUrl
+            Result.failure(
+                Exception(
+                    "Cannot resolve '$host'. If using Tailscale, make sure " +
+                        "Tailscale is connected and the VPN is active on this device."
+                )
+            )
+        } catch (e: java.net.ConnectException) {
+            Result.failure(
+                Exception(
+                    "Connection refused at $baseUrl. " +
+                        "Check the server is running and the port is correct."
+                )
+            )
+        } catch (e: java.net.SocketTimeoutException) {
+            Result.failure(
+                Exception(
+                    "Connection timed out reaching $baseUrl. " +
+                        "Check the server is reachable from this network."
+                )
+            )
+        } catch (e: javax.net.ssl.SSLException) {
+            Result.failure(
+                Exception(
+                    "SSL/TLS error: ${e.message}. " +
+                        "If your server uses a self-signed certificate, try HTTP instead."
+                )
+            )
         } catch (e: java.io.IOException) {
             Result.failure(
-                Exception("Cannot reach server at $baseUrl — check the URL and network")
+                Exception("Cannot reach server at $baseUrl: ${e.message}")
             )
         } catch (e: Exception) {
             try {

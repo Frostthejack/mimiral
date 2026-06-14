@@ -549,8 +549,9 @@ class ReadingModeViewModel @Inject constructor(
 
                 val chapters = mutableListOf<ReadingChapter>()
                 val structuredExtractor = com.mimiral.app.data.reader.PdfStructuredExtractor()
-                val document = PDDocument.load(effectiveFile)
 
+                // Open once and reuse — avoids reopening the file for each section
+                val document = PDDocument.load(effectiveFile)
                 try {
                     val totalPages = document.numberOfPages
                     if (totalPages == 0) return@withContext emptyList<ReadingChapter>()
@@ -564,9 +565,9 @@ class ReadingModeViewModel @Inject constructor(
                     while (pageStart < totalPages) {
                         val pageEnd = minOf(pageStart + pagesPerChapter, totalPages)
 
-                        // Use structured extractor for richer content
-                        val blocks = structuredExtractor.extractPages(
-                            effectiveFile,
+                        // Use structured extractor with the already-open document
+                        val blocks = structuredExtractor.extractPagesFromDocument(
+                            document,
                             pageStart,
                             pageEnd - 1
                         )
@@ -589,7 +590,7 @@ class ReadingModeViewModel @Inject constructor(
                             )
                             chapterIndex++
                         } else {
-                            // Fallback to raw text extraction
+                            // Fallback to raw text extraction using the same document
                             val stripper = PDFTextStripper()
                             stripper.startPage = pageStart + 1
                             stripper.endPage = pageEnd
@@ -1139,9 +1140,26 @@ class ReadingModeViewModel @Inject constructor(
      * Prefers contentBlocks (structured) if available, falls back to paragraphs.
      */
     fun getFullText(): String {
-        val chapters = _uiState.value.chapters
-        val chapterIdx = _uiState.value.currentChapterIndex
-        val chapter = chapters.getOrNull(chapterIdx)
+        val pages = _uiState.value.pages
+        val currentPageIdx = _uiState.value.currentPageIndex
+        val currentChapterIdx = _uiState.value.currentChapterIndex
+
+        // Start reading from the current page, not the chapter beginning.
+        // Only include pages in the same chapter so the utterance is bounded.
+        if (pages.isNotEmpty()) {
+            val text = buildString {
+                for (i in currentPageIdx until pages.size) {
+                    val page = pages.getOrNull(i) ?: break
+                    if (page.chapterIndex != currentChapterIdx) break
+                    if (isNotEmpty()) append("\n\n")
+                    append(page.text)
+                }
+            }
+            if (text.isNotBlank()) return text
+        }
+
+        // Fallback when pages haven't been computed yet (e.g. still paginating)
+        val chapter = _uiState.value.chapters.getOrNull(currentChapterIdx)
         if (chapter != null && chapter.contentBlocks.isNotEmpty()) {
             return chapter.contentBlocks.joinToString("\n\n") { it.text }
         }

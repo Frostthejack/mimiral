@@ -213,8 +213,12 @@ private fun TtsSliderRow(
  */
 object TtsControlsHelper {
 
-    fun play(context: Context, text: String) {
-        val intent = TTSService.createPlayIntent(context, text)
+    fun play(context: Context, text: String, bookTitle: String = "") {
+        val intent = TTSService.createPlayIntent(
+            context,
+            text,
+            bookTitle.takeIf { it.isNotBlank() }
+        )
         context.startService(intent)
     }
 

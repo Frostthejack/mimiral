@@ -153,20 +153,38 @@ class PdfStructuredExtractor {
     fun extractPages(file: File, startPage: Int, endPage: Int): List<ContentBlock> {
         try {
             PDDocument.load(file).use { document ->
-                val allChunks = mutableListOf<FontChunk>()
-                val pageCount = document.numberOfPages
-                for (i in startPage..endPage.coerceAtMost(pageCount - 1)) {
-                    if (i >= 0) allChunks.addAll(collectChunks(document, i))
-                }
-                if (allChunks.isEmpty()) return emptyList()
-                val bodyFontSize = estimateBodyFontSize(allChunks)
-                val lines = assembleLines(allChunks)
-                return classifyLines(lines, bodyFontSize)
+                return extractPagesFromDocument(document, startPage, endPage)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to extract structured content from pages $startPage-$endPage", e)
             return emptyList()
         }
+    }
+
+    /**
+     * Extracts structured content blocks from a range of pages in an already-open document.
+     * Prefer this over [extractPages] when processing multiple sections of the same PDF,
+     * to avoid reopening the file on each call.
+     *
+     * @param document  An already-open [PDDocument].
+     * @param startPage Zero-based start page index (inclusive).
+     * @param endPage   Zero-based end page index (inclusive).
+     * @return List of [ContentBlock] for all pages in the range.
+     */
+    fun extractPagesFromDocument(
+        document: PDDocument,
+        startPage: Int,
+        endPage: Int
+    ): List<ContentBlock> {
+        val allChunks = mutableListOf<FontChunk>()
+        val pageCount = document.numberOfPages
+        for (i in startPage..endPage.coerceAtMost(pageCount - 1)) {
+            if (i >= 0) allChunks.addAll(collectChunks(document, i))
+        }
+        if (allChunks.isEmpty()) return emptyList()
+        val bodyFontSize = estimateBodyFontSize(allChunks)
+        val lines = assembleLines(allChunks)
+        return classifyLines(lines, bodyFontSize)
     }
 
     // ---- Chunk collection via PDFTextStripper ----
