@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -108,24 +109,41 @@ fun ReadingModeScreen(
     val configuration = LocalConfiguration.current
     val paginationEngine = remember { PaginationEngine(context) }
 
-    // Compute pages from chapters when chapters or text settings change
-    val screenWidthPx = remember(configuration) {
-        configuration.screenWidthDp * context.resources.displayMetrics.density.toInt()
+    // Fallback dimensions (full screen) until the actual content area is known.
+    // Using float density here avoids the .toInt() truncation bug (2.625 → 2) that
+    // caused page heights to be computed ~25% too small on high-density devices.
+    val displayDensity = context.resources.displayMetrics.density
+    val fallbackWidthPx = remember(configuration) {
+        (configuration.screenWidthDp * displayDensity).toInt()
     }
-    val screenHeightPx = remember(configuration) {
-        configuration.screenHeightDp * context.resources.displayMetrics.density.toInt()
+    val fallbackHeightPx = remember(configuration) {
+        (configuration.screenHeightDp * displayDensity).toInt()
     }
 
-    // Track last paginated settings to avoid re-paginating on every recomposition
+    // Actual content area size — populated by onSizeChanged after first layout.
+    // Pagination re-runs whenever these change so pages fit the real available space.
+    var contentWidthPx by remember { mutableIntStateOf(0) }
+    var contentHeightPx by remember { mutableIntStateOf(0) }
     var lastPaginatedFont by remember { mutableIntStateOf(-1) }
+    var lastPaginatedWidth by remember { mutableIntStateOf(0) }
+    var lastPaginatedHeight by remember { mutableIntStateOf(0) }
     var isPaginating by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uiState.chapters, textSettings.fontSize) {
+    LaunchedEffect(uiState.chapters, textSettings.fontSize, contentWidthPx, contentHeightPx) {
         if (uiState.chapters.isEmpty()) return@LaunchedEffect
-        if (textSettings.fontSize == lastPaginatedFont && uiState.pages.isNotEmpty()) {
+        val w = contentWidthPx.takeIf { it > 0 } ?: fallbackWidthPx
+        val h = contentHeightPx.takeIf { it > 0 } ?: fallbackHeightPx
+        if (w <= 0 || h <= 0) return@LaunchedEffect
+        if (textSettings.fontSize == lastPaginatedFont &&
+            w == lastPaginatedWidth &&
+            h == lastPaginatedHeight &&
+            uiState.pages.isNotEmpty()
+        ) {
             return@LaunchedEffect
         }
         lastPaginatedFont = textSettings.fontSize
+        lastPaginatedWidth = w
+        lastPaginatedHeight = h
         isPaginating = true
 
         val capturedChapters = uiState.chapters
@@ -141,8 +159,8 @@ fun ReadingModeScreen(
                     val paginated = paginationEngine.paginateBlocks(
                         blocks = chapter.contentBlocks,
                         config = renderConfig,
-                        screenWidthPx = screenWidthPx,
-                        screenHeightPx = screenHeightPx
+                        screenWidthPx = w,
+                        screenHeightPx = h
                     )
 
                     for (page in paginated.pages) {
@@ -165,8 +183,8 @@ fun ReadingModeScreen(
                     val paginated = paginationEngine.paginate(
                         text = chapterText,
                         config = renderConfig,
-                        screenWidthPx = screenWidthPx,
-                        screenHeightPx = screenHeightPx
+                        screenWidthPx = w,
+                        screenHeightPx = h
                     )
 
                     for (page in paginated.pages) {
@@ -466,13 +484,23 @@ fun ReadingModeScreen(
             }
         }
     ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .onSizeChanged { size ->
+                    if (size.width > 0 && size.height > 0 &&
+                        (size.width != contentWidthPx || size.height != contentHeightPx)
+                    ) {
+                        contentWidthPx = size.width
+                        contentHeightPx = size.height
+                    }
+                }
+        ) {
         when {
             uiState.isLoading || isPaginating -> {
-                // Loading/paginating state
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -492,11 +520,8 @@ fun ReadingModeScreen(
             }
 
             uiState.error != null -> {
-                // Error state
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -520,11 +545,8 @@ fun ReadingModeScreen(
             }
 
             uiState.pages.isEmpty() && uiState.chapters.isEmpty() -> {
-                // Truly empty — no content at all
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -536,18 +558,23 @@ fun ReadingModeScreen(
             }
 
             else -> {
-                // Reading content — HorizontalPager of paginated pages
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
+                    modifier = Modifier.fillMaxSize(),
                     beyondViewportPageCount = 1,
                     key = { index -> index }
                 ) { pageIndex ->
                     val page = uiState.pages.getOrNull(pageIndex)
                     if (page != null) {
-                        // Render the page text with proper formatting
+                        val ttsPageOffset = if (
+                            uiState.ttsStartPage >= 0 &&
+                                pageIndex >= uiState.ttsStartPage
+                        ) {
+                            uiState.ttsPageOffsets
+                                .getOrNull(pageIndex - uiState.ttsStartPage) ?: -1
+                        } else {
+                            -1
+                        }
                         PageTextContent(
                             text = page.text,
                             contentBlocks = page.contentBlocks,
@@ -559,7 +586,8 @@ fun ReadingModeScreen(
                             marginTop = textSettings.marginTop,
                             marginBottom = textSettings.marginBottom,
                             ttsWordStart = uiState.ttsWordStart,
-                            ttsWordEnd = uiState.ttsWordEnd
+                            ttsWordEnd = uiState.ttsWordEnd,
+                            ttsPageOffset = ttsPageOffset
                         )
                     }
                 }
@@ -596,9 +624,7 @@ fun ReadingModeScreen(
                         }
                     }
                 },
-                onDeleteBookmark = { bookmark ->
-                    // Delegate to existing bookmark management
-                },
+                onDeleteBookmark = { _ -> },
                 onDismiss = { viewModel.toggleBookmarkList() }
             )
         }
@@ -630,6 +656,7 @@ fun ReadingModeScreen(
                 onDismiss = { showVoicePicker = false }
             )
         }
+        } // end outer Box
     }
 }
 
@@ -656,7 +683,8 @@ private fun PageTextContent(
     marginTop: Int,
     marginBottom: Int,
     ttsWordStart: Int = -1,
-    ttsWordEnd: Int = -1
+    ttsWordEnd: Int = -1,
+    ttsPageOffset: Int = -1
 ) {
     val highlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
 
@@ -677,6 +705,17 @@ private fun PageTextContent(
             .filter { it.isNotEmpty() }
     }
 
+    // Cumulative char offsets of each content block within this page's text.
+    // Used to convert the TTS absolute word offset to a block-local offset.
+    val blockStartOffsets = remember(contentBlocks) {
+        var off = 0
+        contentBlocks.map { block ->
+            val s = off
+            off += block.text.length + 2 // +2 for the "\n\n" separator between blocks
+            s
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -694,7 +733,17 @@ private fun PageTextContent(
             itemsIndexed(
                 items = contentBlocks,
                 key = { index, _ -> index }
-            ) { _, block ->
+            ) { blockIndex, block ->
+                // Convert TTS absolute offset to block-local offset for accurate highlighting.
+                val blockLocalOffset = blockStartOffsets.getOrNull(blockIndex) ?: 0
+                val blockStartInText =
+                    if (ttsPageOffset >= 0) ttsPageOffset + blockLocalOffset else -1
+                val showBlockHighlight = blockStartInText >= 0 &&
+                    ttsWordStart >= blockStartInText &&
+                    ttsWordStart < blockStartInText + block.text.length
+                val localTtsStart = if (showBlockHighlight) ttsWordStart - blockStartInText else -1
+                val localTtsEnd = if (showBlockHighlight) ttsWordEnd - blockStartInText else -1
+
                 when (block) {
                     is ContentBlock.Heading -> {
                         val headingStyle = when (block.level) {
@@ -724,10 +773,7 @@ private fun PageTextContent(
                             )
                         }
                         val annotated = applyTtsHighlight(
-                            block.text,
-                            ttsWordStart,
-                            ttsWordEnd,
-                            highlightColor
+                            block.text, localTtsStart, localTtsEnd, highlightColor
                         )
                         Text(
                             text = annotated,
@@ -740,22 +786,17 @@ private fun PageTextContent(
 
                     is ContentBlock.Paragraph -> {
                         val style = if (block.isBold) {
-                            baseParagraphStyle.copy(
-                                fontWeight = FontWeight.Bold
-                            )
+                            baseParagraphStyle.copy(fontWeight = FontWeight.Bold)
                         } else {
                             baseParagraphStyle
                         }
-
-                        // Build annotated string with inline spans + TTS highlight
                         val annotated = buildParagraphAnnotatedString(
                             text = block.text,
                             spans = block.spans,
-                            ttsWordStart = ttsWordStart,
-                            ttsWordEnd = ttsWordEnd,
+                            ttsWordStart = localTtsStart,
+                            ttsWordEnd = localTtsEnd,
                             highlightColor = highlightColor
                         )
-
                         Text(
                             text = annotated,
                             style = style,
@@ -774,10 +815,7 @@ private fun PageTextContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         val annotated = applyTtsHighlight(
-                            block.text,
-                            ttsWordStart,
-                            ttsWordEnd,
-                            highlightColor
+                            block.text, localTtsStart, localTtsEnd, highlightColor
                         )
                         Text(
                             text = annotated,
@@ -791,11 +829,13 @@ private fun PageTextContent(
                     is ContentBlock.ListItem -> {
                         val prefix = if (block.order > 0) "${block.order}. " else "• "
                         val fullText = "$prefix${block.text}"
+                        // Shift by prefix length since the prefix is not in block.text
+                        val listStart =
+                            if (localTtsStart >= 0) localTtsStart + prefix.length else -1
+                        val listEnd =
+                            if (localTtsEnd >= 0) localTtsEnd + prefix.length else -1
                         val annotated = applyTtsHighlight(
-                            fullText,
-                            ttsWordStart,
-                            ttsWordEnd,
-                            highlightColor
+                            fullText, listStart, listEnd, highlightColor
                         )
                         Text(
                             text = annotated,

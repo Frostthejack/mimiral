@@ -166,6 +166,9 @@ class PdfStructuredExtractor {
      * Prefer this over [extractPages] when processing multiple sections of the same PDF,
      * to avoid reopening the file on each call.
      *
+     * Uses a single [PDFTextStripper] pass over the whole range rather than one call per
+     * page, which is significantly faster for multi-page sections.
+     *
      * @param document  An already-open [PDDocument].
      * @param startPage Zero-based start page index (inclusive).
      * @param endPage   Zero-based end page index (inclusive).
@@ -176,15 +179,63 @@ class PdfStructuredExtractor {
         startPage: Int,
         endPage: Int
     ): List<ContentBlock> {
-        val allChunks = mutableListOf<FontChunk>()
         val pageCount = document.numberOfPages
-        for (i in startPage..endPage.coerceAtMost(pageCount - 1)) {
-            if (i >= 0) allChunks.addAll(collectChunks(document, i))
-        }
-        if (allChunks.isEmpty()) return emptyList()
-        val bodyFontSize = estimateBodyFontSize(allChunks)
-        val lines = assembleLines(allChunks)
+        val actualEnd = endPage.coerceAtMost(pageCount - 1)
+        if (startPage < 0 || startPage > actualEnd) return emptyList()
+        val chunks = collectChunksForRange(document, startPage, actualEnd)
+        if (chunks.isEmpty()) return emptyList()
+        val bodyFontSize = estimateBodyFontSize(chunks)
+        val lines = assembleLines(chunks)
         return classifyLines(lines, bodyFontSize)
+    }
+
+    /**
+     * Collects font-metadata-rich text chunks from a page range in a single stripper pass.
+     * Much faster than calling [collectChunks] per-page.
+     */
+    private fun collectChunksForRange(
+        document: PDDocument,
+        startPage: Int,
+        endPage: Int
+    ): List<FontChunk> {
+        val chunks = mutableListOf<FontChunk>()
+        val stripper = object : PDFTextStripper() {
+            init {
+                this.startPage = startPage + 1
+                this.endPage = endPage + 1
+                sortByPosition = true
+            }
+            override fun processTextPosition(text: TextPosition) {
+                val character = text.unicode ?: return
+                if (character.isEmpty()) return
+                val codePoint = character[0].code
+                if (codePoint < 0x20 && character != "\n" && character != "\r") return
+                if (codePoint == 0x200B) return
+                val fontSize = text.fontSize
+                val font = text.font
+                val fontName = font?.name ?: ""
+                val isBold = BOLD_INDICATORS.any { fontName.contains(it, ignoreCase = true) }
+                val isItalic = ITALIC_INDICATORS.any { fontName.contains(it, ignoreCase = true) }
+                chunks.add(
+                    FontChunk(
+                        text = character,
+                        fontSize = fontSize,
+                        fontName = fontName,
+                        x = text.xDirAdj,
+                        y = text.yDirAdj,
+                        isBold = isBold,
+                        isItalic = isItalic,
+                        width = text.widthDirAdj
+                    )
+                )
+            }
+        }
+        try {
+            stripper.getText(document)
+        } catch (e: Exception) {
+            Log.w(TAG, "PDFTextStripper failed on pages $startPage-$endPage", e)
+        }
+        return chunks
     }
 
     // ---- Chunk collection via PDFTextStripper ----
@@ -317,7 +368,23 @@ class PdfStructuredExtractor {
         return lines.map { lineChunks ->
             // Sort within line by X position (left to right)
             val sortedChunks = lineChunks.sortedBy { it.x }
-            val text = sortedChunks.joinToString("") { it.text }.trim()
+            // Many PDFs represent spaces as X-position gaps rather than explicit space chars.
+            // Insert a space wherever the gap between adjacent chunks exceeds 25% of font size.
+            val text = buildString {
+                var prevEndX = Float.NEGATIVE_INFINITY
+                var prevFontSize = 0f
+                for (chunk in sortedChunks) {
+                    if (prevEndX > Float.NEGATIVE_INFINITY) {
+                        val gap = chunk.x - prevEndX
+                        if (gap > prevFontSize * 0.25f && !endsWith(' ')) {
+                            append(' ')
+                        }
+                    }
+                    append(chunk.text)
+                    prevEndX = chunk.x + chunk.width
+                    prevFontSize = chunk.fontSize.coerceAtLeast(1f)
+                }
+            }.trim()
 
             // Weighted average font size by text length
             val totalLen = sortedChunks.sumOf { it.text.length }

@@ -122,6 +122,10 @@ data class ReadingModeUiState(
     val ttsWordStart: Int = -1,
     /** End offset of the currently spoken word (-1 = none). */
     val ttsWordEnd: Int = -1,
+    /** Page index from which TTS was started (used for word-offset mapping). */
+    val ttsStartPage: Int = -1,
+    /** Cumulative char offset of each page within the TTS text, indexed from ttsStartPage. */
+    val ttsPageOffsets: List<Int> = emptyList(),
     /** Sync status indicator for Kavita progress sync */
     val syncStatus: com.mimiral.app.data.remote.SyncStatus =
         com.mimiral.app.data.remote.SyncStatus.IDLE
@@ -1137,25 +1141,33 @@ class ReadingModeViewModel @Inject constructor(
 
     /**
      * Get the full text of the current chapter for TTS.
-     * Prefers contentBlocks (structured) if available, falls back to paragraphs.
+     * Also records [ttsStartPage] and [ttsPageOffsets] in state so the UI can map
+     * word-level offsets back to individual content blocks for accurate highlighting.
      */
     fun getFullText(): String {
         val pages = _uiState.value.pages
         val currentPageIdx = _uiState.value.currentPageIndex
         val currentChapterIdx = _uiState.value.currentChapterIndex
 
-        // Start reading from the current page, not the chapter beginning.
-        // Only include pages in the same chapter so the utterance is bounded.
         if (pages.isNotEmpty()) {
+            val pageOffsets = mutableListOf<Int>()
             val text = buildString {
+                var cumOffset = 0
                 for (i in currentPageIdx until pages.size) {
                     val page = pages.getOrNull(i) ?: break
                     if (page.chapterIndex != currentChapterIdx) break
-                    if (isNotEmpty()) append("\n\n")
+                    if (isNotEmpty()) { append("\n\n"); cumOffset += 2 }
+                    pageOffsets.add(cumOffset)
                     append(page.text)
+                    cumOffset += page.text.length
                 }
             }
-            if (text.isNotBlank()) return text
+            if (text.isNotBlank()) {
+                _uiState.update {
+                    it.copy(ttsStartPage = currentPageIdx, ttsPageOffsets = pageOffsets)
+                }
+                return text
+            }
         }
 
         // Fallback when pages haven't been computed yet (e.g. still paginating)

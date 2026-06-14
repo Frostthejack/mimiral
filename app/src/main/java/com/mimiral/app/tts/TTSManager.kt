@@ -70,6 +70,10 @@ class TTSManager(
     private val queueLock = Any()
     private val settings = TTSSettings()
 
+    /** The utterance currently being spoken (removed from queue but not yet finished). */
+    @Volatile
+    private var currentItem: TTSQueueItem? = null
+
     val preprocessor = TTSPreprocessor()
 
     private val sentenceDetector = SentenceBoundaryDetector()
@@ -179,6 +183,7 @@ class TTSManager(
         fullText = text
         currentOffset = 0
         currentUtteranceOffset = 0
+        currentItem = null
 
         // Extract sentence boundaries for highlighting
         currentSentences = sentenceDetector.findSentences(fullText)
@@ -256,9 +261,17 @@ class TTSManager(
 
     fun pause() {
         if (_state != TTSState.PLAYING) return
+        // Capture and clear current item before stopping engine so the Done callback
+        // (which fires synchronously on some devices) doesn't advance to the next item.
+        val item = currentItem
+        currentItem = null
         ttsEngine?.stop()
         _state = TTSState.PAUSED
-        // Clear sentence highlight on pause
+        // Re-enqueue the interrupted utterance at the front so resume restarts it
+        // from the beginning rather than jumping to the next sentence.
+        if (item != null) {
+            synchronized(queueLock) { queue.addFirst(item) }
+        }
         currentSentenceIndex = -1
         onSentenceChanged.forEach { cb -> cb(null) }
         onWordCleared.forEach { cb -> cb() }
@@ -280,6 +293,7 @@ class TTSManager(
 
     fun stop() {
         ttsEngine?.stop()
+        currentItem = null
         synchronized(queueLock) { queue.clear() }
         // Clear sentence highlight on stop
         currentSentenceIndex = -1
@@ -368,6 +382,7 @@ class TTSManager(
         ttsEngine?.stop()
         ttsEngine?.shutdown()
         ttsEngine = null
+        currentItem = null
         synchronized(queueLock) { queue.clear() }
         currentSentences = emptyList()
         currentSentenceIndex = -1
@@ -533,6 +548,7 @@ class TTSManager(
             }
             queue.removeFirst()
         }
+        currentItem = item
         currentUtteranceOffset = item.startOffset
         _state = TTSState.PLAYING
         if (engine.language != item.locale) {
