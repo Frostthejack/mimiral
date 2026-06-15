@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -86,6 +87,7 @@ fun LibraryScreen(
     onNavigateToCollections: ((List<Int>) -> Unit)? = null,
     onNavigateToAddBooks: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -129,6 +131,12 @@ fun LibraryScreen(
                             } else {
                                 "Switch to grid view"
                             }
+                        )
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = "Settings"
                         )
                     }
                 }
@@ -277,25 +285,25 @@ fun LibraryScreen(
                 onRefresh = { viewModel.refreshLibrary() },
                 modifier = Modifier.fillMaxSize()
             ) {
-            // Content
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (uiState.error != null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = uiState.error ?: "Unknown error",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            } else {
+                // Content
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (uiState.error != null) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = uiState.error ?: "Unknown error",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                } else {
                     val showRecent = recentBooks.isNotEmpty() &&
                         uiState.searchQuery.isBlank() &&
                         uiState.filterOption == FilterOption.ALL &&

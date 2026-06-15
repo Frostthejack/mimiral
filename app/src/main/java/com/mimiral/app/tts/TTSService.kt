@@ -553,7 +553,7 @@ class TTSService : Service() {
             else -> { /* READY, PLAYING, PAUSED — proceed */ }
         }
         startForeground(NOTIFICATION_ID, buildNotification())
-        mgr.play(currentText)
+        mgr.playNow(currentText)
         updatePlaybackState(PlaybackStateCompat.STATE_PLAYING)
         showNotification()
         broadcastTTSState()

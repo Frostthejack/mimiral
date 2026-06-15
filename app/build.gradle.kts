@@ -20,7 +20,6 @@ android {
     namespace = "com.mimiral.app"
     compileSdk = 35
 
-
     defaultConfig {
         applicationId = "com.mimiral.app"
         minSdk = 31
@@ -160,7 +159,6 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
-
 }
 
 ksp {

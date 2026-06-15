@@ -85,7 +85,10 @@ class ExternalBookHandler @Inject constructor(
                 // Check if book already exists in library
                 val existing = bookDao.getBookByFilePath(destFile.absolutePath)
                 if (existing != null) {
-                    return@withContext ExternalBookResult.AlreadyExists(existing.id, existing.format)
+                    return@withContext ExternalBookResult.AlreadyExists(
+                        existing.id,
+                        existing.format
+                    )
                 }
 
                 // Insert into database

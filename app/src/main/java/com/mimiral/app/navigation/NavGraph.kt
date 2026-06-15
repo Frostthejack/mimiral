@@ -135,7 +135,10 @@ fun MimiralNavGraph(navController: NavHostController) {
                     onNavigateToAddBooks = {
                         navController.navigate(Screen.AddBooks.route)
                     },
-                    onOpenDrawer = openDrawer
+                    onOpenDrawer = openDrawer,
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route)
+                    }
                 )
             }
             composable(Screen.Collections.route) {
@@ -345,7 +348,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                     bookId = bookId,
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToReadingMode = {
-                        navController.navigate(Screen.ReadingMode.createRoute(bookId))
+                        navController.navigate(Screen.EpubReader.createRoute(bookId))
                     }
                 )
             }
@@ -358,10 +361,7 @@ fun MimiralNavGraph(navController: NavHostController) {
                     ?: return@composable
                 EpubReaderScreen(
                     bookId = bookId,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToReadingMode = {
-                        navController.navigate(Screen.ReadingMode.createRoute(bookId))
-                    }
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 

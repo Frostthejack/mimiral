@@ -8,20 +8,29 @@ import com.mimiral.app.data.local.entity.HighlightEntity
 import com.mimiral.app.data.local.entity.ReadingTimeTracker
 import com.mimiral.app.data.reader.ChapterExtractionResult
 import com.mimiral.app.data.reader.ChapterExtractor
+import com.mimiral.app.data.reader.ContentBlock
 import com.mimiral.app.data.reader.EpubParser
 import com.mimiral.app.data.reader.EpubState
+import com.mimiral.app.data.reader.PdfStructuredExtractor
 import com.mimiral.app.data.reader.Sentence
+import com.mimiral.app.data.reader.StructuredChapterExtractionResult
 import com.mimiral.app.data.repository.BookRepository
 import com.mimiral.app.data.repository.ReadingTimeRepository
 import com.mimiral.app.tts.TTSState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.apache.pdfbox.pdmodel.PDDocument
+import org.apache.pdfbox.text.PDFTextStripper
 
 data class ReaderHighlight(
     val id: Int = 0,
@@ -88,7 +97,9 @@ data class ReaderUiState(
     val syncStatus: com.mimiral.app.data.remote.SyncStatus =
         com.mimiral.app.data.remote.SyncStatus.IDLE,
     /** Full extracted text content from the EPUB, or null if not yet loaded. */
-    val bookContent: String? = null
+    val bookContent: String? = null,
+    /** Structured content blocks for rich Typography rendering. */
+    val contentBlocks: List<ContentBlock> = emptyList()
 )
 
 @HiltViewModel
@@ -139,7 +150,12 @@ class EpubReaderViewModel @Inject constructor(
             try {
                 val book = bookRepository.getBookById(bookId)
                 if (book == null || book.filePath.isBlank()) {
-                    _uiState.update { it.copy(error = "Book file not found") }
+                    _uiState.update { it.copy(isLoading = false, error = "Book file not found") }
+                    return@launch
+                }
+
+                if (book.format.uppercase() == "PDF") {
+                    loadPdfContent(book.filePath)
                     return@launch
                 }
 
@@ -149,31 +165,62 @@ class EpubReaderViewModel @Inject constructor(
                     is EpubState.Loaded -> {
                         val extractor = ChapterExtractor(parser)
                         val chapters = parser.getChapters()
-                        val contentBuilder = StringBuilder()
+                        val allBlocks = mutableListOf<ContentBlock>()
+                        val textBuilder = StringBuilder()
 
                         for (chIndex in chapters.indices) {
-                            when (val extractionResult = extractor.getChapter(chIndex)) {
-                                is ChapterExtractionResult.Success -> {
-                                    if (contentBuilder.isNotEmpty()) {
-                                        contentBuilder.append("\n\n")
-                                    }
-                                    contentBuilder.append(extractionResult.text)
+                            when (val sr = extractor.getStructuredChapter(chIndex)) {
+                                is StructuredChapterExtractionResult.Success -> {
+                                    allBlocks.addAll(sr.blocks)
+                                    if (textBuilder.isNotEmpty()) textBuilder.append("\n\n")
+                                    textBuilder.append(
+                                        sr.blocks.joinToString("\n\n") { it.text }
+                                    )
                                 }
-                                is ChapterExtractionResult.Error -> {
-                                    // Log but continue — skip failed chapters
-                                    continue
+                                is StructuredChapterExtractionResult.Error -> {
+                                    when (val pr = extractor.getChapter(chIndex)) {
+                                        is ChapterExtractionResult.Success -> {
+                                            pr.text.split(Regex("\\n\\s*\\n"))
+                                                .filter { it.isNotBlank() }
+                                                .forEach { para ->
+                                                    allBlocks.add(
+                                                        ContentBlock.Paragraph(
+                                                            index = allBlocks.size,
+                                                            text = para.trim()
+                                                        )
+                                                    )
+                                                }
+                                            if (textBuilder.isNotEmpty()) {
+                                                textBuilder.append("\n\n")
+                                            }
+                                            textBuilder.append(pr.text)
+                                        }
+                                        is ChapterExtractionResult.Error ->
+                                            android.util.Log.w(
+                                                "EpubReaderVM",
+                                                "Chapter $chIndex failed: ${pr.message}"
+                                            )
+                                    }
                                 }
                             }
-                            // Yield between chapters to avoid blocking the main thread
                             kotlinx.coroutines.yield()
                         }
 
-                        val fullText = contentBuilder.toString()
-                        _uiState.update {
-                            it.copy(
-                                bookContent = fullText,
-                                isLoading = false
-                            )
+                        if (allBlocks.isEmpty()) {
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = "No readable text could be extracted from this EPUB"
+                                )
+                            }
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    contentBlocks = allBlocks,
+                                    bookContent = textBuilder.toString(),
+                                    isLoading = false
+                                )
+                            }
                         }
                         parser.close()
                     }
@@ -197,6 +244,91 @@ class EpubReaderViewModel @Inject constructor(
                         isLoading = false,
                         error = "Failed to load book content: ${e.message}"
                     )
+                }
+            }
+        }
+    }
+
+    private fun loadPdfContent(filePath: String) {
+        viewModelScope.launch {
+            try {
+                val effectiveFile = withContext(Dispatchers.IO) {
+                    val direct = File(filePath)
+                    if (direct.exists()) {
+                        direct
+                    } else {
+                        val uri = android.net.Uri.parse(filePath)
+                        val input = appContext.contentResolver.openInputStream(uri)
+                            ?: return@withContext null
+                        val cache = File(
+                            appContext.cacheDir,
+                            "pdf_epub_${filePath.hashCode().toString(16)}.pdf"
+                        )
+                        FileOutputStream(cache).use { out -> input.copyTo(out) }
+                        input.close()
+                        cache
+                    }
+                }
+
+                if (effectiveFile == null || !effectiveFile.exists()) {
+                    _uiState.update {
+                        it.copy(isLoading = false, error = "PDF file not found")
+                    }
+                    return@launch
+                }
+
+                val allBlocks = withContext(Dispatchers.IO) {
+                    val extractor = PdfStructuredExtractor()
+                    val blocks = mutableListOf<ContentBlock>()
+                    PDDocument.load(effectiveFile).use { doc ->
+                        val total = doc.numberOfPages
+                        if (total == 0) return@withContext blocks
+                        val pagesPerSection = (total / maxOf(1, total / 10)).coerceIn(1, 20)
+                        var start = 0
+                        while (start < total) {
+                            val end = minOf(start + pagesPerSection, total) - 1
+                            val pageBlocks = extractor.extractPagesFromDocument(doc, start, end)
+                            if (pageBlocks.isNotEmpty()) {
+                                blocks.addAll(pageBlocks)
+                            } else {
+                                val stripper = PDFTextStripper().apply {
+                                    startPage = start + 1
+                                    endPage = end + 1
+                                }
+                                val text = stripper.getText(doc).trim()
+                                if (text.isNotEmpty()) {
+                                    text.split(Regex("\\n\\s*\\n"))
+                                        .filter { it.isNotBlank() }
+                                        .forEach { para ->
+                                            blocks.add(
+                                                ContentBlock.Paragraph(
+                                                    index = blocks.size,
+                                                    text = para.trim()
+                                                )
+                                            )
+                                        }
+                                }
+                            }
+                            kotlinx.coroutines.yield()
+                            start = end + 1
+                        }
+                    }
+                    blocks
+                }
+
+                if (allBlocks.isEmpty()) {
+                    _uiState.update {
+                        it.copy(isLoading = false, error = "No readable text found in PDF")
+                    }
+                } else {
+                    val flat = allBlocks.joinToString("\n\n") { it.text }
+                    _uiState.update {
+                        it.copy(contentBlocks = allBlocks, bookContent = flat, isLoading = false)
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isLoading = false, error = "Failed to load PDF: ${e.message}")
                 }
             }
         }
@@ -238,6 +370,11 @@ class EpubReaderViewModel @Inject constructor(
                 val book = bookRepository.getBookById(bookId)
                 if (book == null || book.filePath.isBlank()) {
                     setSampleChapters()
+                    return@launch
+                }
+
+                if (book.format.uppercase() == "PDF") {
+                    _uiState.update { it.copy(chapters = emptyList()) }
                     return@launch
                 }
 

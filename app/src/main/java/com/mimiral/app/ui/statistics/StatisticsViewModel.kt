@@ -70,8 +70,14 @@ class StatisticsViewModel @Inject constructor(
 
                 // Fetch all session data in parallel
                 val allSessions = readingStatsRepository.getAllSessions().first()
-                val weekSessions = readingStatsRepository.getSessionsBetweenDates(weekStart, todayString).first()
-                val monthSessions = readingStatsRepository.getSessionsBetweenDates(monthStart, todayString).first()
+                val weekSessions = readingStatsRepository.getSessionsBetweenDates(
+                    weekStart,
+                    todayString
+                ).first()
+                val monthSessions = readingStatsRepository.getSessionsBetweenDates(
+                    monthStart,
+                    todayString
+                ).first()
 
                 // Today's stats
                 val todaySessions = allSessions.filter { it.sessionDate == todayEpochDay }

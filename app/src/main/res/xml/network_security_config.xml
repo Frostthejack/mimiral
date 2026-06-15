@@ -16,14 +16,16 @@
     192.168.x.x addresses.
 -->
 <network-security-config>
-    <!-- Default: block cleartext for all internet traffic -->
-    <base-config cleartextTrafficPermitted="false">
+    <!-- Allow cleartext for user-configured servers (Kavita, OPDS, Tailscale, etc.).
+         Self-hosted server apps must allow HTTP because users may configure any
+         private network address, including Tailscale (100.x.x.x), LAN, or localhost. -->
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
 
-    <!-- Allow cleartext only on private/local networks (user-configured servers) -->
+    <!-- Private/local network domain list (kept for reference; base-config now covers all). -->
     <domain-config cleartextTrafficPermitted="true">
         <!-- Loopback -->
         <domain includeSubdomains="true">127.0.0.1</domain>

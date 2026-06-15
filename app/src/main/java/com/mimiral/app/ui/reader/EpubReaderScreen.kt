@@ -99,7 +99,6 @@ import kotlinx.coroutines.launch
 fun EpubReaderScreen(
     bookId: Int,
     onNavigateBack: () -> Unit,
-    onNavigateToReadingMode: () -> Unit = {},
     viewModel: EpubReaderViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -417,10 +416,11 @@ fun EpubReaderScreen(
                         }
                     },
                     actions = {
-                        // Read Aloud button — shows when TTS is not actively playing/paused
+                        // Read Aloud button — shows when TTS is idle, ready, or stopped
                         val isTtsIdle = uiState.ttsState == TTSState.IDLE
                         val isTtsReady = uiState.ttsState == TTSState.READY
-                        if (isTtsIdle || isTtsReady) {
+                        val isTtsStopped = uiState.ttsState == TTSState.STOPPED
+                        if (isTtsIdle || isTtsReady || isTtsStopped) {
                             IconButton(onClick = {
                                 // Build text from the current page forward (capped at 150 K chars to
                                 // stay under Android's ~1 MB binder transaction limit), and record the
@@ -456,10 +456,6 @@ fun EpubReaderScreen(
                                     contentDescription = "Read Aloud"
                                 )
                             }
-                        }
-                        // Reading Mode button
-                        IconButton(onClick = onNavigateToReadingMode) {
-                            Icon(Icons.Default.MenuBook, contentDescription = "Reading Mode")
                         }
                         IconButton(onClick = { viewModel.showToc() }) {
                             Icon(Icons.Default.List, contentDescription = "Table of Contents")

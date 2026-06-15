@@ -399,6 +399,12 @@ class ReadingModeViewModel @Inject constructor(
                 val savedProgress = bookRepository.getProgressForBook(bookId)
                 val startChapter = savedProgress?.chapterIndex ?: 0
                 val startParagraph = savedProgress?.pageNumber ?: 0
+                // Only restore reading-mode page index if saved by reading mode itself
+                val startPage = if (savedProgress?.lastReadPosition?.startsWith("page:") == true) {
+                    savedProgress.lastReadPosition!!.removePrefix("page:").toIntOrNull() ?: 0
+                } else {
+                    0
+                }
 
                 _uiState.update {
                     it.copy(
@@ -406,6 +412,7 @@ class ReadingModeViewModel @Inject constructor(
                         chapters = chapters,
                         chapterTitles = chapterTitles,
                         currentChapterIndex = startChapter,
+                        currentPageIndex = startPage,
                         paragraphs = chapters.getOrNull(startChapter)?.paragraphs
                             ?: chapters.first().paragraphs,
                         totalCharacters = totalChars,
@@ -1147,15 +1154,20 @@ class ReadingModeViewModel @Inject constructor(
     fun getFullText(): String {
         val pages = _uiState.value.pages
         val currentPageIdx = _uiState.value.currentPageIndex
-        val currentChapterIdx = _uiState.value.currentChapterIndex
 
         if (pages.isNotEmpty()) {
+            // Use the actual chapter of the current page rather than state's currentChapterIndex:
+            // after a restore, currentPageIndex and currentChapterIndex can be out of sync until
+            // onPageChanged fires, causing the loop to break immediately on the first page.
+            val effectiveChapterIdx = pages.getOrNull(currentPageIdx)?.chapterIndex
+                ?: _uiState.value.currentChapterIndex
+
             val pageOffsets = mutableListOf<Int>()
             val text = buildString {
                 var cumOffset = 0
                 for (i in currentPageIdx until pages.size) {
                     val page = pages.getOrNull(i) ?: break
-                    if (page.chapterIndex != currentChapterIdx) break
+                    if (page.chapterIndex != effectiveChapterIdx) break
                     if (isNotEmpty()) { append("\n\n"); cumOffset += 2 }
                     pageOffsets.add(cumOffset)
                     append(page.text)
@@ -1171,6 +1183,7 @@ class ReadingModeViewModel @Inject constructor(
         }
 
         // Fallback when pages haven't been computed yet (e.g. still paginating)
+        val currentChapterIdx = _uiState.value.currentChapterIndex
         val chapter = _uiState.value.chapters.getOrNull(currentChapterIdx)
         if (chapter != null && chapter.contentBlocks.isNotEmpty()) {
             return chapter.contentBlocks.joinToString("\n\n") { it.text }

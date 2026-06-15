@@ -233,7 +233,11 @@ private fun CollectionsList(
                     onRemoveBook(bookId, collectionWithCount.collection.id)
                 },
                 showDeleteConfirm = pendingDeleteCollection == collectionWithCount.collection,
-                onShowDeleteConfirm = { onPendingDeleteCollectionChange(collectionWithCount.collection) },
+                onShowDeleteConfirm = {
+                    onPendingDeleteCollectionChange(
+                        collectionWithCount.collection
+                    )
+                },
                 onDismissDeleteConfirm = { onPendingDeleteCollectionChange(null) },
                 pendingRemoveBook = pendingRemoveBook,
                 onPendingRemoveBookChange = onPendingRemoveBookChange
@@ -422,7 +426,6 @@ private fun BookRow(
     onShowRemoveConfirm: () -> Unit,
     onDismissRemoveConfirm: () -> Unit
 ) {
-
     Row(
         modifier = Modifier
             .fillMaxWidth()

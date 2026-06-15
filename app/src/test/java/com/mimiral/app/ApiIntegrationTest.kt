@@ -796,7 +796,6 @@ class ApiIntegrationTest {
         assertEquals("Fiction", category.label)
     }
 
-
     // ==================== OkHttp Client Configuration Tests ====================
 
     @Test
@@ -822,7 +821,6 @@ class ApiIntegrationTest {
         assertNotNull(client)
         assertEquals(15_000L, client.connectTimeoutMillis.toLong())
     }
-
 
     // ==================== MockWebServer Request Verification Tests ====================
 

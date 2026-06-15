@@ -219,6 +219,16 @@ fun ReadingModeScreen(
         viewModel.onPageChanged(pagerState.currentPage)
     }
 
+    // Restore saved page once pagination is first complete (fires when pageCount goes from 0 → N)
+    LaunchedEffect(pageCount) {
+        if (pageCount > 0 && uiState.currentPageIndex > 0 &&
+            uiState.currentPageIndex < pageCount &&
+            pagerState.currentPage == 0
+        ) {
+            pagerState.scrollToPage(uiState.currentPageIndex)
+        }
+    }
+
     // Handle page-scroll requests (from chapter/bookmark navigation)
     LaunchedEffect(uiState.currentPageIndex) {
         if (pagerState.currentPage != uiState.currentPageIndex &&
@@ -359,10 +369,11 @@ fun ReadingModeScreen(
                     }
                 },
                 actions = {
-                    // Read Aloud button — shows when TTS is not actively playing/paused
+                    // Read Aloud button — shows when TTS is idle, ready, or stopped
                     val isTtsIdle = uiState.ttsState == TTSState.IDLE
                     val isTtsReady = uiState.ttsState == TTSState.READY
-                    if (isTtsIdle || isTtsReady) {
+                    val isTtsStopped = uiState.ttsState == TTSState.STOPPED
+                    if (isTtsIdle || isTtsReady || isTtsStopped) {
                         IconButton(onClick = {
                             val textToRead = viewModel.getFullText()
                             if (textToRead.isNotBlank()) {

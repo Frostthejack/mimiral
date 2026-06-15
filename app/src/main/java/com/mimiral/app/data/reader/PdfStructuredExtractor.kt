@@ -130,11 +130,12 @@ class PdfStructuredExtractor {
         try {
             PDDocument.load(file).use { document ->
                 if (pageIndex < 0 || pageIndex >= document.numberOfPages) return emptyList()
-                val chunks = collectChunks(document, pageIndex)
+                val (chunks, stdText) = collectChunks(document, pageIndex)
                 if (chunks.isEmpty()) return emptyList()
                 val bodyFontSize = estimateBodyFontSize(chunks)
                 val lines = assembleLines(chunks)
-                return classifyLines(lines, bodyFontSize)
+                val reconciled = reconcileWithStdText(lines, stdText)
+                return classifyLines(reconciled, bodyFontSize)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to extract structured content from page $pageIndex", e)
@@ -166,8 +167,9 @@ class PdfStructuredExtractor {
      * Prefer this over [extractPages] when processing multiple sections of the same PDF,
      * to avoid reopening the file on each call.
      *
-     * Uses a single [PDFTextStripper] pass over the whole range rather than one call per
-     * page, which is significantly faster for multi-page sections.
+     * Processes each page individually so that Y-coordinate-based line assembly stays
+     * correct — Y coordinates in PDFBox are page-relative, so processing multiple pages
+     * in one pass causes chunks from different pages to interleave incorrectly.
      *
      * @param document  An already-open [PDDocument].
      * @param startPage Zero-based start page index (inclusive).
@@ -182,60 +184,16 @@ class PdfStructuredExtractor {
         val pageCount = document.numberOfPages
         val actualEnd = endPage.coerceAtMost(pageCount - 1)
         if (startPage < 0 || startPage > actualEnd) return emptyList()
-        val chunks = collectChunksForRange(document, startPage, actualEnd)
-        if (chunks.isEmpty()) return emptyList()
-        val bodyFontSize = estimateBodyFontSize(chunks)
-        val lines = assembleLines(chunks)
-        return classifyLines(lines, bodyFontSize)
-    }
-
-    /**
-     * Collects font-metadata-rich text chunks from a page range in a single stripper pass.
-     * Much faster than calling [collectChunks] per-page.
-     */
-    private fun collectChunksForRange(
-        document: PDDocument,
-        startPage: Int,
-        endPage: Int
-    ): List<FontChunk> {
-        val chunks = mutableListOf<FontChunk>()
-        val stripper = object : PDFTextStripper() {
-            init {
-                this.startPage = startPage + 1
-                this.endPage = endPage + 1
-                sortByPosition = true
-            }
-            override fun processTextPosition(text: TextPosition) {
-                val character = text.unicode ?: return
-                if (character.isEmpty()) return
-                val codePoint = character[0].code
-                if (codePoint < 0x20 && character != "\n" && character != "\r") return
-                if (codePoint == 0x200B) return
-                val fontSize = text.fontSize
-                val font = text.font
-                val fontName = font?.name ?: ""
-                val isBold = BOLD_INDICATORS.any { fontName.contains(it, ignoreCase = true) }
-                val isItalic = ITALIC_INDICATORS.any { fontName.contains(it, ignoreCase = true) }
-                chunks.add(
-                    FontChunk(
-                        text = character,
-                        fontSize = fontSize,
-                        fontName = fontName,
-                        x = text.xDirAdj,
-                        y = text.yDirAdj,
-                        isBold = isBold,
-                        isItalic = isItalic,
-                        width = text.widthDirAdj
-                    )
-                )
-            }
+        val allBlocks = mutableListOf<ContentBlock>()
+        for (pageIndex in startPage..actualEnd) {
+            val (chunks, stdText) = collectChunks(document, pageIndex)
+            if (chunks.isEmpty()) continue
+            val bodyFontSize = estimateBodyFontSize(chunks)
+            val lines = assembleLines(chunks)
+            val reconciled = reconcileWithStdText(lines, stdText)
+            allBlocks.addAll(classifyLines(reconciled, bodyFontSize))
         }
-        try {
-            stripper.getText(document)
-        } catch (e: Exception) {
-            Log.w(TAG, "PDFTextStripper failed on pages $startPage-$endPage", e)
-        }
-        return chunks
+        return allBlocks
     }
 
     // ---- Chunk collection via PDFTextStripper ----
@@ -247,21 +205,20 @@ class PdfStructuredExtractor {
      * [TextPosition] object (which carries font size, font name, and position)
      * instead of just the concatenated text string.
      */
-    private fun collectChunks(document: PDDocument, pageIndex: Int): List<FontChunk> {
+    private fun collectChunks(document: PDDocument, pageIndex: Int): Pair<List<FontChunk>, String> {
         val chunks = mutableListOf<FontChunk>()
 
         val stripper = object : PDFTextStripper() {
             init {
                 startPage = pageIndex + 1 // 1-indexed
                 endPage = pageIndex + 1
-                // Disable sorting so we get raw positions; we'll sort ourselves.
                 sortByPosition = true
             }
 
             override fun processTextPosition(text: TextPosition) {
+                super.processTextPosition(text)
                 val character = text.unicode ?: return
                 if (character.isEmpty()) return
-                // Skip control characters and zero-width space
                 val codePoint = character[0].code
                 if (codePoint < 0x20 && character != "\n" && character != "\r") return
                 if (codePoint == 0x200B) return
@@ -287,13 +244,44 @@ class PdfStructuredExtractor {
             }
         }
 
+        var stdText = ""
         try {
-            stripper.getText(document)
+            stdText = stripper.getText(document)
         } catch (e: Exception) {
             Log.w(TAG, "PDFTextStripper failed on page $pageIndex", e)
         }
 
-        return chunks
+        return Pair(chunks, stdText)
+    }
+
+    // ---- Standard-text reconciliation ----
+
+    /**
+     * Replaces each TextLine's text with the corresponding line from PDFBox's
+     * standard getText() output when line counts match. This corrects character
+     * encoding errors that arise from fonts with missing or non-standard ToUnicode
+     * CMaps, because the standard PDFBox pipeline applies additional Unicode
+     * resolution steps (ActualText marked content, normalization) that our
+     * per-glyph processTextPosition override would miss without calling super.
+     *
+     * Falls back to chunk-assembled text if line counts differ (e.g. PDFBox
+     * splits or joins lines differently than our Y-position grouping).
+     */
+    private fun reconcileWithStdText(
+        chunkLines: List<TextLine>,
+        stdText: String
+    ): List<TextLine> {
+        if (stdText.isBlank()) return chunkLines
+        val stdLines = stdText.lines().filter { it.isNotBlank() }
+        if (stdLines.size != chunkLines.size) return chunkLines
+        return chunkLines.mapIndexed { i, line ->
+            val std = stdLines[i].trim()
+            if (std.isBlank()) return@mapIndexed line
+            val newIsAllCaps = std.length <= ALL_CAPS_HEADING_MAX_LENGTH &&
+                std.filter { c -> c.isLetter() }.all { c -> c.isUpperCase() } &&
+                std.any { c -> c.isLetter() }
+            line.copy(text = std, isAllCaps = newIsAllCaps)
+        }
     }
 
     // ---- Body font estimation ----

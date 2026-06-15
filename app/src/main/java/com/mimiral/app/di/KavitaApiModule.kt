@@ -1,5 +1,6 @@
 package com.mimiral.app.di
 
+import com.mimiral.app.BuildConfig
 import com.mimiral.app.data.local.dao.ServerDao
 import com.mimiral.app.data.remote.KavitaSyncApi
 import com.mimiral.app.data.remote.kavita.KavitaApi
@@ -14,7 +15,6 @@ import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import com.mimiral.app.BuildConfig
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient

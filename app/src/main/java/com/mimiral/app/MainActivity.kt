@@ -28,10 +28,10 @@ import com.mimiral.app.ui.theme.MimiralTheme
 import com.mimiral.app.ui.theme.ThemeState
 import com.mimiral.app.ui.theme.rememberMimiralThemeState
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
 
 /**
  * Represents a pending external book to be opened (from ACTION_VIEW intent).

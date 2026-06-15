@@ -2,10 +2,10 @@ package com.mimiral.app.data.repository
 
 import com.mimiral.app.data.local.dao.ReadingTimeDao
 import com.mimiral.app.data.local.entity.ReadingTimeEntity
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
 
 /**
  * Repository for reading time tracking.
