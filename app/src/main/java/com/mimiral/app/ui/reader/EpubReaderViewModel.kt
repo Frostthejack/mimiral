@@ -29,8 +29,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.apache.pdfbox.pdmodel.PDDocument
-import org.apache.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 
 data class ReaderHighlight(
     val id: Int = 0,
@@ -280,38 +280,41 @@ class EpubReaderViewModel @Inject constructor(
                 val allBlocks = withContext(Dispatchers.IO) {
                     val extractor = PdfStructuredExtractor()
                     val blocks = mutableListOf<ContentBlock>()
-                    PDDocument.load(effectiveFile).use { doc ->
+                    val doc = PDDocument.load(effectiveFile)
+                    try {
                         val total = doc.numberOfPages
-                        if (total == 0) return@withContext blocks
-                        val pagesPerSection = (total / maxOf(1, total / 10)).coerceIn(1, 20)
-                        var start = 0
-                        while (start < total) {
-                            val end = minOf(start + pagesPerSection, total) - 1
-                            val pageBlocks = extractor.extractPagesFromDocument(doc, start, end)
-                            if (pageBlocks.isNotEmpty()) {
-                                blocks.addAll(pageBlocks)
-                            } else {
-                                val stripper = PDFTextStripper().apply {
-                                    startPage = start + 1
-                                    endPage = end + 1
-                                }
-                                val text = stripper.getText(doc).trim()
-                                if (text.isNotEmpty()) {
-                                    text.split(Regex("\\n\\s*\\n"))
-                                        .filter { it.isNotBlank() }
-                                        .forEach { para ->
-                                            blocks.add(
-                                                ContentBlock.Paragraph(
-                                                    index = blocks.size,
-                                                    text = para.trim()
+                        if (total > 0) {
+                            val pagesPerSection = (total / maxOf(1, total / 10)).coerceIn(1, 20)
+                            var start = 0
+                            while (start < total) {
+                                val end = minOf(start + pagesPerSection, total) - 1
+                                val pageBlocks =
+                                    extractor.extractPagesFromDocument(doc, start, end)
+                                if (pageBlocks.isNotEmpty()) {
+                                    blocks.addAll(pageBlocks)
+                                } else {
+                                    val stripper = PDFTextStripper()
+                                    stripper.startPage = start + 1
+                                    stripper.endPage = end + 1
+                                    val text = stripper.getText(doc).trim()
+                                    if (text.isNotEmpty()) {
+                                        text.split(Regex("\\n\\s*\\n"))
+                                            .filter { it.isNotBlank() }
+                                            .forEach { para ->
+                                                blocks.add(
+                                                    ContentBlock.Paragraph(
+                                                        index = blocks.size,
+                                                        text = para.trim()
+                                                    )
                                                 )
-                                            )
-                                        }
+                                            }
+                                    }
                                 }
+                                start = end + 1
                             }
-                            kotlinx.coroutines.yield()
-                            start = end + 1
                         }
+                    } finally {
+                        doc.close()
                     }
                     blocks
                 }
